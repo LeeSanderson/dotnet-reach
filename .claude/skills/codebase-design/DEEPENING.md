@@ -12,7 +12,7 @@ Pure computation, in-memory state, no I/O. Always deepenable: merge the modules 
 
 ### 2. Local-substitutable
 
-Dependencies that have local test stand-ins (PGLite for Postgres, in-memory filesystem). Deepenable if the stand-in exists. The deepened module is tested with the stand-in running in the test suite. The seam is internal; no port at the module's external interface.
+Dependencies that have local test stand-ins (SQLite in-memory or a Testcontainers instance for a real database, `MockFileSystem` from `System.IO.Abstractions` for the filesystem, `FakeTimeProvider` for the clock). Deepenable if the stand-in exists. The deepened module is tested with the stand-in running in the test suite. The seam is internal; no port at the module's external interface.
 
 ### 3. Remote but owned (Ports & Adapters)
 
@@ -20,9 +20,9 @@ Your own services across a network boundary (microservices, internal APIs). Defi
 
 Recommendation shape: *"Define a port at the seam, implement an HTTP adapter for production and an in-memory adapter for testing, so the logic sits in one deep module even though it's deployed across a network."*
 
-### 4. True external (Mock)
+### 4. True external (Substitute)
 
-Third-party services (Stripe, Twilio, etc.) you don't control. The deepened module takes the external dependency as an injected port; tests provide a mock adapter.
+Third-party services (Stripe, Twilio, etc.) you don't control. The deepened module takes the external dependency as an injected port; tests provide a substitute adapter. Declare the port as an `interface` so NSubstitute can stand in for it: a sealed vendor client with non-virtual members can't be substituted, which is the reason the port exists.
 
 ## Seam discipline
 

@@ -1,17 +1,23 @@
 # Good and Bad Tests
 
+Examples use xUnit, [AwesomeAssertions](https://awesomeassertions.org) for assertions, and [NSubstitute](https://nsubstitute.github.io) for substitutes.
+
 ## Good Tests
 
-**Integration-style**: Test through real interfaces, not mocks of internal parts.
+**Integration-style**: Test through real interfaces, not substitutes for internal parts.
 
-```typescript
+```csharp
 // GOOD: Tests observable behavior
-test("user can checkout with valid cart", async () => {
-  const cart = createCart();
-  cart.add(product);
-  const result = await checkout(cart, paymentMethod);
-  expect(result.status).toBe("confirmed");
-});
+[Fact]
+public async Task User_can_checkout_with_valid_cart()
+{
+    var cart = new Cart();
+    cart.Add(product);
+
+    var result = await checkout.PlaceAsync(cart, paymentMethod);
+
+    result.Status.Should().Be(CheckoutStatus.Confirmed);
+}
 ```
 
 Characteristics:
@@ -26,52 +32,73 @@ Characteristics:
 
 **Implementation-detail tests**: Coupled to internal structure.
 
-```typescript
+```csharp
 // BAD: Tests implementation details
-test("checkout calls paymentService.process", async () => {
-  const mockPayment = jest.mock(paymentService);
-  await checkout(cart, payment);
-  expect(mockPayment.process).toHaveBeenCalledWith(cart.total);
-});
+[Fact]
+public async Task Checkout_calls_payment_service_process()
+{
+    var payments = Substitute.For<IPaymentService>();
+    var checkout = new Checkout(payments);
+
+    await checkout.PlaceAsync(cart, paymentMethod);
+
+    await payments.Received(1).ProcessAsync(cart.Total);
+}
 ```
 
 Red flags:
 
-- Mocking internal collaborators
-- Testing private methods
-- Asserting on call counts/order
+- Substituting internal collaborators
+- Testing private members (or reaching them through `InternalsVisibleTo` / reflection)
+- Asserting on call counts/order with `Received()`
 - Test breaks when refactoring without behavior change
 - Test name describes HOW not WHAT
 - Verifying through external means instead of interface
 
-```typescript
+```csharp
 // BAD: Bypasses interface to verify
-test("createUser saves to database", async () => {
-  await createUser({ name: "Alice" });
-  const row = await db.query("SELECT * FROM users WHERE name = ?", ["Alice"]);
-  expect(row).toBeDefined();
-});
+[Fact]
+public async Task CreateUser_saves_to_database()
+{
+    await users.CreateAsync(new NewUser("Alice"));
+
+    var row = await connection.QuerySingleOrDefaultAsync<UserRow>(
+        "SELECT * FROM Users WHERE Name = @Name", new { Name = "Alice" });
+    row.Should().NotBeNull();
+}
 
 // GOOD: Verifies through interface
-test("createUser makes user retrievable", async () => {
-  const user = await createUser({ name: "Alice" });
-  const retrieved = await getUser(user.id);
-  expect(retrieved.name).toBe("Alice");
-});
+[Fact]
+public async Task CreateUser_makes_user_retrievable()
+{
+    var user = await users.CreateAsync(new NewUser("Alice"));
+
+    var retrieved = await users.GetAsync(user.Id);
+    retrieved.Name.Should().Be("Alice");
+}
 ```
 
 **Tautological tests**: Expected value restates the implementation, so the test passes by construction.
 
-```typescript
+```csharp
 // BAD: Expected value is recomputed the way the code computes it
-test("calculateTotal sums line items", () => {
-  const items = [{ price: 10 }, { price: 5 }];
-  const expected = items.reduce((sum, i) => sum + i.price, 0);
-  expect(calculateTotal(items)).toBe(expected);
-});
+[Fact]
+public void CalculateTotal_sums_line_items()
+{
+    var items = new[] { new LineItem(10m), new LineItem(5m) };
+    var expected = items.Sum(i => i.Price);
+
+    Invoice.CalculateTotal(items).Should().Be(expected);
+}
 
 // GOOD: Expected value is an independent, known literal
-test("calculateTotal sums line items", () => {
-  expect(calculateTotal([{ price: 10 }, { price: 5 }])).toBe(15);
-});
+[Fact]
+public void CalculateTotal_sums_line_items()
+{
+    var items = new[] { new LineItem(10m), new LineItem(5m) };
+
+    Invoice.CalculateTotal(items).Should().Be(15m);
+}
 ```
+
+`[Theory]` with `[InlineData]` is the same trap in bulk: the cases are only worth having if each expected value is an independent literal, not a formula applied to the input.

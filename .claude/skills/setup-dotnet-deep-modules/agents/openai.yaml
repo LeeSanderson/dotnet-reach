@@ -1,0 +1,5 @@
+interface:
+  display_name: "Setup .NET Deep Modules"
+  short_description: "Enforce deep modules in a .NET solution"
+policy:
+  allow_implicit_invocation: false

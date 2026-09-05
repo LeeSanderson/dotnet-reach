@@ -11,7 +11,7 @@ Design **deep modules**: a lot of behaviour behind a small interface, placed at 
 
 Use these terms exactly: don't substitute "component," "service," "API," or "boundary." Consistent language is the whole point.
 
-**Module**: anything with an interface and an implementation. Deliberately scale-agnostic: a function, class, package, or tier-spanning slice. _Avoid_: unit, component, service.
+**Module**: anything with an interface and an implementation. Deliberately scale-agnostic: a method, class, project/assembly, or tier-spanning slice. _Avoid_: unit, component, service.
 
 **Interface**: everything a caller must know to use the module correctly: the type signature, but also invariants, ordering constraints, error modes, required configuration, and performance characteristics. _Avoid_: API, signature (too narrow, they refer only to the type-level surface).
 
@@ -70,25 +70,27 @@ Good interfaces make testing natural:
 
 1. **Accept dependencies, don't create them.**
 
-   ```typescript
+   ```csharp
    // Testable
-   function processOrder(order, paymentGateway) {}
+   public Receipt ProcessOrder(Order order, IPaymentGateway gateway) { }
 
    // Hard to test
-   function processOrder(order) {
-     const gateway = new StripeGateway();
+   public Receipt ProcessOrder(Order order)
+   {
+       var gateway = new StripeGateway();
    }
    ```
 
 2. **Return results, don't produce side effects.**
 
-   ```typescript
+   ```csharp
    // Testable
-   function calculateDiscount(cart): Discount {}
+   public Discount CalculateDiscount(Cart cart) { }
 
    // Hard to test
-   function applyDiscount(cart): void {
-     cart.total -= discount;
+   public void ApplyDiscount(Cart cart)
+   {
+       cart.Total -= discount;
    }
    ```
 
@@ -105,7 +107,7 @@ Good interfaces make testing natural:
 ## Rejected framings
 
 - **Depth as ratio of implementation-lines to interface-lines** (Ousterhout): rewards padding the implementation. We use depth-as-leverage instead.
-- **"Interface" as the TypeScript `interface` keyword or a class's public methods**: too narrow: interface here includes every fact a caller must know.
+- **"Interface" as the C# `interface` keyword or a type's public members**: too narrow: interface here includes every fact a caller must know. A project's public surface (its non-`internal` types) is an interface in this sense; so is a single method's contract.
 - **"Boundary"**: overloaded with DDD's bounded context. Say **seam** or **interface**.
 
 ## Going deeper
