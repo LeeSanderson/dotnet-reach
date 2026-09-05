@@ -1,6 +1,6 @@
 # Reach — Product Requirements
 
-**Status:** Draft v0.1 · 3 September 2026
+**Status:** Approved v0.1 · 5 September 2026
 **Owner:** Lee Sanderson
 
 ---
@@ -261,6 +261,4 @@ Method identity must be integers derived from metadata tokens, never strings —
 
 **Reach** was chosen because reverse reachability is literally the algorithm, and "what does this change reach?" is the question a developer is actually asking. It is short, works as both verb and noun, and reads naturally as a command: `dotnet reach select`, `dotnet reach watch`.
 
-Package name would be `dotnet-reach`, invoked as `dotnet reach`. **Availability on nuget.org has not been verified and must be checked before this is committed to.**
-
-Alternatives considered: *Sift* (clear, slightly bland), *Winnow* (evocative, obscure), *Blast Radius* (matches the consultant's phrase but sounds destructive), *Ripple* (clashes with an older .NET tool).
+Package name would be `dotnet-reach`, invoked as `dotnet reach`.
