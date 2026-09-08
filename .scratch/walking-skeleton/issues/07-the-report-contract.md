@@ -52,3 +52,29 @@ discovery, so obtaining them may require a discovery pass Reach does not otherwi
 Decide whether MTP renders as UIDs or as a filter string, and what that costs.
 
 The dialect research is resolved; this ticket is now unblocked.
+
+## Comments
+
+**From [Change-set edge cases](04-change-set-edge-cases.md):** that ticket decided *which
+facts* the report owes and deliberately left the shape here. Five of them:
+
+1. **The analysis scope itself** — which test projects, and which assemblies their closures
+   cover. ADR-0002 permits pointing Reach at a single test project, and "your change is
+   inert" versus "you asked me to look at one project" are very different news that produce
+   identical selections.
+2. **Every unattributed changed path, with a category** — *outside any project*, or *inside
+   a project no test project's closure reaches*. The second reads as "nothing in this
+   repository can test this code", which is the honest answer for an untested worker or
+   console project and better than a warning.
+3. **An empty change set as its own named outcome**, distinct from an empty selection. A
+   baseline resolving to `HEAD` produces an empty diff, an empty selection, a green pipeline
+   and no tests run, while every other guard passes happily.
+4. **Untracked `.cs` files that entered the change set** — either intentional codegen or a
+   forgotten `git add`, and both bear on trusting a surprising selection.
+5. **First-party PDB documents that are untracked and git-ignored** — compiled source Reach
+   cannot observe changes to. Reported, never selected on, and suppressed under `obj/` and
+   `bin/` path segments.
+
+Standing rule from that ticket: **an empty selection is never emitted without an
+accompanying reason list.** It reinforces the position already carried in above — emitting
+no command at all for an empty selection — since an empty `--filter` string runs everything.

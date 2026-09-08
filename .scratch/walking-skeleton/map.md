@@ -96,12 +96,28 @@ Resolved tickets:
   what the `dotnet` CLI itself is built on. `RollForward: LatestMajor` verified end to end
   against Microsoft's own `net8.0` sample tool. Install guidance leads with `dnx`, not
   `-g`. Surfaced the Roslyn conflict now held in ticket 13.
+- [Change-set edge cases: deletions, renames, untracked files](issues/04-change-set-edge-cases.md):
+  the tier ladder routes **per change, not per file**, and the results union. A deleted
+  method widens its declaring type unconditionally — a deleted `override` or `operator ==`
+  compiles clean and rebinds, so "no caller means inert" is unsafe; an absorption test that
+  would prove most deletions inert is written down but deferred as five clauses of
+  under-selection risk. A deleted *file* is routed as the deletion of every type it
+  declared, with nearest-ancestor-project directory containment as the fallback for a type
+  that is genuinely gone. Renames are never detected —
+  [ADR-0005](../../docs/adr/0005-change-detection-is-keyed-on-declared-type.md). Untracked
+  files are always in, with no flag. Changes outside the analysis scope are reported with a
+  category and never selected on, and **an empty selection is never emitted without a reason
+  list**. Ignored-and-untracked compiled files are a blind spot Reach detects and reports but
+  cannot select on. Added terms `whole-assembly widening` and `whole-type widening`; surfaced
+  ticket 18.
 
 ## Not yet specified
 
 - **What documentation M1 ships.** PRD §12 makes "a competent engineer can add Reach to an
   unfamiliar pipeline in under an hour, using only documentation" a success criterion, so
-  documentation is in M1's scope, but nothing about its shape is decided.
+  documentation is in M1's scope, but nothing about its shape is decided. Named obligations
+  are already accumulating — the resolved tickets each flag the surprises they create — so
+  this graduates once there is somewhere for them to land.
 - **CI for the Reach repository itself** — build, test, pack, and whether the tool is
   published anywhere during M1.
 - **Parallelism in graph construction**, and whether M1 commits to any concurrency at all.

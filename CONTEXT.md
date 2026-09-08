@@ -12,8 +12,9 @@ branch and the target branch, not the target branch's tip.
 _Avoid_: base commit, parent, previous version
 
 **Changed set**:
-The methods a change added, altered or removed, computed by comparing method bodies
-between the baseline and the working tree.
+The members a change added, altered or removed, computed by matching declared types
+between the baseline and the working tree — keyed on name, never on file path, so a moved
+type is the same type.
 _Avoid_: diff, delta, dirty set
 
 **Unmappable change**:
@@ -116,6 +117,16 @@ Selecting every test in a project because Reach cannot analyse it — an unrecog
 framework, an unparseable project graph, a package with no model. The standard response
 to missing information.
 _Avoid_: fallback, bail-out
+
+**Whole-assembly widening**:
+Putting every method of an assembly into the changed set and then walking back as normal.
+The response to a change Reach can attribute to an assembly but not to a method.
+_Avoid_: whole-project selection, which selects tests directly rather than adding roots
+
+**Whole-type widening**:
+Putting every surviving member of a type into the changed set and then walking back as
+normal. The same operation as whole-assembly widening, one granularity finer.
+_Avoid_: type-level selection
 
 **Dialect**:
 The filter expression grammar a particular test framework, framework version and runner

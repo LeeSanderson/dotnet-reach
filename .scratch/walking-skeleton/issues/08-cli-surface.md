@@ -34,3 +34,22 @@ count (committed, staged, unstaged, untracked); build configuration; output root
 
 Blocked on packaging and CLI-library research, and on the report contract, since where
 output goes is an argument.
+
+## Comments
+
+**From [Change-set edge cases](04-change-set-edge-cases.md):** that ticket established that
+an empty selection is a distinguishable *outcome* carrying its reason, and left the encoding
+here. Two things to settle:
+
+- **How the outcome is signalled to a pipeline.** A changed set that attributes to nothing —
+  a docs-only PR — is a legitimate, valuable answer and must not fail the build, so it is
+  not an error. But it is indistinguishable from a misconfiguration unless something
+  distinguishes it. A distinct non-error exit code was considered and routed here rather than
+  decided there.
+- **An empty selection must never render as an empty `--filter` string**, which runs
+  everything. Ticket 07 carries the rendering half (emit no command at all); this ticket owns
+  whatever the CLI *says* and returns when that happens.
+
+That ticket also ruled out a `--no-untracked` flag: untracked files are always included, on
+the grounds that the flag's only possible effect is under-selection and the pathological case
+belongs in the consumer's `.gitignore`. One fewer argument in the option budget.
