@@ -37,18 +37,34 @@ that one". Built from compiled assemblies, never from source.
 **Method identity**:
 A method's node in the call graph, derived from metadata rather than from its name.
 Two methods compiled from the same source under different target frameworks are
-different identities.
+different identities. A generic definition and every instantiation of it are one
+identity — the type arguments at a call site are not part of it.
 _Avoid_: method key, symbol name, signature
 
 **Edge provenance**:
-Why an edge exists — a compiled call instruction, widening through an interface or a
-virtual override, or later a framework model. Every edge carries it, so any selection
-can be explained and the cost of widening can be measured.
+Why an edge exists, in one of three classes. **Compiled**: read directly from an
+instruction. **Synthesised**: invented by Reach where the control flow is certain but no
+instruction expresses it. **Widened**: the implementation that runs is not knowable, so
+every candidate gets an edge. Every edge carries it, so any selection can be explained,
+the cost of widening can be measured, and narrowing has one class it may safely touch.
+
+**Kernel method**:
+The method a developer wrote, as distinct from the compiler-generated members that carry
+its body — async and iterator state machines, lambdas, local functions. A change inside
+any of them is a change to the kernel method.
+_Avoid_: user method, original method, outer method
 
 **Widening**:
-Adding edges from a dispatch site to every implementation it could reach, because IL
-names the interface or base method rather than the implementation that runs.
+Adding edges from a dispatch site to every implementation it could reach, because IL names
+a base or interface member rather than the implementation that runs. Bounded by the
+inferred receiver type.
 _Avoid_: expansion, fan-out
+
+**Inferred receiver type**:
+The static type a dispatch site can be shown to hold, recovered from the instructions that
+produced the receiver. It bounds widening without narrowing it: a static type constrains
+what a receiver can hold, so no edge that could run is removed.
+_Avoid_: declared type, receiver type
 
 **Narrowing**:
 Removing edges or selected tests using evidence that a particular implementation cannot
@@ -63,8 +79,10 @@ _Avoid_: impact analysis, backward slice
 
 **Blind spot**:
 A call edge that exists at runtime but appears in neither the compiled instructions nor
-any loaded framework model — reflection, plugin loading, convention-based registration.
-Blind spots cause under-selection, so a suspected blind spot always widens the selection.
+any loaded framework model — reflection, plugin loading, convention-based registration, or
+a first-party member invoked only from outside the analysis scope. Blind spots cause
+under-selection, so a detected blind spot is always reported, and widened wherever a
+bounded widening exists.
 
 **Framework model**:
 A description of call edges a framework establishes at runtime rather than in compiled

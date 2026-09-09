@@ -46,6 +46,25 @@ Added after [What is dotnet test --affected-tests](16-what-is-dotnet-test-affect
   secondary consultant audience, non-Azure CI, and the non-MTP majority. Record a trigger
   for revisiting: **the extension published publicly with a local filesystem provider**.
 
+Added after [Generics, delegates and function
+pointers](05-generics-delegates-and-function-pointers.md):
+
+- **§9.2, compiled IL.** "IL exposes async state machines, lambdas and generic
+  instantiations as concrete methods" is right about lambdas and misleading about the other
+  two, and the gap between them is where two of M1's accepted holes come from. An async
+  method's body is a concrete method, but nothing in first-party IL *calls* it — control
+  reaches `MoveNext` through `AsyncTaskMethodBuilder.Start` inside the BCL — so the
+  containment edge in [ADR-0006](../../docs/adr/0006-a-graph-node-is-an-il-method-definition.md)
+  exists to reconnect it. And a generic instantiation is exposed at the *call site*, not as
+  a distinct definition, which is why identity collapses instantiations. Restate the claim
+  so it does not read as "this is free".
+- **§8 and §12, the correctness rule.**
+  [ADR-0008](../../docs/adr/0008-m1-accepts-named-under-selection.md) consciously overrides
+  "under-selection is a correctness bug, not a tuning issue" for M1, in favour of named,
+  reported holes. This is the single largest deviation from the approved PRD and the one
+  most likely to be read as a bug. It needs the owner's explicit sign-off in the PRD text,
+  not just in an ADR.
+
 Resolved when the owner has accepted or rejected each item and PRD.md reflects the outcome.
 Record any rejection and its reasoning in the answer — a rejected amendment means the
 corresponding ADR needs revisiting, not quietly ignoring.

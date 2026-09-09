@@ -72,6 +72,10 @@ the ADR where one exists.
   modern agent (PRD §1.2). *Under revision* — see
   [Tool target framework versus the Roslyn dependency](issues/13-tool-target-framework-versus-roslyn.md).
 - **Selection granularity is the test method**, never the individual test case (PRD §11).
+- **M1 accepts named under-selection** rather than widening for every hole —
+  [ADR-0008](../../docs/adr/0008-m1-accepts-named-under-selection.md). A conscious owner
+  override of the correctness rule in the Notes above, valid only while every accepted hole
+  is named in the limitations register and surfaced in the report.
 
 Resolved tickets:
 
@@ -110,6 +114,20 @@ Resolved tickets:
   list**. Ignored-and-untracked compiled files are a blind spot Reach detects and reports but
   cannot select on. Added terms `whole-assembly widening` and `whole-type widening`; surfaced
   ticket 18.
+- [Generics, delegates and function pointers in the graph](issues/05-generics-delegates-and-function-pointers.md):
+  a node is an **IL method definition**, per assembly, per target framework, with generic
+  instantiations collapsed and accessors as nodes in their own right —
+  [ADR-0006](../../docs/adr/0006-a-graph-node-is-an-il-method-definition.md). Seven edge
+  kinds, in three safety classes rather than two, which amended
+  [ADR-0004](../../docs/adr/0004-call-graph-edges-carry-provenance.md). Widening is bounded
+  by the **inferred receiver type**, because Roslyn emits `callvirt` against the
+  slot-defining declaration and the naive reading fans every `ToString()` call site out to
+  the whole suite —
+  [ADR-0007](../../docs/adr/0007-widening-targets-the-inferred-receiver-type.md). PRD §9.2
+  understates two holes: an `async` body is reachable only through the BCL, closed by a
+  **containment edge** from the kernel method, and first-party members the host calls back
+  into are not reachable at all, left open and named. Every IL claim verified by
+  disassembly, and two working assumptions were overturned in the process.
 
 ## Not yet specified
 
@@ -117,7 +135,11 @@ Resolved tickets:
   unfamiliar pipeline in under an hour, using only documentation" a success criterion, so
   documentation is in M1's scope, but nothing about its shape is decided. Named obligations
   are already accumulating — the resolved tickets each flag the surprises they create — so
-  this graduates once there is somewhere for them to land.
+  this graduates once there is somewhere for them to land. One piece has already graduated:
+  the limitations register is now
+  [ticket 19](issues/19-the-limitations-register.md), because ADR-0008 made it load-bearing
+  rather than documentation hygiene. The rest — install guide, CI recipes, the explanation
+  of a surprising selection — is still fog.
 - **CI for the Reach repository itself** — build, test, pack, and whether the tool is
   published anywhere during M1.
 - **Parallelism in graph construction**, and whether M1 commits to any concurrency at all.
