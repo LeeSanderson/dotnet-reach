@@ -114,6 +114,24 @@ Resolved tickets:
   list**. Ignored-and-untracked compiled files are a blind spot Reach detects and reports but
   cannot select on. Added terms `whole-assembly widening` and `whole-type widening`; surfaced
   ticket 18.
+- [The report contract](issues/07-the-report-contract.md): one report per run keyed on
+  **(test project, target framework)**, each entry holding a mode and an **`invocations`
+  array** — zero invocations for an empty selection, so "emit no command" is the only
+  representable answer rather than a rule to remember. The change side is keyed on **changes,
+  not expanded roots**, because whole-assembly widening would otherwise put ten thousand roots
+  on every test; the tier lives on the change. Each selected test carries the **rules** that
+  selected it (PRD §4.2 has four, and only reverse-reachability had been designed for) and, per
+  change, a **path class** — the weakest edge on the strongest path. A forward list of every
+  change with the count of tests it reached makes an inert change readable rather than absent.
+  One global **notices** array with stable kebab codes and one `kind`; every `blind-spot` code
+  must have a limitations-register entry, asserted by a test, which makes ADR-0008 mechanical.
+  Rich exit codes with **an empty selection at zero**, so "non-zero means run everything" is the
+  invariant in one line; a report is written even on failure. Delivery uses each host's private
+  file channel and **chunks for VSTest under `dotnet test`** rather than writing a
+  `.runsettings` — [ADR-0009](../../docs/adr/0009-per-host-private-filter-channels-over-runsettings.md).
+  Found two gaps: the rendered NUnit `~` filter **runs more tests than the report says were
+  selected**, so both counts are carried or ticket 17 measures the wrong number; and adding
+  `[Fact]` to an existing method creates a test with an unchanged body, escalated to ticket 18.
 - [Generics, delegates and function pointers in the graph](issues/05-generics-delegates-and-function-pointers.md):
   a node is an **IL method definition**, per assembly, per target framework, with generic
   instantiations collapsed and accessors as nodes in their own right —
@@ -139,7 +157,11 @@ Resolved tickets:
   the limitations register is now
   [ticket 19](issues/19-the-limitations-register.md), because ADR-0008 made it load-bearing
   rather than documentation hygiene. The rest — install guide, CI recipes, the explanation
-  of a surprising selection — is still fog.
+  of a surprising selection — is still fog, though
+  [the report contract](issues/07-the-report-contract.md) has narrowed it: the docs now owe a
+  schema reference with a compatibility promise, one page per notice code, the exit-code table,
+  and the single line of pipeline guidance that falls out of it (*non-zero means run the whole
+  suite*). What is still unpinned is the shape those take and who they are written for.
 - **CI for the Reach repository itself** — build, test, pack, and whether the tool is
   published anywhere during M1.
 - **Parallelism in graph construction**, and whether M1 commits to any concurrency at all.
@@ -161,3 +183,12 @@ Scope is fixed by the destination: a spec for M1. These sit beyond it and do not
   Needs the conflict resolved and shadow mode to prove it safe.
 - **Local mode** (PRD §7) — M3.
 - **Previously-failed-test selection** — ruled out by ADR-0001; a pipeline concern.
+- **MTP test-node UID emission** (`--filter-uid`, `TestNodeUidListFilter`), from
+  [The report contract](issues/07-the-report-contract.md). It would dissolve the command-line
+  length ceiling entirely for MTP hosts, but UIDs come from a discovery pass Reach does not
+  run, and the in-process provider path is `[Experimental]` and needs a code change in the
+  consumer's test project — the infrastructure ask PRD §9.1 exists to avoid. Revisit trigger:
+  Reach running discovery for some other reason, or the filter provider stabilising.
+- **Notice suppression.** Deliberately absent from M1: a suppression switch un-surfaces
+  exactly the holes ADR-0008's bargain depends on surfacing, and there is no evidence yet
+  about which codes are noisy. If it ever ships, `blind-spot` must be non-suppressible.

@@ -47,3 +47,31 @@ measurement is possible, and defines the measurement itself.
 
 **And the honest question underneath:** what result would mean Reach should not be built
 further? Deciding that *before* seeing the number is the only way the answer stays credible.
+
+## Comments
+
+**From [The report contract](07-the-report-contract.md):** three inputs are now available,
+and one of them means the obvious numerator is wrong.
+
+**The dialect over-match is over-selection and must be counted.** NUnit selections render as
+`FullyQualifiedName~Ns.C.MyTest` (contains, not equality), so the emitted filter also matches
+`MyTest2`. What actually runs is a strict superset of the canonical selection. The report
+therefore carries **both** numbers — the canonical selected count, and the rendered filter's
+true match set, computed by applying the dialect's matching semantics back over the enumerated
+test list. Measuring only the canonical count would understate Reach's real over-selection by
+whatever the `~` rendering adds, and on an NUnit-heavy solution that could be substantial. So
+the measurement's numerator is **tests that will run**, not tests that were selected, and the
+gap between the two is itself worth reporting since it is the price of one named decision.
+
+**`total` can legitimately be `unknown`.** A test project on an unrecognised framework falls to
+whole-project selection and cannot be enumerated at all. The report says `unknown` rather than
+`0`, which means this ticket has to decide what such a project contributes to the
+denominator — excluded, or counted at some estimate. Silently treating it as zero would flatter
+the ratio in exactly the case where Reach is running the entire project.
+
+**The widening delta is directly available.** Every (test, change) pair carries a **path
+class**: the weakest edge provenance on the *strongest* path between them. A test whose every
+path crosses a widened edge reads `widened`; one with any fully compiled path reads `compiled`.
+So "how much of the selection exists only because of widening" is a count over pairs, not a
+second walk with widened edges disabled — though a second walk remains the more rigorous
+version and this ticket should decide whether the cheap number suffices.

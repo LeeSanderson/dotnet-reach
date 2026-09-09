@@ -154,3 +154,44 @@ _Avoid_: filter format, syntax
 **Shadow mode**:
 Running the selection and then the whole suite anyway, recording every test that was
 skipped but failed. The instrument that proves a selection safe on a real codebase.
+
+## The report
+
+**Report**:
+The machine-readable record of one run — the canonical selection, why each test was
+selected, what could not be analysed, and the run's own inputs. A product surface with a
+versioned schema, not a log: a selection nobody can audit gets switched off.
+_Avoid_: output, log, results, audit trail
+
+**Outcome**:
+What a run concluded, from a closed set: a selection was made, nothing was selected, there
+were no changes to analyse, or the run failed. An empty selection and an empty change set
+are different news and are never conflated.
+_Avoid_: status, result, exit state
+
+**Invocation**:
+One rendered command that runs part of a selection — an argument vector, never a shell
+string. A test project's selection is always a list of them: several when the selection
+exceeds the command-line ceiling, one when the whole project runs, and **none** when nothing
+was selected, because an empty filter runs everything.
+_Avoid_: command, filter, argument string
+
+**Path class**:
+How much to trust one test's selection by one change: the weakest edge provenance on the
+strongest path between them. A test reachable by any fully compiled path is `compiled` even
+if a widened path also exists; a test reachable only through widening is `widened`, which is
+where over-selection is plausible and the only class narrowing may ever touch.
+_Avoid_: confidence, path provenance, edge class
+
+**Notice**:
+One thing a run has to disclose — an unmodelled framework, a detected blind spot, a
+deliberate widening, a fact about the environment. Identified by a stable code that is never
+renamed, so it can be documented once and depended on. Every notice announcing a blind spot
+has an entry in the limitations register.
+_Avoid_: warning, diagnostic, message, error
+
+**Limitations register**:
+The catalogue of accepted holes — each with its direction of failure, whether Reach can
+detect an instance of it, and its upgrade path. What makes named under-selection an honest
+position rather than a silent one.
+_Avoid_: known issues, caveats

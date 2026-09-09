@@ -54,3 +54,27 @@ Reaches into [Method identity and the performance budget](09-method-identity-and
 and [The unmappable-change rule table](15-the-unmappable-change-rule-table.md). Blocks
 [Write the spec](12-write-the-spec.md): it is a correctness rule, and the spec cannot state
 which direction change detection errs in without it.
+
+## Comments
+
+**From [The report contract](07-the-report-contract.md):** an **attribute-only change must
+count as a changed member**, and the reason is sharper than the general
+`const`/initializer/attribute-argument gap already listed above.
+
+PRD §4.2 selects a test that is **new since the baseline**. Reach reads only the *current*
+compiled output and cannot enumerate the baseline's tests without building it, so the only
+affordable implementation is to derive newness from the change set: an added test method is
+a changed member that happens to be a test.
+
+That derivation breaks on a case with no attribute *argument* involved at all. **Adding
+`[Fact]`, `[Test]` or `[TestMethod]` to an existing method creates a new test while its body
+stays byte-identical.** A body-level hash sees nothing, the method never enters the changed
+set, and the new test never runs — an under-selection, which the correctness rule forbids.
+The same applies to `[Theory]`/`[TestCase]`/`[DataRow]` added to a method that was already a
+test, and to a test class gaining an attribute that makes its methods discoverable.
+
+So the answer to "is the unit of comparison the member declaration?" has a correctness
+consequence beyond the consumer-side inlining problem: if the unit stays the body, ticket 07
+needs a separate mechanism for `new-since-baseline`, and there isn't an affordable one.
+Ticket 07 has kept `new-since-baseline` as a rule distinct from `own-source-changed` in the
+report so that the two can diverge if this ticket decides they must.

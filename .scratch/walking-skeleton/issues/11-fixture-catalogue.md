@@ -46,3 +46,36 @@ arguments, and method-level matching survives only via an adapter re-parse that 
 supported configurations disable — so this is the one fixture standing between the design
 and a silent under-selection. Ideally exercised under both the default configuration and
 `UseNUnitFilter=false`.
+
+## Comments
+
+**From [The report contract](07-the-report-contract.md):** four fixtures, and one of them
+changes the answer to "what exactly is asserted".
+
+1. **Report determinism.** The report is specified as byte-deterministic for a given input,
+   every array sorted by a documented key, with timings segregated into one envelope object
+   so that excluding a single key makes two reports comparable. A fixture that runs the same
+   input twice and compares the two documents pins this — and it is what makes exact
+   assertions affordable elsewhere, since without determinism every assertion needs bespoke
+   comparison logic. This bears directly on the open question above: **exact expected
+   selections become the cheap option**, not the brittle one.
+2. **An empty selection**, asserting the report emits **zero invocations** for the project —
+   not an empty filter string, which runs everything. The dialect research already wanted an
+   empty-selection fixture asserting exit code 0 in every host; this is the report-side half,
+   and it is the assertion that stops the most expensive possible regression.
+3. **A chunked selection.** Under `dotnet test` in VSTest mode there is no working response
+   file, so a selection past the command-line ceiling splits across several invocations
+   (ADR-0009). The ceiling arrives at roughly 100 test methods through `cmd`, so the fixture
+   needs enough tests to cross it — assert that the invocations partition the selection with
+   no test dropped and none duplicated.
+4. **The NUnit `~` over-match count.** The existing NUnit fixture above proves the rendered
+   filter does not *under*-select. This adds the other side: include a `MyTest` and a
+   `MyTest2` where only `MyTest` is selected, and assert the report's rendered-match count
+   reports `MyTest2` as an extra. That number feeds
+   [the over-selection measurement](17-defining-the-over-selection-measurement.md), so a
+   fixture that lets it silently read zero would corrupt the headline metric.
+
+Also worth folding into the negative-assertion list above: a change that maps to a member
+which reaches **no** test at all, asserting it appears in the report's forward change list
+with a count of zero. That is the field that makes an under-selection visible, and it is
+only trustworthy if something proves it fires.

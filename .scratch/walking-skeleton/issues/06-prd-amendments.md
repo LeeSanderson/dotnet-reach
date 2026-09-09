@@ -65,6 +65,27 @@ pointers](05-generics-delegates-and-function-pointers.md):
   most likely to be read as a bug. It needs the owner's explicit sign-off in the PRD text,
   not just in an ADR.
 
+Added after [The report contract](07-the-report-contract.md):
+
+- **§4.3, output contract.** The section describes "a filter suitable for `dotnet test
+  --filter`, and a JSON report containing" five things. Both halves are now too small. Reach
+  emits **complete argument vectors per (test project, target framework)**, not a filter
+  string — because the correct rendering depends on framework generation, package version,
+  runner host and which length escape hatch that host accepts, and because a selection past
+  roughly 100 test methods does not fit on a command line at all (ADR-0009). And the report
+  carries far more than five fields: outcomes, per-project modes, selection rules, path
+  classes, a forward list of changes that reached nothing, notices with stable codes, a run
+  envelope, and a versioned schema. Restate §4.3 as a pointer to the schema rather than an
+  enumeration that will be wrong within a release, and say plainly that the schema is a
+  product surface with a compatibility promise.
+- **§4.2, selection rules.** Rule 3, "it is new since the baseline", is not free. Reach reads
+  only the current compiled output and cannot enumerate the baseline's tests without building
+  it, so newness has to be derived from the change set — and that derivation misses a test
+  created by **adding `[Fact]` to an existing method**, whose body is byte-identical. Either
+  §4.2 acknowledges that rule 3 depends on attribute-level change detection, or it names the
+  hole. Escalated to [What counts as a changed member](18-what-counts-as-a-changed-member.md);
+  the PRD should not keep listing the rule as though it were satisfied by a body hash.
+
 Resolved when the owner has accepted or rejected each item and PRD.md reflects the outcome.
 Record any rejection and its reasoning in the answer — a rejected amendment means the
 corresponding ADR needs revisiting, not quietly ignoring.
