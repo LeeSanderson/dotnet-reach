@@ -15,6 +15,11 @@ want to start building, that is the edge of the map: hand off instead.
 - Product definition: [PRD.md](../../PRD.md). Vocabulary: [CONTEXT.md](../../CONTEXT.md).
   Decisions: [docs/adr/](../../docs/adr/). Read the glossary before writing anything and
   use its terms; where a decision contradicts the PRD, say so explicitly.
+- **PRD.md is at v0.2** and already reflects every decision through ticket 07, so a
+  contradiction found there is news rather than known staleness. Its closing appendix lists
+  what v0.1 said and what superseded it. A fresh contradiction goes to
+  [PRD amendments](issues/06-prd-amendments.md) — reopen it rather than editing the PRD
+  under an unrelated ticket, since amending an approved document is the owner's call.
 - Default skills for a ticket: `grilling` and `domain-modeling`, unless its `Type:` says
   otherwise.
 - **The correctness rule outranks everything.** Under-selection is a correctness bug, not
@@ -146,6 +151,18 @@ Resolved tickets:
   **containment edge** from the kernel method, and first-party members the host calls back
   into are not reachable at all, left open and named. Every IL claim verified by
   disassembly, and two working assumptions were overturned in the process.
+
+- [PRD amendments](issues/06-prd-amendments.md): **every amendment accepted, nothing rejected**,
+  so no ADR needed revisiting. PRD.md is now **v0.2** with an appendix tabulating each change
+  against the record that drove it. The owner call that mattered: ADR-0008's override is written
+  in as a **bounded exception in a new §8.1** — it holds only while every hole is in the register
+  and surfaced in the report, and lapses with the register — which gave §12 a second correctness
+  criterion for M1, since shadow mode is M2's and cannot measure it. Rule 4 removed outright
+  rather than restated as a pipeline union, so nothing invites a consumer to depend on behaviour
+  Reach does not implement. Four contradictions outside the checklist were found and fixed;
+  §4.2 rule 3 now records its dependency on attribute-level detection without pre-empting
+  ticket 18. Two new commitments: the report schema carries a compatibility promise, and §11
+  holds a revisit trigger for the coverage argument.
 
 ## Not yet specified
 

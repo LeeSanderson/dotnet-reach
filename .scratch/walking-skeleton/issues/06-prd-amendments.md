@@ -1,7 +1,7 @@
 # PRD amendments
 
 Type: task (HITL)
-Status: open
+Status: resolved
 Blocked by: (none)
 
 ## Question
@@ -89,3 +89,69 @@ Added after [The report contract](07-the-report-contract.md):
 Resolved when the owner has accepted or rejected each item and PRD.md reflects the outcome.
 Record any rejection and its reasoning in the answer — a rejected amendment means the
 corresponding ADR needs revisiting, not quietly ignoring.
+
+## Answer
+
+**Every item accepted. Nothing rejected, so no ADR needs revisiting.** PRD.md is now
+**Approved v0.2 · 9 September 2026**, with a closing *Appendix — amendments since v0.1* that
+tabulates each change against the decision record that drove it. That table, not this answer,
+is the canonical index of what moved.
+
+Three items were owner calls rather than transcription, and were decided as follows.
+
+**§8/§12, ADR-0008 — accepted, conditional on the register.** The invariant stays the standing
+rule; M1's override is a *bounded exception* in a new **§8.1**, and the bound is explicit: it
+holds only while every accepted hole is in the limitations register and surfaced in the report
+where a user judging a selection will see it. If the register lapses, the exception lapses and
+the invariant governs again. §10's conservatism-plus-disclosure claim is cited as the reason
+that bargain is honest rather than a loophole. M2 is stated as the return to an unexceptional
+invariant, so there is no standing licence to under-select past M1.
+
+This gave **§12 a second correctness criterion**: M1 cannot meet the shadow-mode gate, because
+shadow mode is what measures it, so M1 is held instead to *every known hole registered and
+reported, asserted by a test rather than by review*. That is the mechanical form of ADR-0008's
+condition, and it is what [The limitations register](19-the-limitations-register.md) has to
+satisfy. §3's definition of under-selection carries a pointer to §8.1 so the contradiction
+cannot read as an oversight.
+
+**§4.2 rule 4 — removed outright.** The alternative considered was restating it as something a
+pipeline unions in for itself, which is safe (widening always is). Rejected in favour of a plain
+removal citing ADR-0001: an invitation to union in a previously-failed set invites a consumer to
+depend on behaviour Reach does not implement, test or report on.
+
+**Recording — v0.2 with an amendment log.** Chosen over silent in-place editing because the
+approved v0.1 has readers: anyone holding it can now see the delta and follow one link to the
+reasoning. *How to read this document* also states that where the two disagree, the ADR wins.
+
+Items handled by default, flagged rather than asked:
+
+- **§4.2 rule 3** now says plainly that newness is *derived from the change set* — Reach cannot
+  enumerate the baseline's tests without building it — and so depends on change detection seeing
+  attribute-level edits, with the `[Fact]`-added-to-an-existing-method case named in §11 as open.
+  Deliberately does **not** pre-empt [What counts as a changed
+  member](18-what-counts-as-a-changed-member.md): the PRD records the dependency and the hole,
+  and ticket 18 still owns the decision.
+
+Four contradictions outside the checklist were found and fixed, all the same class of staleness
+the ticket exists to clear:
+
+- **§11, "Is standalone mode supported at all?"** — was still open, resting on freshness being
+  uninferable. ADR-0003 removed the premise and both modes ship, so it is marked settled.
+- **§11, data-driven test identity** — v0.1's *proposed* resolution is now adopted and confirmed
+  safe by [Filter dialects and runner
+  detection](01-filter-dialects-and-runner-detection.md).
+- **§2, §4.1 step 6, §10** — all three still described the output as "a test filter", which §4.3
+  no longer says. Now "the commands the pipeline should run".
+- **§4.1 step 3** — "read every assembly in the solution's output" contradicted the new §8.2;
+  it now points at the analysis scope.
+
+Two additions worth noting as commitments, because both are now product surface rather than
+design notes: **the report schema carries a compatibility promise** (additive growth, no
+breaking changes), and **§11 records a revisit trigger** for the coverage argument — Microsoft's
+extension published publicly with a local filesystem provider, at which point §9.1 is re-argued
+from scratch rather than cited. A **§8 table row** was also added for a source-binary mismatch,
+which ADR-0003 makes an error and the table did not list.
+
+No new tickets. The documentation obligations this creates — a schema reference, the exit-code
+table, a page per notice code — land in the fog patch that already holds them, and the register
+is already [ticket 19](19-the-limitations-register.md).
