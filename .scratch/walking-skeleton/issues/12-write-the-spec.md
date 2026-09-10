@@ -2,7 +2,7 @@
 
 Type: task
 Status: open
-Blocked by: 10, 11, 15, 17, 18, 19 (04, 05, 06, 07, 08, 09, 13, 14 resolved)
+Blocked by: (none — every other ticket resolved)
 
 ## Question
 

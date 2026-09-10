@@ -241,6 +241,75 @@ Resolved tickets:
   silent under-selection. `-c`, `-o` and `--artifacts-path` demote from layout inputs to
   **narrowing hints**. Stale output is mostly free; the residue is a stale assembly under
   `--no-build` whose own source is unchanged but whose dependencies moved.
+- [What counts as a changed member](issues/18-what-counts-as-a-changed-member.md): the unit of
+  comparison is the **whole member declaration** with trivia stripped, not the body — free,
+  since Roslyn already parses the file, and it closes `const` values, field initializers, enum
+  members, attribute arguments and default parameter values in one move. It also settles the
+  case ticket 07 escalated: **adding `[Fact]` to an existing method now registers as a change**,
+  so PRD §4.2 rule 3 stays derivable from the change set and needs no separate mechanism. Type
+  headers hash separately, giving whole-type widening when a test class gains a discoverability
+  attribute. The consumer side is implemented rather than named —
+  [ADR-0014](../../docs/adr/0014-removals-and-constant-changes-widen-transitive-referencers.md):
+  a **removed member or changed compile-time constant** widens every in-scope assembly
+  transitively referencing the declaring one, because an inlined constant leaves no reference for
+  the reverse walk to follow. Additions are self-covering, so the trigger stays narrow; not
+  restricted to public surface, since `InternalsVisibleTo` defeats that. MVID stays out — it
+  needs the baseline's binaries.
+- [The unmappable-change rule table](issues/15-the-unmappable-change-rule-table.md): **six rows**,
+  and **directory containment** is what stops the table degenerating into "select everything" — a
+  `Directory.Build.props` widens projects at or below its own directory, which is the same rule
+  MSBuild's props discovery uses, so it is not a heuristic. Only `global.json`, `nuget.config`,
+  lock files and solution files are genuinely solution-wide. **No row adds dependents**: whole-assembly
+  widening plus a backwards walk already reaches everything downstream. Row 6, the default, is the
+  one deliberate under-selection — nearest ancestor project, or **nothing plus a notice** — taken
+  because whole-solution selection would mean a README change runs the whole suite, and rows 1–5
+  already enumerate every build-affecting root file. Generator detection stays conventional and
+  **does not fall back to whole-suite**, which would fire hardest on solutions with no generator.
+- [Fixture catalogue](issues/11-fixture-catalogue.md): **one fixture solution, four mandatory
+  integration assertions, everything else in memory.** The four are the ones that fail *silently* —
+  the NUnit `~` filter in both directions, an empty selection emitting **zero invocations**,
+  whole-project fallback reporting `total: unknown`, and report determinism run twice. Determinism
+  is what makes the rest cheap: with it pinned, **exact expected selections become the cheap
+  option**, which settles the ticket's open question. Chunking demotes to a unit test of the
+  chunker; layout tests relocate already-built output, now that discovery scans rather than
+  predicts. Integration tests get their history from a **temp git repository per test**, which also
+  makes ADR-0010's exit 4 testable. Negative assertions are named individually, including that a
+  `Handler<Foo>` change *does* select `Handler<Bar>` tests, so ADR-0006's accepted cost stays a
+  decision rather than drifting.
+- [Project layout and ports](issues/10-project-layout-and-ports.md): three projects
+  (`Reach.Cli`, `Reach.Core`, one test project), no `Reach.Contracts` until it has a consumer, and
+  **one port** — `IProcessRunner`, covering `git` and `dotnet build`, which is two adapters at one
+  seam. The ticket's most consequential call inverts its own framing: **the metadata reader is a
+  parameter, not a port.** The core takes already-opened `PEReader`s, so an in-memory Roslyn
+  compilation and a file on disk are the same type — the BCL type already *is* the seam, and
+  wrapping it would be a shallow module that fails the deletion test. **No filesystem
+  abstraction**: it is viral, and every filesystem test here needs a real git repository anyway.
+  Nothing public in `Core`; the CLI is the only contract. Roslyn confined to one namespace by
+  convention, with an architecture test named as the cheap upgrade. The deciding argument is the
+  ticket's own: Reach will be pointed at its own repository, and an interface with one
+  implementation forever is exactly what makes widening fan out.
+- [Defining the over-selection measurement](issues/17-defining-the-over-selection-measurement.md):
+  **a field in the report, not a harness** — every input is already carried for other reasons.
+  The numerator is **tests that will run**, not tests selected, because the NUnit `~` rendering
+  makes what runs a strict superset; both counts and the gap are reported. Unenumerable projects
+  contribute to neither side and appear as a **second number** rather than a fake denominator,
+  since counting them as zero would flatter the ratio in exactly the case where Reach runs a whole
+  project. Unweighted by duration — Reach never runs tests and ADR-0001 forbids persisting, so
+  there is no history to weight by. The widening delta uses the **cheap path-class count**, no
+  second walk. And the stop condition is fixed *before* any number exists: over 70% mostly
+  `widened` means stop, while over 70% mostly `compiled` means the codebase is too connected for
+  any selector and is **not Reach's failure** — the row most likely to be misread as one.
+- [The limitations register](issues/19-the-limitations-register.md): it **exists** —
+  [docs/limitations.md](../../docs/limitations.md), twenty-three entries. One hand-written
+  document, not generated in either direction, because the report says *this run hit this gap*
+  while the register explains what the gap is and how it closes. What binds them is the code plus
+  **one test: every `blind-spot` code must have an entry**, which turns ADR-0008's "named and
+  surfaced" clause into a build failure and is the whole mechanism. That also answers
+  detectability from the clean side — a detectable gap has a code and is mechanically tied to an
+  entry; an undetectable one has no code, and the document is the only place it can live. Three
+  directions rather than one: eleven under-selection, eight over-selection, two **measurement**
+  (new from ticket 17), plus ADR-0010's environment entry. Notice suppression stays out, and if it
+  ever ships `blind-spot` must be non-suppressible.
 
 ## Not yet specified
 
@@ -248,11 +317,12 @@ Resolved tickets:
   unfamiliar pipeline in under an hour, using only documentation" a success criterion, so
   documentation is in M1's scope, but nothing about its shape is decided. Named obligations
   are already accumulating — the resolved tickets each flag the surprises they create — so
-  this graduates once there is somewhere for them to land. One piece has already graduated:
-  the limitations register is now
-  [ticket 19](issues/19-the-limitations-register.md), because ADR-0008 made it load-bearing
-  rather than documentation hygiene. The rest — install guide, CI recipes, the explanation
-  of a surprising selection — is still fog, though
+  this graduates once there is somewhere for them to land. One piece has graduated and is now
+  **done**: [the limitations register](issues/19-the-limitations-register.md) exists at
+  [docs/limitations.md](../../docs/limitations.md), because ADR-0008 made it load-bearing rather
+  than documentation hygiene — so M1 now has two documents rather than one, and the named
+  obligations the resolved tickets keep generating have somewhere to land. The rest — install
+  guide, CI recipes, the explanation of a surprising selection — is still fog, though
   [the report contract](issues/07-the-report-contract.md) has narrowed it: the docs now owe a
   schema reference with a compatibility promise, one page per notice code, the exit-code table,
   and the single line of pipeline guidance that falls out of it (*non-zero means run the whole

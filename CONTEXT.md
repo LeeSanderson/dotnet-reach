@@ -113,6 +113,13 @@ its debug symbols point at. Everything else in the output — package dependenci
 framework assemblies — is not first-party and is not analysed.
 _Avoid_: local assembly, our code, project assembly
 
+**Assembly instance**:
+One project compiled for one target framework — the unit Reach actually analyses. A
+multi-targeted project contributes several, each with its own methods and its own
+identities. The target framework is read from the assembly's own metadata, never from
+where the file sits on disk.
+_Avoid_: assembly (ambiguous for a multi-targeted project), output, binary
+
 **Project graph**:
 The dependency graph between project files, derived from their project references.
 Much coarser than the call graph, and available without compiling anything.
@@ -152,6 +159,14 @@ _Avoid_: whole-project selection, which selects tests directly rather than addin
 Putting every surviving member of a type into the changed set and then walking back as
 normal. The same operation as whole-assembly widening, one granularity finer.
 _Avoid_: type-level selection
+
+**Recompilation widening**:
+Widening every assembly instance that transitively references a changed one, because the
+compiler bakes values and binding decisions into consumers — so a consumer's IL can differ
+while its source is byte-identical, and an inlined constant leaves no reference behind for
+the reverse walk to follow. Triggered only by removals and by changed compile-time
+constants; additions are self-covering.
+_Avoid_: transitive widening, dependent selection
 
 **Dialect**:
 The filter expression grammar a particular test framework, framework version and runner
