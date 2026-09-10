@@ -25,6 +25,13 @@ want to start building, that is the edge of the map: hand off instead.
 - **The correctness rule outranks everything.** Under-selection is a correctness bug, not
   a tuning issue (PRD §8). Where a decision is genuinely uncertain, take the option that
   widens the selection.
+- **Resolve at 80/20** — [ADR-0012](../../docs/adr/0012-m1-resolves-open-design-questions-at-80-20.md).
+  Where a question has a simple answer covering the common case and a complete answer
+  covering every edge, take the simple one and write the constraint down. Owner decision,
+  generalising ADR-0008 across the whole remaining map. It does **not** license leaving a
+  question undecided: state the rule adopted, the case it does not cover, and the direction
+  that case fails in. Simplifications that over-select are free; those that under-select owe
+  a register entry, and a notice code wherever Reach can detect an instance.
 - M1 ships **no framework models** (PRD §12). Whole-project fallbacks are not models and
   are in scope.
 
@@ -73,9 +80,10 @@ the ADR where one exists.
 - **Testing is in-memory Roslyn compilation for the core** plus committed fixture
   solutions for integration, with every environment boundary behind a port.
 - **PRD §4.2's rules 1, 2, 3 and 5 are in; rule 4 is out** — [ADR-0001](../../docs/adr/0001-reach-persists-no-state-between-runs.md).
-- **The tool targets `net8.0` with `RollForward: LatestMajor`**, so it installs on any
-  modern agent (PRD §1.2). *Under revision* — see
-  [Tool target framework versus the Roslyn dependency](issues/13-tool-target-framework-versus-roslyn.md).
+- **The tool targets `net10.0`** with `RollForward: LatestMajor` —
+  [ADR-0013](../../docs/adr/0013-the-tool-targets-net10-0.md). Supersedes the charting
+  decision of `net8.0`; roll-forward is still needed, since the default policy will not
+  cross a major version.
 - **Selection granularity is the test method**, never the individual test case (PRD §11).
 - **M1 accepts named under-selection** rather than widening for every hole —
   [ADR-0008](../../docs/adr/0008-m1-accepts-named-under-selection.md). A conscious owner
@@ -188,6 +196,52 @@ Resolved tickets:
   is the preview, which puts the weight on the summary — resolved baseline SHA first, the two
   zero-outcomes visibly distinct, over-selection as a percentage.
 
+- [Tool target framework versus the Roslyn dependency](issues/13-tool-target-framework-versus-roslyn.md):
+  **the tool targets `net10.0`**, single TFM, latest Roslyn —
+  [ADR-0013](../../docs/adr/0013-the-tool-targets-net10-0.md). Owner decision against the
+  ticket's recommendation of `net8.0`; the accepted cost is that Reach does not run on an agent
+  carrying only .NET 8, since roll-forward never goes downward. `RollForward: LatestMajor` is
+  **kept**, because the default policy will not cross a major version either. The packaging
+  conflict dissolves rather than being traded: Roslyn 5.9.0 ships a native `net10.0` asset, so
+  there is no facade chain and no `NU1605` class. The fact-find also disposed of the option the
+  ticket flagged for investigation — the `netstandard2.0` asset is the *same* front-end
+  retargeted, verified identical in public surface and byte-identical in parse output across
+  C# 1–14 — so lowering the floor later is a csproj edit, not a redesign. The half that mattered
+  more than the TFM: **Roslyn checks language versions at binding, not parsing**, so a
+  parse-only tool gets no "feature unavailable" diagnostic and **a clean parse never proves a
+  correct parse** — an older parser meeting `record` produced a *method* named `Person` with
+  zero diagnostics. Hence: parse with `LanguageVersion.Preview`; an error diagnostic *or*
+  skipped-tokens trivia widens the project; a `LangVersion` above Reach's ceiling gets a notice
+  but not widening; the silent misparse is a register entry.
+- [Method identity and the performance budget](issues/09-method-identity-and-performance-budget.md):
+  identity is a **64-bit value** — 1 discriminator bit, 31-bit assembly-instance ordinal, 32-bit
+  metadata token. **The TFM needs no field**: an assembly instance *is* one (project, TFM) pair,
+  so multi-targeting falls out of the ordinal and the hottest struct stays 8 bytes. The
+  discriminator exists because ADR-0006 needs widening anchors for declarations Reach never
+  reads — `object::ToString`, `IDisposable::Dispose` — which have no token, so they are interned
+  external references instead. Cross-assembly resolution is a **one-time string-keyed index per
+  assembly**, which is what PRD §9.4 actually permits: it forbids strings in *identity*, not in a
+  build-once lookup. Resolution failure has three different right answers, and ambiguous
+  signatures **edge to every candidate**. Edges are a flat triple array inverted into a CSR
+  reverse index *after* the pass; only the reverse index is built. **No committed wall-clock
+  number in M1** (owner decision) — instead the two §9.4 constraints asserted by tests, phase
+  timings always emitted, and the first real run as the first datapoint. Explicitly not
+  optimised: no concurrency at all, which closes the map's parallelism fog.
+- [Assembly discovery under ambiguous output layouts](issues/14-assembly-discovery-under-ambiguous-output-layouts.md):
+  **Reach does not predict layouts, it scans and verifies.** The ticket's candidate-path
+  algorithm is dissolved rather than answered — enumerate `*.dll` excluding `obj/`, prune by
+  expected assembly name before opening anything, then prove each survivor by its debug symbols
+  and read its TFM from **`TargetFrameworkAttribute`** rather than a path segment, which is
+  exactly what every ambiguous layout destroys on disk and metadata always had. Every listed
+  case falls out for free, the empty outer-build directory included, because no path is ever
+  computed. The payoff: **"assembly not found" becomes unambiguously an error** (exit 3) since
+  the tree was searched, with projects outside analysis scope and projects producing no assembly
+  excluded from the expected set. Two candidates for one instance **errors and names the
+  disambiguating option**; newest-mtime guessing was rejected for converting a loud stop into
+  silent under-selection. `-c`, `-o` and `--artifacts-path` demote from layout inputs to
+  **narrowing hints**. Stale output is mostly free; the residue is a stale assembly under
+  `--no-build` whose own source is unchanged but whose dependencies moved.
+
 ## Not yet specified
 
 - **What documentation M1 ships.** PRD §12 makes "a competent engineer can add Reach to an
@@ -209,7 +263,6 @@ Resolved tickets:
   caller. What is still unpinned is the shape those take and who they are written for.
 - **CI for the Reach repository itself** — build, test, pack, and whether the tool is
   published anywhere during M1.
-- **Parallelism in graph construction**, and whether M1 commits to any concurrency at all.
 - **How the spec is sliced into implementation tickets** — depends on which seams survive.
 
 ## Out of scope
