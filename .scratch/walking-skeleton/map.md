@@ -164,6 +164,30 @@ Resolved tickets:
   ticket 18. Two new commitments: the report schema carries a compatibility promise, and §11
   holds a revisit trigger for the coverage argument.
 
+- [CLI surface](issues/08-cli-surface.md): one verb, one positional, eleven options.
+  `dotnet reach select [<SOLUTION|PROJECT>] [options] [-- <dotnet build args>]`. The verb is
+  **required** — bare `dotnet reach` prints help and **exits 1**, because the default mode
+  invokes `dotnet build` and a newcomer typing the tool's name must not trigger a multi-minute
+  build; and because exiting 0 with no report would hand a mis-wired pipeline "success". Two
+  findings turned out to be environmental rather than matters of taste, and both became ADRs.
+  **Reach does not work under default CI settings** —
+  [ADR-0010](../../docs/adr/0010-the-baseline-is-auto-detected-with-no-default-branch-fallback.md):
+  `actions/checkout` fetches one refspec at depth 1, so `merge-base` has neither the ref nor the
+  history, and `refs/remotes/origin/HEAD` does not exist after *any* CI checkout because neither
+  provider runs `git clone` — so the obvious default-branch fallback is unavailable offline. The
+  fix is one line of YAML, which makes exit 4 the likeliest first run anyone has and its message a
+  designed artifact that prints the literal line. Baseline collapses to **one** option, `--base`,
+  always merge-base, auto-detected through five CI variables (not TeamCity, which does not pass
+  the value to the build process). **A solution wins over a project in discovery** —
+  [ADR-0011](../../docs/adr/0011-a-solution-wins-over-a-project-in-target-discovery.md) —
+  deliberately diverging from MSBuild's base-name rule, because choosing the project is choosing
+  the narrower scope; `.slnf` is rejected for the same reason. That draws the boundary ticket 14
+  inherits: **mirroring `dotnet build` governs option spellings, not resolution semantics.** Added
+  `--` passthrough to the build, without which every non-trivial adopter is stuck on `--no-build`,
+  with layout-affecting switches refused in the passthrough. No dry-run verb: a normal run already
+  is the preview, which puts the weight on the summary — resolved baseline SHA first, the two
+  zero-outcomes visibly distinct, over-selection as a percentage.
+
 ## Not yet specified
 
 - **What documentation M1 ships.** PRD §12 makes "a competent engineer can add Reach to an
@@ -178,7 +202,11 @@ Resolved tickets:
   [the report contract](issues/07-the-report-contract.md) has narrowed it: the docs now owe a
   schema reference with a compatibility promise, one page per notice code, the exit-code table,
   and the single line of pipeline guidance that falls out of it (*non-zero means run the whole
-  suite*). What is still unpinned is the shape those take and who they are written for.
+  suite*). [The CLI surface](issues/08-cli-surface.md) narrowed it again and made one piece
+  non-negotiable: since Reach does not work under default CI settings (ADR-0010), the docs owe **a
+  recipe per CI provider whose first line is the fetch-depth setting**, plus a TeamCity recipe
+  passing `--base` explicitly, and one line stating that `.reach/`'s lifecycle belongs to the
+  caller. What is still unpinned is the shape those take and who they are written for.
 - **CI for the Reach repository itself** — build, test, pack, and whether the tool is
   published anywhere during M1.
 - **Parallelism in graph construction**, and whether M1 commits to any concurrency at all.
@@ -206,6 +234,17 @@ Scope is fixed by the destination: a spec for M1. These sit beyond it and do not
   run, and the in-process provider path is `[Experimental]` and needs a code change in the
   consumer's test project — the infrastructure ask PRD §9.1 exists to avoid. Revisit trigger:
   Reach running discovery for some other reason, or the filter provider stabilising.
+- **An `explain` verb**, from [the CLI surface](issues/08-cli-surface.md). The version worth
+  building reads `report.json` and renders one test's selection as prose, never re-analysing —
+  PRD §12 requires a surprising selection to be explicable "without rerunning the tool", which
+  makes a re-analysing `explain` a criterion violation dressed as a feature. But that same wording
+  makes the *report* the thing that satisfies the criterion, leaving `explain` a convenience over a
+  document already required to be sufficient. `--paths` ships in M1 so the data exists for whoever
+  writes it. Revisit trigger: the first real surprising selection the report alone fails to explain.
+- **A dry-run or preview verb**, from the same ticket. Not deferred but dissolved: `select` does not
+  run tests, so a normal run already *is* the preview, and a second verb would create two code paths
+  obliged to agree. The requirement it carried — an honest "this codebase over-selects too heavily
+  to be worth adopting" — became the summary's over-selection percentage instead.
 - **Notice suppression.** Deliberately absent from M1: a suppression switch un-surfaces
   exactly the holes ADR-0008's bargain depends on surfacing, and there is no evidence yet
   about which codes are noisy. If it ever ships, `blind-spot` must be non-suppressible.

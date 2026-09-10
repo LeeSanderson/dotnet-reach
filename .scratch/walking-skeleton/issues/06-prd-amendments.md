@@ -54,12 +54,12 @@ pointers](05-generics-delegates-and-function-pointers.md):
   two, and the gap between them is where two of M1's accepted holes come from. An async
   method's body is a concrete method, but nothing in first-party IL *calls* it — control
   reaches `MoveNext` through `AsyncTaskMethodBuilder.Start` inside the BCL — so the
-  containment edge in [ADR-0006](../../docs/adr/0006-a-graph-node-is-an-il-method-definition.md)
+  containment edge in [ADR-0006](../../../docs/adr/0006-a-graph-node-is-an-il-method-definition.md)
   exists to reconnect it. And a generic instantiation is exposed at the *call site*, not as
   a distinct definition, which is why identity collapses instantiations. Restate the claim
   so it does not read as "this is free".
 - **§8 and §12, the correctness rule.**
-  [ADR-0008](../../docs/adr/0008-m1-accepts-named-under-selection.md) consciously overrides
+  [ADR-0008](../../../docs/adr/0008-m1-accepts-named-under-selection.md) consciously overrides
   "under-selection is a correctness bug, not a tuning issue" for M1, in favour of named,
   reported holes. This is the single largest deviation from the approved PRD and the one
   most likely to be read as a bug. It needs the owner's explicit sign-off in the PRD text,

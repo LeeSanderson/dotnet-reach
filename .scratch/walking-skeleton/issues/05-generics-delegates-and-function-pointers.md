@@ -192,7 +192,7 @@ future narrowing may touch.
 
 ADR-0004 promised narrowing "may only ever remove widened edges, never compiled ones",
 written when only two classes existed; containment and type initialization are neither.
-[ADR-0004](../../docs/adr/0004-call-graph-edges-carry-provenance.md) has been amended
+[ADR-0004](../../../docs/adr/0004-call-graph-edges-carry-provenance.md) has been amended
 rather than left quietly wrong. This also sharpens its measurement: "the walk with
 widening and without" means the four non-widened kinds versus all seven.
 
@@ -204,7 +204,7 @@ stated limits beats an exhaustively-specified one that does not exist.
 
 This **overrides the map's standing note that the correctness rule outranks everything**,
 for this ticket's residues only, and it is recorded in
-[ADR-0008](../../docs/adr/0008-m1-accepts-named-under-selection.md) rather than left
+[ADR-0008](../../../docs/adr/0008-m1-accepts-named-under-selection.md) rather than left
 implicit. It is defensible because PRD §10 already scopes the product claim to
 "conservative, and that it says so when it cannot see" — but *only* while the holes are
 named somewhere a user actually reads. That makes the constraints list load-bearing, and

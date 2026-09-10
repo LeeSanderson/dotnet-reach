@@ -9,7 +9,7 @@ Blocked by: (none — 07 resolved, see Comments)
 Graduated from the fog by [Generics, delegates and function
 pointers](05-generics-delegates-and-function-pointers.md), which accepted a set of named
 under-selection holes rather than widening for each of them
-([ADR-0008](../../docs/adr/0008-m1-accepts-named-under-selection.md)).
+([ADR-0008](../../../docs/adr/0008-m1-accepts-named-under-selection.md)).
 
 That decision is only safe while the holes are visible to whoever is deciding whether to
 trust a selection. PRD §10's claim is conservatism **plus disclosure** — "it says so when
@@ -53,7 +53,7 @@ landing.
   selectable-on.
 - The deferred absorption test for deleted methods, from the same ticket.
 - Renames are never detected —
-  [ADR-0005](../../docs/adr/0005-change-detection-is-keyed-on-declared-type.md).
+  [ADR-0005](../../../docs/adr/0005-change-detection-is-keyed-on-declared-type.md).
 
 The output is the register's format and its first full contents, in a form
 [Write the spec](12-write-the-spec.md) can reference rather than restate.

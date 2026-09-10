@@ -272,7 +272,7 @@ runsettings path, Reach may merge and emit a combined file, and if that file alr
 a `<TestCaseFilter>`, Reach **refuses to filter that project and downgrades it to `run-all`**,
 per the widen-when-uncertain rule. Every chunk and every downgrade emits a notice.
 
-Recorded as [ADR-0009](../../docs/adr/0009-per-host-private-filter-channels-over-runsettings.md),
+Recorded as [ADR-0009](../../../docs/adr/0009-per-host-private-filter-channels-over-runsettings.md),
 because a future reader will find the unlimited runsettings hatch and need to know why it was
 rejected. Rejected alternative: invoking `vstest.console.exe` directly, which *does* accept
 `@file` — locating it means finding a Visual Studio or test-platform installation, a discovery

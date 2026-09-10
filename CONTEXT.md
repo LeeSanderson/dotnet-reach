@@ -11,6 +11,13 @@ The commit a change is measured against. In CI this is the merge-base of the cur
 branch and the target branch, not the target branch's tip.
 _Avoid_: base commit, parent, previous version
 
+**Target branch**:
+The branch the current work merges into, from which the baseline is computed. Never the
+solution or project Reach is pointed at — that has no name and appears as
+`<SOLUTION|PROJECT>` on the command line and as "the solution or single test project" in
+prose.
+_Avoid_: target, base branch, destination branch
+
 **Changed set**:
 The members a change added, altered or removed, computed by matching declared types
 between the baseline and the working tree — keyed on name, never on file path, so a moved
