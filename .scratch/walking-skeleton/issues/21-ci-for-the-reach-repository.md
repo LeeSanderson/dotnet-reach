@@ -42,3 +42,20 @@ walking skeleton; CI earns its place here by unblocking those tickets, not by be
 thorough.
 
 Resolve at 80/20, per the map's Notes.
+
+## Comments
+
+**From [What documentation M1 ships](20-what-documentation-m1-ships.md),** which resolved
+first and left two constraints here rather than deciding them:
+
+1. **The GitHub Actions workflow is also a documentation artifact.** M1 ships one complete
+   CI recipe, and it must be the same YAML this repository's own CI runs, asserted by a test
+   comparing the fenced block in `docs/adopting-reach.md` against the workflow file. That
+   ticket made adoption cost a *judged* criterion everywhere except here, because
+   ADR-0010 makes exit 4 the likeliest first run anyone has and a wrong fetch-depth line in
+   the docs breaks PRD §12's criterion on contact. So whatever CI does, it does it in a
+   workflow file shaped to be readable as an example.
+2. **Publishing is still open and the docs are waiting on it.** The README carries a
+   two-line quickstart whose first line is a `dnx` install. If M1 publishes nothing, that
+   line documents a future state and both the README and `docs/adopting-reach.md` need
+   different wording — so this ticket's answer changes text that is already specified.

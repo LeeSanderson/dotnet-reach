@@ -311,6 +311,28 @@ Resolved tickets:
   (new from ticket 17), plus ADR-0010's environment entry. Notice suppression stays out, and if it
   ever ships `blind-spot` must be non-suppressible.
 
+- [What documentation M1 ships](issues/20-what-documentation-m1-ships.md): **four documents, one
+  of which already exists** — `README.md`, `docs/adopting-reach.md`, `docs/report-schema.md` and
+  the limitations register — and **no new machinery**. Every obligation the resolved tickets had
+  been banking lands in exactly one of them. The ticket settled a disagreement between two
+  resolved tickets: ticket 07 assumed the register documents every notice code, ticket 19 scoped
+  it to accepted *holes*, and both cannot hold once `no-changed-member-reached-a-test` is a code.
+  The register keeps its identity; **the schema reference carries a complete code index**, full
+  entry for codes that are not limitations, one line plus a link for codes that are — which also
+  narrows ticket 07's "one page per notice code" to one index entry. **No JSON Schema file**: the
+  contract is deliberately tolerant, so the instrument is a **committed example `report.json`
+  that is the output of ticket 11's determinism fixture**, which means the test already written
+  pins the documentation too. **Adoption cost is judged, not measured** — nothing rides on it the
+  way ADR-0008's bargain rides on correctness — with one carve-out, since ADR-0010 makes exit 4
+  the likeliest first run anyone has: the GitHub Actions recipe must be **the same YAML Reach's
+  own CI runs**, which is a constraint [ticket 21](issues/21-ci-for-the-reach-repository.md)
+  inherits. That verified recipe plus **a table row per provider** replaces the six recipes
+  ticket 08 committed to — a deliberate, owner-taken narrowing, since ADR-0010 already is that
+  table and an unverified recipe looks more authoritative than a row. The exit-code table lives
+  with the pipeline author, not the schema; the `explain` verb's absence becomes a **"Reading a
+  surprising selection"** section walking the committed example; and the README stops pointing
+  adopters at the PRD as though a planning artifact were the manual.
+
 ## Not yet specified
 
 The fog is clear. Everything in scope is now either decided above or a live ticket, and the
@@ -318,9 +340,8 @@ two remaining decisions both block the destination ticket,
 [Write the spec](issues/12-write-the-spec.md):
 
 - **What documentation M1 ships** graduated into
-  [its own ticket](issues/20-what-documentation-m1-ships.md), now that the obligations the
-  resolved tickets kept banking are numerous and specific enough to decide against. One piece
-  had already graduated ahead of it and is **done** —
+  [its own ticket](issues/20-what-documentation-m1-ships.md) and is now **resolved**. One piece
+  had already graduated ahead of it and is likewise done —
   [the limitations register](issues/19-the-limitations-register.md) exists at
   [docs/limitations.md](../../docs/limitations.md) — because ADR-0008 made it load-bearing
   rather than documentation hygiene.
