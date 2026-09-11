@@ -313,27 +313,23 @@ Resolved tickets:
 
 ## Not yet specified
 
-- **What documentation M1 ships.** PRD §12 makes "a competent engineer can add Reach to an
-  unfamiliar pipeline in under an hour, using only documentation" a success criterion, so
-  documentation is in M1's scope, but nothing about its shape is decided. Named obligations
-  are already accumulating — the resolved tickets each flag the surprises they create — so
-  this graduates once there is somewhere for them to land. One piece has graduated and is now
-  **done**: [the limitations register](issues/19-the-limitations-register.md) exists at
-  [docs/limitations.md](../../docs/limitations.md), because ADR-0008 made it load-bearing rather
-  than documentation hygiene — so M1 now has two documents rather than one, and the named
-  obligations the resolved tickets keep generating have somewhere to land. The rest — install
-  guide, CI recipes, the explanation of a surprising selection — is still fog, though
-  [the report contract](issues/07-the-report-contract.md) has narrowed it: the docs now owe a
-  schema reference with a compatibility promise, one page per notice code, the exit-code table,
-  and the single line of pipeline guidance that falls out of it (*non-zero means run the whole
-  suite*). [The CLI surface](issues/08-cli-surface.md) narrowed it again and made one piece
-  non-negotiable: since Reach does not work under default CI settings (ADR-0010), the docs owe **a
-  recipe per CI provider whose first line is the fetch-depth setting**, plus a TeamCity recipe
-  passing `--base` explicitly, and one line stating that `.reach/`'s lifecycle belongs to the
-  caller. What is still unpinned is the shape those take and who they are written for.
-- **CI for the Reach repository itself** — build, test, pack, and whether the tool is
-  published anywhere during M1.
-- **How the spec is sliced into implementation tickets** — depends on which seams survive.
+The fog is clear. Everything in scope is now either decided above or a live ticket, and the
+two remaining decisions both block the destination ticket,
+[Write the spec](issues/12-write-the-spec.md):
+
+- **What documentation M1 ships** graduated into
+  [its own ticket](issues/20-what-documentation-m1-ships.md), now that the obligations the
+  resolved tickets kept banking are numerous and specific enough to decide against. One piece
+  had already graduated ahead of it and is **done** —
+  [the limitations register](issues/19-the-limitations-register.md) exists at
+  [docs/limitations.md](../../docs/limitations.md) — because ADR-0008 made it load-bearing
+  rather than documentation hygiene.
+- **CI for the Reach repository itself** graduated into
+  [its own ticket](issues/21-ci-for-the-reach-repository.md): what runs on a push, and whether
+  the tool is published anywhere during M1.
+- **How the spec is sliced into implementation tickets** was never separate work — it is what
+  [Write the spec](issues/12-write-the-spec.md) does, and the seams it depends on were settled
+  by [project layout and ports](issues/10-project-layout-and-ports.md).
 
 ## Out of scope
 
