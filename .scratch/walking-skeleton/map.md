@@ -333,21 +333,54 @@ Resolved tickets:
   surprising selection"** section walking the committed example; and the README stops pointing
   adopters at the PRD as though a planning artifact were the manual.
 
+- [CI for the Reach repository itself](issues/21-ci-for-the-reach-repository.md): **three workflow
+  files in two phases, publication to NuGet.org, and a gate that never trusts Reach's own
+  selection.** The circular constraint it inherited — the documented recipe must be the YAML this
+  repo runs, but that recipe is a `pull_request` workflow installing a published package, and the
+  repo had neither — is dissolved by **sequencing rather than compromise**: pre-publish, work lands
+  on `main` and CI gates on push; at the first tag the package exists, PRs begin, and the recipe
+  becomes runnable *with the published package*, so workflow and docs block are byte-identical and
+  the parity test ships with the workflow. You cannot dogfood before you publish and do not need
+  to. A fact removed one decision outright: `xunit.v3` **4.0.0** makes `dotnet test` a **hard build
+  error** without `global.json`'s MTP runner setting, so the file is mandatory — which **corrected
+  the first fact-find**, whose conclusion had been that doing nothing left VSTest. The gate matrixes
+  **both operating systems**, the one place worth the minutes, because Reach matches debug-symbol
+  document paths against the working tree and is developed on Windows, so a separator or
+  case-sensitivity bug on Linux is silent under-selection. Publishing is NuGet.org because **GitHub
+  Packages requires auth even for public packages** (live 401s), which would make the `dnx`
+  quickstart work only for its author; version hand-edited and pushed on a `v*` tag, since a
+  published package **cannot be deleted, only unlisted**; Trusted Publishing via OIDC, since new API
+  keys are capped at 30 days. **Reach runs on Reach but does not gate** — gating M1 on its own
+  selection is the unproven narrowing PRD §8 forbids, and shadow mode is M2; running both *is* a
+  miniature shadow mode and the first real datapoint ticket 09 deferred the performance budget to.
+  Surfaced the exit-8 finding now held as
+  [ticket 22](issues/22-zero-match-filters-and-the-third-runner-host.md), and discharged ticket 20's
+  two open constraints — with one bite: **`dnx` with a bare package id will not find a prerelease**,
+  so the quickstart's version pin is now a requirement rather than a preference.
+
 ## Not yet specified
 
-The fog is clear. Everything in scope is now either decided above or a live ticket, and the
-two remaining decisions both block the destination ticket,
-[Write the spec](issues/12-write-the-spec.md):
+The fog is clear, and every patch that was ever written here has graduated and resolved.
+Everything in scope is now either decided above or one of the two live tickets:
+[zero-match filters and the third runner host](issues/22-zero-match-filters-and-the-third-runner-host.md),
+which is the frontier, and the destination ticket it blocks,
+[Write the spec](issues/12-write-the-spec.md).
+
+Ticket 22 is **not** graduated fog. It was surfaced by a resolution rather than sharpened out
+of a dim view: nobody suspected it, because it rests on a fact about a package version that
+did not exist while this map was charted. Worth recording, since it is the one thing on this
+map the fog section could not have predicted.
+
+The patches that did graduate, kept as a record of where the frontier ran:
 
 - **What documentation M1 ships** graduated into
-  [its own ticket](issues/20-what-documentation-m1-ships.md) and is now **resolved**. One piece
+  [its own ticket](issues/20-what-documentation-m1-ships.md) and is **resolved**. One piece
   had already graduated ahead of it and is likewise done —
   [the limitations register](issues/19-the-limitations-register.md) exists at
   [docs/limitations.md](../../docs/limitations.md) — because ADR-0008 made it load-bearing
   rather than documentation hygiene.
 - **CI for the Reach repository itself** graduated into
-  [its own ticket](issues/21-ci-for-the-reach-repository.md): what runs on a push, and whether
-  the tool is published anywhere during M1.
+  [its own ticket](issues/21-ci-for-the-reach-repository.md) and is **resolved**.
 - **How the spec is sliced into implementation tickets** was never separate work — it is what
   [Write the spec](issues/12-write-the-spec.md) does, and the seams it depends on were settled
   by [project layout and ports](issues/10-project-layout-and-ports.md).
