@@ -378,11 +378,41 @@ Resolved tickets:
   multi-instance project carries a platform suffix. Amends tickets 07, 11 and 14; PRD §4.3 checked
   and clear, since it already committed to complete argument vectors.
 
+- [Write the spec and implementation tickets](issues/12-write-the-spec.md): **the destination.**
+  [spec.md](spec.md) exists — nineteen sections, with direction (*errs over* / *errs under* /
+  *stops*) stated on every rule, and a closing index from each claim to the one record that
+  argues it, so a reader zooms rather than re-reads this map. All four carry-forwards are
+  discharged as block quotes that cannot be skimmed past: the **join stays abstract** and its
+  ticket is a spike that builds both candidates and deletes the loser — with *failure direction*
+  named as the row that outranks the rest; **ADR-0003's checksum mechanism is unverified**, and
+  verifying it against real build output is its ticket's *first* acceptance criterion, with an
+  instruction to stop and report if it does not hold; and tickets 07, 11 and 14 are flagged in
+  bold as *read the amendment with the answer*, since a spec drawn from their headlines alone
+  would have got all three wrong. Two things no single ticket owned: the **nine-phase pipeline**,
+  whose ordering invariant is that no phase after correspondence verification can fail the run,
+  and a **concrete normative shape for the report** — twenty-two tickets specified its fields
+  without anyone writing the document down. The **twenty-two implementation tickets** live in a
+  [separate effort](../m1-implementation/README.md), and that separation is deliberate: putting
+  them in this effort's `issues/` would have poisoned the frontier, since a future wayfinder
+  session would find twenty-two build tickets and try to resolve one as a decision. Staged so
+  something runs end to end early — **A (01–13)** is the spine over compiled edges only, **B
+  (14–18)** is every widening and correctness rule, **C (19–22)** is acceptance, documentation
+  and release — and the tickets state plainly that **stage order is integration order, not
+  release order**. Twenty-one are `ready-for-agent`; publishing is `ready-for-human`. Where a
+  decision is the kind a competent engineer would reasonably reverse, the ticket says **do not
+  re-add this** and gives the reason, so the argument is not had again by someone holding only
+  the code.
+
 ## Not yet specified
 
-The fog is clear, and every patch that was ever written here has graduated and resolved.
-Everything in scope is now either decided above or the destination itself:
-[Write the spec](issues/12-write-the-spec.md), which is unblocked and the only live ticket.
+Nothing. The fog is clear, every patch that was ever written here has graduated and resolved,
+and the destination is reached: [spec.md](spec.md) exists and the implementation tickets are
+written and triaged. **This map is complete.**
+
+Work continues in a separate effort at
+[.scratch/m1-implementation/](../m1-implementation/README.md), which is a build, not a map.
+Nothing here is a backlog: `issues/` holds the twenty-two decision tickets that produced the
+spec, all resolved, and they are the record of how each rule was argued rather than work to do.
 
 Ticket 22 was **not** graduated fog. It was surfaced by a resolution rather than sharpened out
 of a dim view: nobody suspected it, because it rests on a fact about a package version that
