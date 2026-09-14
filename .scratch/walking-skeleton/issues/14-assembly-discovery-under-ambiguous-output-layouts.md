@@ -165,3 +165,28 @@ Mostly free, and worth enumerating because each has a different reason:
   the same built output relocated, rather than a project per layout — and it is the natural place
   to prove the ambiguity error fires.
 - Rendering still owes the MTP `-o` trap above. Unowned by this ticket, carried to the spec.
+
+## Amended by ticket 22
+
+This answer says the target framework is read from `TargetFrameworkAttribute` *"rather than a
+path segment, which is exactly what every ambiguous layout destroys on disk and metadata always
+had."* **Metadata does not always have it.**
+[Zero-match filters and the third runner host](22-zero-match-filters-and-the-third-runner-host.md)
+verified that `net10.0`, `net10.0-windows` and `net10.0-windows10.0.19041.0` all stamp the
+identical `TargetFrameworkAttribute(".NETCoreApp,Version=v10.0")`, with `FrameworkDisplayName`
+reading `.NET 10.0` for all three.
+
+Two corrections follow, both contained:
+
+- **Read `TargetPlatformAttribute` as well.** Its presence and value separate a platform-suffixed
+  instance from a plain one, so discovery still resolves two distinct assembly instances and this
+  ticket's "two candidates for one instance" error does **not** misfire. Identity is unaffected.
+- **The declared moniker is unrecoverable**, because `TargetPlatformAttribute` always carries a
+  version: `net10.0-windows` reads back as `Windows7.0`, and a project declaring
+  `net10.0-windows7.0` produces byte-identical attributes. Only the command line needs that
+  string, so the consequence lands on rendering rather than on discovery —
+  [ADR-0015](../../../docs/adr/0015-invocations-pin-the-target-framework-where-it-is-derivable.md).
+
+The scan-and-verify thesis stands. The output directory name *was* re-examined as a moniker
+source and rejected for this ticket's own reason: it is exactly what the ambiguous layouts
+destroy.

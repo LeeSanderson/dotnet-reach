@@ -169,9 +169,19 @@ constants; additions are self-covering.
 _Avoid_: transitive widening, dependent selection
 
 **Dialect**:
-The filter expression grammar a particular test framework, framework version and runner
-host accepts. One selection renders into as many dialects as the solution contains.
+The filter expression grammar accepted by one combination of test framework, framework
+version and runner host. The first two are read from the compiled output; the third is
+chosen when Reach renders, not detected. One selection renders into as many dialects as
+the solution contains.
 _Avoid_: filter format, syntax
+
+**Runner host**:
+The process that will run the tests. Not a property of a test project — the same assembly
+answers to `dotnet test`, to its own executable, and for some package versions to VSTest,
+differing in filter switch spelling and in exit code when a filter matches nothing. Reach
+detects which hosts are available and chooses one when it renders an invocation; M1 always
+chooses `dotnet test`.
+_Avoid_: runner, test host, execution mode
 
 **Shadow mode**:
 Running the selection and then the whole suite anyway, recording every test that was

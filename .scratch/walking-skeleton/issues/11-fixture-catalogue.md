@@ -184,3 +184,31 @@ named test:
   a fixture.
 - **[Write the spec](12-write-the-spec.md)**: the four integration assertions are M1's
   acceptance criteria, which is what PRD §12's "correct on a sample repository" turns into.
+
+## Amended by ticket 22
+
+**Assertion 2 keeps its place and loses its last clause.** It reads *"an empty selection emits
+zero invocations, not an empty filter string... and exit code 0 in every host"* — but with zero
+invocations there is no host and no exit code to assert. The clause was written believing Reach
+might emit a filter that matches nothing.
+[Zero-match filters and the third runner host](22-zero-match-filters-and-the-third-runner-host.md)
+restates it as two halves:
+
+- **Report side**: an empty selection produces `mode: skip` with `invocations: []`.
+- **Consumer side**, which is the half that earns an end-to-end slot: a loop over `invocations`
+  starts **no process at all**, asserted by driving the loop and observing that no test command
+  was issued.
+
+Its justification gains a second direction. It was "an empty filter runs everything" — the most
+expensive possible regression. It is now *also* "and under Microsoft.Testing.Platform an
+empty-match filter exits 8 and turns a green build red". Two opposite failure modes, both closed
+by the same zero-invocations fact.
+
+**One new unit assertion, not a fifth fixture**: every emitted argv carries a framework selector
+matching its entry's target framework, where the project has more than one assembly instance
+([ADR-0015](../../../docs/adr/0015-invocations-pin-the-target-framework-where-it-is-derivable.md)).
+A missing selector fails **loudly** — exit 8, with the offending module named in the runner's own
+summary — so by this ticket's stated criterion it does not earn an integration slot. It is the
+same kind of claim about the same array as the demoted chunking assertion. The fixture solution's
+multi-targeted project already covers the report side through the exact-expected-selection
+assertions.

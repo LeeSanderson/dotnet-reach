@@ -25,6 +25,11 @@ the fixture catalogue and acceptance criteria; and the performance budget.
 - Every rule that errs toward widening must say so, and say why. PRD §8's invariant is the
   product; an implementation ticket that does not know which direction is safe will pick
   the wrong one under time pressure.
+- **Three resolved tickets carry amendments made after they closed**, and a spec drawn from
+  their headline answers alone would be wrong. Read the `## Amended by ticket 22` sections of
+  [the report contract](07-the-report-contract.md), [the fixture catalogue](11-fixture-catalogue.md)
+  and [assembly discovery](14-assembly-discovery-under-ambiguous-output-layouts.md) alongside
+  their answers.
 
 Implementation tickets should be sliced so that each is one agent session, ordered so
 something runs end to end early — the point of a walking skeleton is a thin path through

@@ -206,6 +206,19 @@ and the first one distorts the numbers Reach reports about itself.
   ([ADR-0009](adr/0009-per-host-private-filter-channels-over-runsettings.md)).
 - **Direction**: over-selection. **Detectable**: **yes** — `runsettings-filter-conflict`.
 
+### A platform-suffixed target framework downgrades its project to whole-project selection
+- **Shape**: an invocation for a project with more than one assembly instance must carry
+  `-f <moniker>`, or the frameworks that selected nothing exit 8 and fail the build. The
+  **declared** moniker is not in assembly metadata: `net10.0`, `net10.0-windows` and
+  `net10.0-windows7.0` are indistinguishable there, and the last two are byte-identical
+  ([ADR-0015](adr/0015-invocations-pin-the-target-framework-where-it-is-derivable.md)). So where
+  such a project carries a `TargetPlatformAttribute` on any of its instances, Reach cannot name
+  the frameworks on the command line and runs the project in full across all of them.
+- **Direction**: over-selection. **Detectable**: **yes** — `framework-selector-underivable`.
+- **Upgrade path**: `dotnet msbuild <project> -getProperty:TargetFrameworks`, which returns the
+  verbatim declared strings and evaluates without building — a third adapter behind the
+  `IProcessRunner` port that already carries `git` and `dotnet build`.
+
 ---
 
 ## Measurement
@@ -239,3 +252,16 @@ Limitations of the numbers Reach reports about itself. They do not affect select
 - **Direction**: not a selection gap — Reach stops. **Exit 4**, whose message prints the literal
   line of YAML that fixes it.
 - **Detectable**: yes, and it is the likeliest outcome of anyone's first run.
+
+### `dotnet test` is unusable without a `global.json` runner setting
+- **Shape**: `xunit.v3` 4.0.0 resolves to `xunit.v3.mtp-v2`, and on the .NET 10 SDK that
+  package's MSBuild targets make `dotnet test` a **hard build error** unless `global.json` sets
+  `"test": { "runner": "Microsoft.Testing.Platform" }`. Adding the VSTest packages back does not
+  help — the block comes from the package, not from a missing adapter. M1 renders only
+  `dotnet test` invocations, so in such a repository none of them can run.
+- **Direction**: not a selection gap. The invocations are correctly rendered; the repository
+  cannot execute them. Reach still emits them and does not stop.
+- **Detectable**: **yes** — `test-runner-not-configured`. The MTP adapter appears in the
+  assembly's referenced identities and `global.json` is a root file Reach already reads, so both
+  halves are free. The message prints the literal `global.json` block, the way exit 4 prints its
+  line of YAML.

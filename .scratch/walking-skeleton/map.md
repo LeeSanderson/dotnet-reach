@@ -358,18 +358,38 @@ Resolved tickets:
   two open constraints — with one bite: **`dnx` with a bare package id will not find a prerelease**,
   so the quickstart's version pin is now a requirement rather than a preference.
 
+- [Zero-match filters and the third runner host](issues/22-zero-match-filters-and-the-third-runner-host.md):
+  **the hole was real and was not the one suspected — a multi-targeted project needs a framework
+  selector, and closing that turns exit 8 from a hazard into an instrument.** `dotnet test` runs
+  every target framework of a project, so a filter naming a test that exists under only one of them
+  makes the others exit 8 — Reach would have rendered the *correct* answer and failed the build with
+  it. Every project with more than one assembly instance now carries `-f <moniker>` —
+  [ADR-0015](../../docs/adr/0015-invocations-pin-the-target-framework-where-it-is-derivable.md). With
+  that closed, **no path through Reach's design renders a filter matching nothing** — stated
+  explicitly, since the claim *is* the mitigation — so **exit 8 from a Reach invocation means a Reach
+  rendering bug and nothing else**, documented as such and never suppressed: `--ignore-exit-code 8`
+  does not merely hide the signal, it rewrites the module's line to `passed`. The two decisions hold
+  each other up: **M1 renders for `dotnet test` only**, because `-filter` turns out to be accepted by
+  *both* hosts in *different* filter languages with no diagnostic either side, so rendering the
+  native dialect would manufacture the exact artifact that makes exit 8 ambiguous. The expensive
+  discovery: **the declared TFM string is not in assembly metadata** — `net10.0`, `net10.0-windows`
+  and `net10.0-windows7.0` are indistinguishable there, and the last two byte-identical — which
+  corrects ticket 14's "metadata always had it" and costs one named over-selection when a
+  multi-instance project carries a platform suffix. Amends tickets 07, 11 and 14; PRD §4.3 checked
+  and clear, since it already committed to complete argument vectors.
+
 ## Not yet specified
 
 The fog is clear, and every patch that was ever written here has graduated and resolved.
-Everything in scope is now either decided above or one of the two live tickets:
-[zero-match filters and the third runner host](issues/22-zero-match-filters-and-the-third-runner-host.md),
-which is the frontier, and the destination ticket it blocks,
-[Write the spec](issues/12-write-the-spec.md).
+Everything in scope is now either decided above or the destination itself:
+[Write the spec](issues/12-write-the-spec.md), which is unblocked and the only live ticket.
 
-Ticket 22 is **not** graduated fog. It was surfaced by a resolution rather than sharpened out
+Ticket 22 was **not** graduated fog. It was surfaced by a resolution rather than sharpened out
 of a dim view: nobody suspected it, because it rests on a fact about a package version that
 did not exist while this map was charted. Worth recording, since it is the one thing on this
-map the fog section could not have predicted.
+map the fog section could not have predicted — and it earned its place twice over, because the
+hole it actually found was a different one again, sitting inside a ticket that had already
+resolved.
 
 The patches that did graduate, kept as a record of where the frontier ran:
 
@@ -418,6 +438,19 @@ Scope is fixed by the destination: a spec for M1. These sit beyond it and do not
   run tests, so a normal run already *is* the preview, and a second verb would create two code paths
   obliged to agree. The requirement it carried — an honest "this codebase over-selects too heavily
   to be worth adopting" — became the summary's over-selection percentage instead.
+- **Rendering for the direct executable**, from
+  [zero-match filters and the third runner host](issues/22-zero-match-filters-and-the-third-runner-host.md).
+  An xUnit v3 project is an executable by design, so a consumer running `./MyTests.exe` is
+  plausible — but the host is not a property of the test project, and since Reach emits an argv,
+  **the argv already is the choice of host**. `dotnet test` is the one choice determinable from
+  the assembly, because the generated entry point dispatches on `--internal-msbuild-node`.
+  Rendering the native dialect as well would double the dialect matrix and, worse, manufacture
+  the one genuinely silent cross-host failure: `-filter` is accepted by both hosts in different
+  filter languages. Named out of scope with **no notice** — it would fire on nearly every xUnit v3
+  project and mean nothing. Errs safe: a consumer who ignores Reach's argv runs everything or
+  hand-renders from the report. Revisit trigger: an adopter whose CI runs test executables
+  directly.
+
 - **Notice suppression.** Deliberately absent from M1: a suppression switch un-surfaces
   exactly the holes ADR-0008's bargain depends on surfacing, and there is no evidence yet
   about which codes are noisy. If it ever ships, `blind-spot` must be non-suppressible.

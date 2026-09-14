@@ -359,3 +359,27 @@ Ruled out of scope on the map with the revisit trigger recorded.
   the dialect over-match count as an input.
 - **[CLI surface](08-cli-surface.md)**: now unblocked, with the flags this contract implies.
 - **[PRD amendments](06-prd-amendments.md)**: two items.
+
+## Amended by ticket 22
+
+[Zero-match filters and the third runner host](22-zero-match-filters-and-the-third-runner-host.md)
+amends the `invocations` array in two ways. Read them with this answer, not instead of it.
+
+**The argv carries a framework selector.** This ticket keyed entries on (test project, target
+framework) but never said what distinguishes the two entries' *commands*. Nothing did, and the
+omission is load-bearing: `dotnet test` runs every target framework of a project, so a filter
+naming a test that exists under only one of them makes the others exit **8** and fails the build
+on a correct selection. Every project with more than one assembly instance therefore gets
+`-f <moniker>` — [ADR-0015](../../../docs/adr/0015-invocations-pin-the-target-framework-where-it-is-derivable.md).
+Single-instance projects have nothing to cross-contaminate and get no selector.
+
+**`run-all` with zero invocations is now representable.** This answer tied zero invocations to
+`skip`. Where the framework moniker cannot be derived, a project's entries are all `run-all` and
+the single project-wide invocation is carried by the **first entry in the report's own sort
+order**, so a consumer's loop issues exactly one command. The remaining entries carry `run-all`
+with an empty array. A consumer reading one entry in isolation must therefore not infer "nothing
+to run" from an empty `invocations` array alone; `mode` is the field that says it.
+
+Unchanged and now **earned rather than implied**: an empty selection emits zero invocations, so
+no path through Reach's design renders a filter that matches nothing. That claim is what makes
+exit 8 from a Reach invocation diagnostic.
