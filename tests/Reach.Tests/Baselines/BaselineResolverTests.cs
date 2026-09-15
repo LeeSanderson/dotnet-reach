@@ -19,6 +19,10 @@ public class BaselineResolverTests
 
     public BaselineResolverTests()
     {
+        // First, so the two specific rev-parse scripts below still win: every reference names
+        // something unless a test says otherwise. Resolution verifies the detected reference
+        // before taking a merge-base, because a CI checkout has no local branches.
+        runner.Succeeds($"{ForkPoint}\n", "rev-parse");
         runner.Succeeds("false\n", "--is-shallow-repository");
         runner.Succeeds($"{ForkPoint}\n", "merge-base");
         runner.Succeeds($"{Head}\n", "rev-parse", "HEAD");
@@ -111,6 +115,60 @@ public class BaselineResolverTests
 
         AssertUnresolvable(resolution);
         Assert.Equal(ExitCode.BaselineUnresolvable, resolution.ExitCode);
+    }
+
+    // ---- The spelling a provider hands out is not the one git can name ------------------
+
+    [Fact]
+    public async Task A_detected_branch_that_names_nothing_locally_falls_back_to_the_remote()
+    {
+        // The environment every rung exists for: actions/checkout fetches into
+        // refs/remotes/origin/* and detaches HEAD, so `main` names nothing and `origin/main`
+        // is the same branch. Without the fallback the whole ladder is exit 4 in CI.
+        runner.Fails(128, "fatal: ambiguous argument 'main'\n", "rev-parse", "main");
+        runner.Succeeds("abc\n", "rev-parse", "origin/main");
+
+        environment["GITHUB_BASE_REF"] = "main";
+
+        AssertResolved(await Resolve(), BaselineOrigin.GitHubActions, "origin/main");
+    }
+
+    [Fact]
+    public async Task A_local_branch_wins_over_the_remote_one_of_the_same_name()
+    {
+        // A developer running --base main by hand means their branch, which can legitimately
+        // sit behind or ahead of the remote's.
+        runner.Succeeds("abc\n", "rev-parse", "main");
+        runner.Succeeds("def\n", "rev-parse", "origin/main");
+
+        AssertResolved(await Resolve("main"), BaselineOrigin.Option, "main");
+    }
+
+    [Fact]
+    public async Task A_branch_name_containing_a_slash_falls_back_too()
+    {
+        // release/1.0 and feature/a-b are ordinary branch names, not qualified references, and
+        // they hit the CI checkout exactly as main does. Reserving the fallback for names
+        // without a slash would have excluded the commonest naming convention there is.
+        runner.Fails(128, "fatal: ambiguous argument 'release/1.0'\n", "rev-parse", "release/1.0");
+        runner.Succeeds("abc\n", "rev-parse", "origin/release/1.0");
+
+        environment["SYSTEM_PULLREQUEST_TARGETBRANCH"] = "refs/heads/release/1.0";
+
+        AssertResolved(await Resolve(), BaselineOrigin.AzureDevOps, "origin/release/1.0");
+    }
+
+    [Fact]
+    public async Task A_reference_neither_spelling_can_name_is_exit_4_saying_both()
+    {
+        runner.Fails(128, "fatal: ambiguous argument\n", "rev-parse", "upstream/main");
+        runner.Fails(128, "fatal: ambiguous argument\n", "rev-parse", "origin/upstream/main");
+
+        var resolution = await Resolve("upstream/main");
+
+        AssertUnresolvable(resolution);
+        Assert.Contains("'upstream/main'", resolution.Message, StringComparison.Ordinal);
+        Assert.Contains("'origin/upstream/main'", resolution.Message, StringComparison.Ordinal);
     }
 
     [Fact]

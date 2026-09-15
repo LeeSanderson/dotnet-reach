@@ -83,6 +83,41 @@ public class BaselineResolverIntegrationTests
     }
 
     [Fact]
+    public async Task A_detected_branch_name_resolves_against_a_checkout_with_no_local_branches()
+    {
+        using var upstream = TempRepository.Create("reach-upstream");
+
+        upstream.WriteFile("src/A.cs", "class A;");
+        upstream.Commit("first");
+        upstream.WriteFile("src/B.cs", "class B;");
+        var target = upstream.Commit("second");
+
+        // Exactly what actions/checkout does, and the reason the test above never caught this:
+        // every branch lands in refs/remotes/origin/*, HEAD is detached, and there is no local
+        // branch at all. Every provider hands out a bare target name — GITHUB_BASE_REF is
+        // "main", never "origin/main" — so the detected reference names nothing.
+        using var work = TempRepository.Create("reach-ci-checkout");
+
+        work.Git("remote", "add", "origin", "file://" + upstream.Path.Replace('\\', '/'));
+        work.Git("fetch", "--no-tags", "--prune", "origin", "+refs/heads/*:refs/remotes/origin/*");
+        work.Git("checkout", "--detach", "origin/main");
+
+        Assert.Equal(string.Empty, work.Git("for-each-ref", "--format=%(refname)", "refs/heads").Trim());
+
+        var resolution = await new BaselineResolver(new GitAdapter(new ProcessRunner(), work.Path))
+            .ResolveAsync(
+                null,
+                name => name == "GITHUB_BASE_REF" ? "main" : null,
+                TestContext.Current.CancellationToken);
+
+        Assert.True(resolution.Resolved, resolution.Message);
+        Assert.Equal(target, resolution.Baseline!.Sha);
+
+        // The report says the spelling that was used, not the one that was detected.
+        Assert.Equal("origin/main", resolution.Baseline.Reference);
+    }
+
+    [Fact]
     public async Task A_baseline_that_lands_on_HEAD_is_detected_against_a_real_repository()
     {
         using var repository = TempRepository.Create();

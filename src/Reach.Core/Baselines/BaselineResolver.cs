@@ -66,6 +66,17 @@ internal sealed class BaselineResolver(GitAdapter git)
                 notices);
         }
 
+        if (await NameableAsync(reference, cancellationToken).ConfigureAwait(false) is not { } nameable)
+        {
+            return Unresolvable(
+                $"neither '{reference}' nor 'origin/{reference}' names a commit in this "
+                + "repository",
+                environment,
+                notices);
+        }
+
+        reference = nameable;
+
         var mergeBase = await git.MergeBaseAsync(reference, cancellationToken).ConfigureAwait(false);
 
         if (!mergeBase.Succeeded || mergeBase.Value.Length == 0)
@@ -135,6 +146,47 @@ internal sealed class BaselineResolver(GitAdapter git)
             BaselineOrigin.LocalRemoteBranch,
             null);
     }
+
+    /// <summary>
+    /// The spelling git can actually name, which is not the one any provider hands out.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <strong>A CI checkout has no local branches at all.</strong> Neither GitHub Actions nor
+    /// any other agent runs <c>git clone</c>: they fetch <c>+refs/heads/*:refs/remotes/origin/*</c>
+    /// and detach HEAD, so <c>refs/heads/main</c> does not exist and <c>git merge-base HEAD main</c>
+    /// fails with <em>"Not a valid object name"</em>. Every variable on the ladder is a bare
+    /// branch name — <c>GITHUB_BASE_REF</c> is <c>main</c>, never <c>origin/main</c> — so without
+    /// this the whole detection ladder resolves to nothing in the one environment it exists for,
+    /// and exit 4 prints checkout guidance the reader has already followed.
+    /// </para>
+    /// <para>
+    /// The reference is probed <em>as given</em> first, so a developer running <c>--base main</c>
+    /// by hand keeps getting their local branch, which can legitimately differ from the remote's;
+    /// a tag or a SHA resolves there too and never reaches the fallback.
+    /// </para>
+    /// <para>
+    /// The fallback is unconditional rather than reserved for names without a slash, because
+    /// <c>release/1.0</c> and <c>feature/a-b</c> are ordinary branch names and are exactly the
+    /// case that needs it. It costs nothing to be wrong: the remote spelling is verified before
+    /// it is used, so an <c>origin/</c> that names nothing leaves the answer unchanged.
+    /// </para>
+    /// </remarks>
+    private async Task<string?> NameableAsync(string reference, CancellationToken cancellationToken)
+    {
+        if (await ExistsAsync(reference, cancellationToken).ConfigureAwait(false))
+        {
+            return reference;
+        }
+
+        var remote = "origin/" + reference;
+
+        return await ExistsAsync(remote, cancellationToken).ConfigureAwait(false) ? remote : null;
+    }
+
+    /// <summary>Whether git can name it, which <c>rev-parse</c> answers and nothing else does.</summary>
+    private async Task<bool> ExistsAsync(string reference, CancellationToken cancellationToken) =>
+        (await git.RevParseAsync(reference, cancellationToken).ConfigureAwait(false)).Succeeded;
 
     /// <summary>
     /// Azure DevOps' format varies by repository provider — <c>refs/heads/main</c> for Azure
