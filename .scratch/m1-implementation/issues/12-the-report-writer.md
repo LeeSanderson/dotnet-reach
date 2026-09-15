@@ -1,6 +1,6 @@
 # The report writer, exit codes and the human summary
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 11
 Spec: [§13](../../walking-skeleton/spec.md#13-the-report), [§14.1](../../walking-skeleton/spec.md#141-two-closed-sets)–[§14.2](../../walking-skeleton/spec.md#142-exit-codes)
 
@@ -138,3 +138,53 @@ most likely to be disbelieved.
 
 Filling `invocations` — ticket 13. The notice catalogue and the measurement fields — ticket 18;
 this ticket writes the shape and the sort, not the codes.
+
+## Comments
+
+**Implemented** in `Reach.Core/Reporting`: `Report` (the DTOs, whose declaration order *is* the
+serialised order), `Outcome`, `ReportBuilder`, `ReportWriter`, `PhaseTimings` and
+`HumanSummary`. The pipeline now returns exit 0 on a complete run, and
+`ReachCli` writes the report and the summary.
+
+**`dotnet reach select` runs end to end.** Pointed at its own repository it reports:
+
+```
+Baseline fbfdfac961 (merge-base with 'main', from Option) — which is HEAD, so only
+uncommitted work can appear as a change
+
+Selected 169 test(s).
+
+  Reach.Tests (net10.0)  filtered  169/303
+```
+
+**Dogfooding found two real bugs immediately**, neither of which any existing test caught.
+
+- **Every enum with more than one member crashed the run.** `SourceRevision.Members` rebuilt an
+  enum's members into a fresh `SyntaxList<MemberDeclarationSyntax>`, which reparents them onto a
+  synthetic node with no source text behind it — and asking such a node for its location throws
+  `ArgumentOutOfRangeException`. It went unnoticed because a one-element `SyntaxList` stores the
+  node itself and needs no synthetic parent, and every enum in the test suite had one member.
+  Fixed, with a multi-member enum test and a new `SourceRevisionRobustnessTests` that parses
+  every `.cs` file in this repository and asserts nothing throws.
+- **The canonicaliser's U+0001 token separator leaked into the report.** `MemberKey` carried
+  parameter types built through `Canonicaliser.Of`, and the member key is a display form as well
+  as a key — it reaches the forward change list. Parameter types are now the source spelling
+  with runs of whitespace collapsed, which is both readable and still exact enough to tell
+  overloads apart.
+
+**Report paths are repository-relative and forward-slashed.** An absolute build-agent path in a
+document people read and diff is noise at best, and it is the one thing that would make two
+runs of the same commit on two machines differ. `SelectRun` carries the repository root for it.
+
+**`total: unknown` is a computed property, not a nullable int in the JSON.** `ReportCounts`
+serialises `total` as either a number or the string `"unknown"`, so the distinction survives a
+round trip and cannot be confused with `0` by a consumer reading it loosely.
+
+**Determinism is asserted in both directions.** Two runs over the same input differ (the
+timings), and are identical once the timings key is dropped. The second half is what makes the
+segregation worth having; asserting only the first would pass with the timings inlined
+everywhere.
+
+**Out of scope and still true:** `invocations` is an empty array on every entry, including
+`filtered` ones. The shape, the sort and the zero-for-`skip` rule are all correct; ticket 13
+fills it. The over-selection `summary` object is ticket 18's.

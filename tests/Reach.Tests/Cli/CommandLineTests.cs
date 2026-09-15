@@ -380,7 +380,7 @@ public class CommandLineTests
     }
 
     [Fact]
-    public async Task Nothing_built_under_no_build_is_exit_3()
+    public async Task Nothing_built_under_no_build_is_exit_3_and_still_writes_a_report()
     {
         using var repository = SolutionRepository();
 
@@ -388,13 +388,19 @@ public class CommandLineTests
 
         // Absence is unambiguous when the tree was searched rather than a path predicted.
         Assert.Equal((int)ExitCode.AssemblyDiscoveryFailed, exitCode);
+        Assert.Contains("No assembly was found", Out + Error);
 
-        // And the phases that did run reported what they found.
-        Assert.Contains("baseline-resolved", Error);
+        // A tool that writes nothing when it fails is one you debug by re-running it with more
+        // flags, on CI, which is the worst place to need a second run.
+        var report = File.ReadAllText(
+            Path.Combine(repository.Path, ReachDirectory.DefaultName, "report.json"));
+
+        Assert.Contains("\"outcome\": \"failed\"", report);
+        Assert.Contains("\"baseline\"", report);
     }
 
     [Fact]
-    public async Task A_run_whose_phases_do_not_exist_yet_is_exit_70_and_says_so()
+    public async Task A_complete_run_exits_0_and_writes_a_report()
     {
         using var repository = SolutionRepository();
 
@@ -411,9 +417,17 @@ public class CommandLineTests
 
         var exitCode = await Run(repository.Path, "select", "--base", "main", "--no-build");
 
-        Assert.Equal((int)ExitCode.InternalError, exitCode);
-        Assert.Contains("not implemented yet", Out + Error);
-        Assert.Contains("2 assembly instance(s)", Out + Error);
+        Assert.Equal((int)ExitCode.Success, exitCode);
+
+        // Nothing changed since the baseline, which is a different piece of news from an empty
+        // selection and gets a visibly different verdict.
+        Assert.Contains("No changes to analyse", Out);
+        Assert.Contains("Baseline ", Out);
+
+        var report = File.ReadAllText(
+            Path.Combine(repository.Path, ReachDirectory.DefaultName, "report.json"));
+
+        Assert.Contains("\"outcome\": \"no-changes\"", report);
     }
 
     /// <summary>The fixture solution inside a real repository, committed as the baseline.</summary>

@@ -55,4 +55,20 @@ internal static class NoticeCodes
     /// its total is unknown rather than zero.
     /// </summary>
     internal const string WholeProjectFallback = "whole-project-fallback";
+
+    // The emptiness taxonomy. `reasons` is a list of these, never prose, and required non-empty
+    // when the outcome is nothing-selected — so every cause of emptiness is documented and
+    // register-linked, and nobody adds one as an ad-hoc string.
+
+    /// <summary>There were changes, they joined, and no test could reach any of them.</summary>
+    internal const string NoChangedMemberReachedATest = "no-changed-member-reached-a-test";
+
+    /// <summary>Every change was outside the union of the test projects' closures.</summary>
+    internal const string AllChangesOutsideAnalysisScope = "all-changes-outside-analysis-scope";
+
+    /// <summary>
+    /// Paths changed, but nothing inside them did: comments, whitespace, or a declaration whose
+    /// canonical form is unchanged.
+    /// </summary>
+    internal const string ChangesWereFormattingOnly = "changes-were-formatting-only";
 }

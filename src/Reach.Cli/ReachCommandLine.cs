@@ -1,6 +1,7 @@
 using System.CommandLine;
 using Reach.Output;
 using Reach.Processes;
+using Reach.Reporting;
 
 namespace Reach.Cli;
 
@@ -175,20 +176,21 @@ internal static class ReachCli
 
         var pipeline = new ReachPipeline(new ProcessRunner());
 
-        var commandLine = new ReachCommandLine(async (request, token) =>
+        var commandLine = new ReachCommandLine(async (parsed, token) =>
         {
+            var request = parsed with
+            {
+                WorkingDirectory = workingDirectory,
+                ForwardedBuildArguments = buildArguments,
+            };
+
+            var timings = new PhaseTimings();
+
             var run = await pipeline
-                .SelectAsync(
-                    request with
-                    {
-                        WorkingDirectory = workingDirectory,
-                        ForwardedBuildArguments = buildArguments,
-                    },
-                    environment,
-                    token)
+                .SelectAsync(request, environment, timings, token)
                 .ConfigureAwait(false);
 
-            Print(run, request, standardOutput, standardError, environment, outputIsRedirected);
+            Print(run, request, timings, standardOutput, standardError, environment, outputIsRedirected);
 
             return (int)run.ExitCode;
         });
@@ -204,15 +206,14 @@ internal static class ReachCli
     private static void Print(
         SelectRun run,
         SelectRequest request,
+        PhaseTimings timings,
         TextWriter standardOutput,
         TextWriter standardError,
         EnvironmentLookup environment,
         bool outputIsRedirected)
     {
-        var destination = ReportDestination.Resolve(
-            request.Report,
-            ReachDirectory.For(request.WorkingDirectory, request.ReportDirectory),
-            request.WorkingDirectory);
+        var directory = ReachDirectory.For(request.WorkingDirectory, request.ReportDirectory);
+        var destination = ReportDestination.Resolve(request.Report, directory, request.WorkingDirectory);
 
         var streams = Streams.For(
             destination,
@@ -220,14 +221,19 @@ internal static class ReachCli
             standardError,
             ColourSupport.Enabled(request.NoColor, environment, outputIsRedirected));
 
-        foreach (var notice in run.Notices)
-        {
-            streams.Notices.WriteLine($"{notice.Code}: {notice.Message}");
-        }
-
         if (run.Message.Length > 0)
         {
-            streams.Summary.WriteLine(run.Message);
+            streams.Notices.WriteLine(run.Message);
         }
+
+        if (!run.WritesReport)
+        {
+            return;
+        }
+
+        var report = ReportBuilder.Build(run, request, timings);
+        var writtenTo = ReportWriter.Write(report, destination, streams);
+
+        streams.Summary.Write(HumanSummary.Write(report, writtenTo, directory.Path));
     }
 }

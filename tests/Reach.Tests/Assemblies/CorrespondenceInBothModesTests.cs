@@ -83,6 +83,7 @@ public class CorrespondenceInBothModesTests
                     NoBuild = noBuild,
                 },
                 _ => null,
+                new Reach.Reporting.PhaseTimings(),
                 Token);
     }
 

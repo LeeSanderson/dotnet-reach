@@ -153,12 +153,19 @@ internal static class SourceRevision
         }
     }
 
-    private static SyntaxList<MemberDeclarationSyntax> Members(BaseTypeDeclarationSyntax declaration) =>
+    /// <summary>
+    /// The members as the tree holds them, never copied into a new list. Rebuilding a
+    /// <see cref="SyntaxList{T}"/> from an enum's members reparents them onto a synthetic node
+    /// with no source text behind it, and asking such a node for its location throws — which it
+    /// does for every enum with more than one member, because a one-element list stores the
+    /// node itself and needs no synthetic parent.
+    /// </summary>
+    private static IEnumerable<MemberDeclarationSyntax> Members(BaseTypeDeclarationSyntax declaration) =>
         declaration switch
         {
             TypeDeclarationSyntax type => type.Members,
-            EnumDeclarationSyntax @enum => new SyntaxList<MemberDeclarationSyntax>(@enum.Members),
-            _ => default,
+            EnumDeclarationSyntax @enum => @enum.Members,
+            _ => [],
         };
 
     private static IEnumerable<(MemberKey Key, SyntaxNode Node, bool IsConstant)> Describe(
@@ -301,8 +308,16 @@ internal static class SourceRevision
             ? []
             : [.. parameters.Parameters.Select(parameter => Mode(parameter) + TypeOf(parameter))];
 
+    /// <summary>
+    /// As written, with runs of whitespace collapsed — <em>not</em> through the canonicaliser.
+    /// A member key is a display form as well as a key: it reaches the report's forward change
+    /// list, and the canonicaliser's U+0001 token separator has no business in a product
+    /// surface.
+    /// </summary>
     private static string TypeOf(ParameterSyntax parameter) =>
-        parameter.Type is null ? string.Empty : Canonicaliser.Of([parameter.Type]);
+        parameter.Type is null
+            ? string.Empty
+            : string.Join(' ', parameter.Type.ToString().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
     private static string Mode(ParameterSyntax parameter)
     {

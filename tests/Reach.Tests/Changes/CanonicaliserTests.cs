@@ -295,4 +295,16 @@ public class CanonicaliserTests
 
         Assert.True(declared["C"].Members.Values.Single().IsCompileTimeConstant);
     }
+
+    [Fact]
+    public void An_enum_with_several_members_reads_a_span_for_each()
+    {
+        // A one-member enum is the case that works by accident: a SyntaxList of one stores the
+        // node itself, so it keeps its place in the tree. Anything longer needs a synthetic
+        // parent, and a node under one has no source text to locate itself in.
+        var declared = SourceRevision.DeclaredTypes("enum C { A = 1, B = 2, C = 3 }");
+
+        Assert.Equal(3, declared["C"].Members.Count);
+        Assert.All(declared["C"].Members.Values, member => Assert.False(member.Span.IsEmpty));
+    }
 }

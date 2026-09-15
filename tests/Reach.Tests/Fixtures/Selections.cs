@@ -33,6 +33,12 @@ internal sealed class Selections : IDisposable
 
     internal CallGraph Graph { get; private set; } = null!;
 
+    internal AnalysisScope Scope { get; private set; } = null!;
+
+    internal IReadOnlyList<AssemblyInstance> Instances { get; private set; } = [];
+
+    internal ChangedSet Changed { get; private set; } = ChangedSet.Empty;
+
     internal IReadOnlyList<ChangeEntry> Changes => Result.Changes;
 
     internal ProjectSelection TestProject => Result.Projects.Single();
@@ -91,13 +97,25 @@ internal sealed class Selections : IDisposable
 
         var joined = new SpanJoin(graphAssemblies, "/repo").ResolveAll(members);
 
+        var changedSet = new ChangedSet(
+            members,
+            [],
+            [],
+            [new ChangedPath("src/Core/Widget.cs", ChangeStatus.Modified)],
+            [],
+            []);
+
         selections.Graph = graph.Graph;
+        selections.Scope = scope;
+        selections.Instances = instances;
+        selections.Changed = changedSet;
+
         selections.Result = Selector.Select(
             graph.Graph,
             graphAssemblies,
             instances,
             scope,
-            new ChangedSet(members, [], [], [], [], []),
+            changedSet,
             joined,
             includePaths);
 
