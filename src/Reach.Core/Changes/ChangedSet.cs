@@ -25,9 +25,24 @@ internal sealed record ChangedMember(
     MemberKey Member,
     MemberChange Change,
     string Path,
-    bool ChangesCompileTimeConstant = false)
+    bool ChangesCompileTimeConstant = false,
+    DeclarationSpan Span = default)
 {
     public override string ToString() => $"{DeclaringType}.{Member}";
+}
+
+/// <summary>
+/// Where a declaration sits in its file, in the spelling debug symbols use: one-based lines
+/// and columns. What the join matches on.
+/// </summary>
+internal readonly record struct DeclarationSpan(int StartLine, int StartColumn, int EndLine, int EndColumn)
+{
+    internal bool IsEmpty => StartLine == 0 && EndLine == 0;
+
+    /// <summary>Whether a point sits inside this span, comparing line and column together.</summary>
+    internal bool Contains(int line, int column) =>
+        (line > StartLine || (line == StartLine && column >= StartColumn))
+        && (line < EndLine || (line == EndLine && column <= EndColumn));
 }
 
 /// <summary>Why a widening was applied. Every one of these errs toward over-selection.</summary>

@@ -16,6 +16,7 @@ namespace Reach.Graph;
 internal sealed class OpenAssemblies : IDisposable
 {
     private readonly List<PEReader> readers = [];
+    private readonly List<MetadataReaderProvider> symbols = [];
 
     private OpenAssemblies(IReadOnlyList<GraphAssembly> assemblies) => Assemblies = assemblies;
 
@@ -55,7 +56,8 @@ internal sealed class OpenAssemblies : IDisposable
                 instance.Assembly.SimpleName,
                 instance.Assembly.Framework,
                 reader.GetMetadataReader(),
-                reader));
+                reader,
+                open.OpenSymbols(reader, instance.Assembly.Path)));
         }
 
         open.Assemblies = assemblies;
@@ -63,8 +65,42 @@ internal sealed class OpenAssemblies : IDisposable
         return open;
     }
 
+    /// <summary>Handles both a separate <c>.pdb</c> and symbols embedded in the image.</summary>
+    private MetadataReader? OpenSymbols(PEReader reader, string path)
+    {
+        try
+        {
+            if (!reader.TryOpenAssociatedPortablePdb(
+                    Path.GetFullPath(path),
+                    candidate => File.Exists(candidate) ? File.OpenRead(candidate) : null,
+                    out var provider,
+                    out _)
+                || provider is null)
+            {
+                return null;
+            }
+
+            symbols.Add(provider);
+
+            return provider.GetMetadataReader();
+        }
+        catch (BadImageFormatException)
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+    }
+
     public void Dispose()
     {
+        foreach (var provider in symbols)
+        {
+            provider.Dispose();
+        }
+
         foreach (var reader in readers)
         {
             reader.Dispose();

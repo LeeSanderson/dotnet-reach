@@ -24,14 +24,22 @@ internal sealed class GraphAssembly
         string name,
         TargetFrameworkMoniker? framework,
         MetadataReader reader,
-        PEReader? peReader)
+        PEReader? peReader,
+        MetadataReader? symbols = null)
     {
         Ordinal = ordinal;
         Name = name;
         Framework = framework;
         Reader = reader;
         PEReader = peReader;
+        Symbols = symbols;
     }
+
+    /// <summary>
+    /// The portable PDB's own reader, or null when there are no symbols. The join reads its
+    /// sequence points; nothing else does.
+    /// </summary>
+    internal MetadataReader? Symbols { get; }
 
     internal int Ordinal { get; }
 

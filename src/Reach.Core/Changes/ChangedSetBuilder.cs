@@ -196,7 +196,8 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
                     member.Key,
                     MemberChange.Added,
                     path,
-                    member.IsCompileTimeConstant));
+                    member.IsCompileTimeConstant,
+                    member.Span));
             }
         }
     }
@@ -231,7 +232,8 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
         {
             if (!baselineMembers.TryGetValue(key, out var previous))
             {
-                members.Add(new ChangedMember(name, key, MemberChange.Added, path, member.IsCompileTimeConstant));
+                members.Add(new ChangedMember(
+                    name, key, MemberChange.Added, path, member.IsCompileTimeConstant, member.Span));
             }
             else if (!string.Equals(previous.Declaration, member.Declaration, StringComparison.Ordinal))
             {
@@ -240,7 +242,8 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
                     key,
                     MemberChange.Modified,
                     path,
-                    member.IsCompileTimeConstant || previous.IsCompileTimeConstant));
+                    member.IsCompileTimeConstant || previous.IsCompileTimeConstant,
+                    member.Span));
             }
         }
 
@@ -248,7 +251,8 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
 
         foreach (var (key, member) in removed)
         {
-            members.Add(new ChangedMember(name, key, MemberChange.Removed, before[0].Path, member.IsCompileTimeConstant));
+            members.Add(new ChangedMember(
+                name, key, MemberChange.Removed, before[0].Path, member.IsCompileTimeConstant, member.Span));
         }
 
         if (removed.Length > 0)

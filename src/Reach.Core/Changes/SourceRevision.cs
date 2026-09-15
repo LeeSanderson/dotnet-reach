@@ -18,7 +18,15 @@ internal sealed record DeclaredType(
     string Header,
     IReadOnlyDictionary<MemberKey, DeclaredMember> Members);
 
-internal sealed record DeclaredMember(MemberKey Key, string Declaration, bool IsCompileTimeConstant);
+/// <param name="Span">
+/// Where the declaration sits in its file, one-based, as debug symbols spell it. The join
+/// matches a source declaration to the IL methods whose sequence points fall inside it.
+/// </param>
+internal sealed record DeclaredMember(
+    MemberKey Key,
+    string Declaration,
+    bool IsCompileTimeConstant,
+    DeclarationSpan Span);
 
 /// <summary>
 /// Reads one revision of one C# file into the types it declares. The only place in Reach that
@@ -140,7 +148,7 @@ internal static class SourceRevision
 
             foreach (var (key, node, isConstant) in Describe(member))
             {
-                yield return (key, new DeclaredMember(key, Canonicaliser.Of([node]), isConstant));
+                yield return (key, new DeclaredMember(key, Canonicaliser.Of([node]), isConstant, SpanOf(node)));
             }
         }
     }
@@ -267,10 +275,49 @@ internal static class SourceRevision
         }
     }
 
+    /// <summary>
+    /// Roslyn counts lines and columns from zero; debug symbols count from one. Converted here
+    /// so the join compares two things measured the same way.
+    /// </summary>
+    private static DeclarationSpan SpanOf(SyntaxNode node)
+    {
+        var span = node.GetLocation().GetLineSpan();
+
+        return new DeclarationSpan(
+            span.StartLinePosition.Line + 1,
+            span.StartLinePosition.Character + 1,
+            span.EndLinePosition.Line + 1,
+            span.EndLinePosition.Character + 1);
+    }
+
+    /// <summary>
+    /// The parameter's type <em>and</em> its passing mode. <c>ref</c>, <c>out</c> and <c>in</c>
+    /// sit on the parameter rather than on the type, so without them <c>M(int)</c> and
+    /// <c>M(ref int)</c> are one key — and one of two genuinely different overloads becomes
+    /// invisible to change detection.
+    /// </summary>
     private static IReadOnlyList<string> ParameterTypes(BaseParameterListSyntax? parameters) =>
         parameters is null
             ? []
-            : [.. parameters.Parameters.Select(parameter => Canonicaliser.Of([parameter.Type!]))];
+            : [.. parameters.Parameters.Select(parameter => Mode(parameter) + TypeOf(parameter))];
+
+    private static string TypeOf(ParameterSyntax parameter) =>
+        parameter.Type is null ? string.Empty : Canonicaliser.Of([parameter.Type]);
+
+    private static string Mode(ParameterSyntax parameter)
+    {
+        foreach (var modifier in parameter.Modifiers)
+        {
+            if (modifier.IsKind(SyntaxKind.RefKeyword)
+                || modifier.IsKind(SyntaxKind.OutKeyword)
+                || modifier.IsKind(SyntaxKind.InKeyword))
+            {
+                return modifier.Text + " ";
+            }
+        }
+
+        return string.Empty;
+    }
 
     private static bool HasDefault(BaseParameterListSyntax? parameters) =>
         parameters is not null && parameters.Parameters.Any(parameter => parameter.Default is not null);
