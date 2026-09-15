@@ -10,9 +10,10 @@ using Microsoft.CodeAnalysis.Text;
 namespace Reach.Tests.Fixtures;
 
 /// <summary>One assembly compiled from a source string, with its portable PDB.</summary>
+/// <param name="Symbols">Empty when the symbols were embedded in <paramref name="Image"/>.</param>
 internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbols)
 {
-    /// <summary>Writes the assembly and its symbols into <paramref name="directory"/>.</summary>
+    /// <summary>Writes the assembly and, unless they are embedded, its symbols.</summary>
     internal string WriteTo(string directory)
     {
         Directory.CreateDirectory(directory);
@@ -20,7 +21,11 @@ internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbol
         var path = Path.Combine(directory, Name + ".dll");
 
         File.WriteAllBytes(path, Image);
-        File.WriteAllBytes(Path.ChangeExtension(path, ".pdb"), Symbols);
+
+        if (Symbols.Length > 0)
+        {
+            File.WriteAllBytes(Path.ChangeExtension(path, ".pdb"), Symbols);
+        }
 
         return path;
     }
@@ -42,6 +47,9 @@ internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbol
 /// </summary>
 internal static class Compiled
 {
+    /// <summary>What <see cref="File.WriteAllText(string, string?)"/> writes, byte for byte.</summary>
+    private static readonly Encoding Utf8NoPreamble = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
     private static readonly Lazy<ImmutableArray<MetadataReference>> FrameworkReferences =
         new(() =>
         [
@@ -66,28 +74,38 @@ internal static class Compiled
         string documentPath,
         string targetFramework = ".NETCoreApp,Version=v10.0",
         string? targetPlatform = null,
-        IEnumerable<CompiledAssembly>? references = null) =>
-        Assembly(name, [(source, documentPath)], targetFramework, targetPlatform, references);
+        IEnumerable<CompiledAssembly>? references = null,
+        bool embedSymbols = false) =>
+        Assembly(name, [(source, documentPath)], targetFramework, targetPlatform, references, embedSymbols);
 
+    /// <param name="embedSymbols">
+    /// Put the portable PDB inside the image, as <c>&lt;DebugType&gt;embedded&lt;/DebugType&gt;</c>
+    /// does. Both shapes have to verify identically.
+    /// </param>
     internal static CompiledAssembly Assembly(
         string name,
         IEnumerable<(string Source, string DocumentPath)> files,
         string targetFramework = ".NETCoreApp,Version=v10.0",
         string? targetPlatform = null,
-        IEnumerable<CompiledAssembly>? references = null)
+        IEnumerable<CompiledAssembly>? references = null,
+        bool embedSymbols = false)
     {
         var options = new CSharpParseOptions(LanguageVersion.Preview);
 
         // The encoding is not optional: without it Roslyn refuses to emit debug information
-        // (CS8055), because it cannot record a document checksum it cannot compute. UTF-8 is
-        // what the real compiler reads a .cs file as, so the checksums match a file on disk.
+        // (CS8055), because it cannot record a document checksum it cannot compute.
+        //
+        // And it must be UTF-8 *without* a byte-order mark. Roslyn hashes the encoding's
+        // preamble along with the text, while File.WriteAllText writes none — so with the
+        // Encoding.UTF8 singleton every document a fixture writes to disk would read as a
+        // correspondence failure.
         var trees = files
             .Select(file => CSharpSyntaxTree.ParseText(
-                SourceText.From(file.Source, Encoding.UTF8),
+                SourceText.From(file.Source, Utf8NoPreamble),
                 options,
                 file.DocumentPath))
             .Append(CSharpSyntaxTree.ParseText(
-                SourceText.From(Attributes(targetFramework, targetPlatform), Encoding.UTF8),
+                SourceText.From(Attributes(targetFramework, targetPlatform), Utf8NoPreamble),
                 options))
             .ToArray();
 
@@ -113,8 +131,11 @@ internal static class Compiled
 
         var result = compilation.Emit(
             image,
-            symbols,
-            options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb));
+            embedSymbols ? null : symbols,
+            options: new EmitOptions(
+                debugInformationFormat: embedSymbols
+                    ? DebugInformationFormat.Embedded
+                    : DebugInformationFormat.PortablePdb));
 
         if (!result.Success)
         {
@@ -125,7 +146,7 @@ internal static class Compiled
                     result.Diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)));
         }
 
-        return new CompiledAssembly(name, image.ToArray(), symbols.ToArray());
+        return new CompiledAssembly(name, image.ToArray(), embedSymbols ? [] : symbols.ToArray());
     }
 
     private static string Attributes(string targetFramework, string? targetPlatform)

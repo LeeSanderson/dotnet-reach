@@ -31,4 +31,10 @@ internal static class NoticeCodes
     /// generation, or a forgotten <c>git add</c>.
     /// </summary>
     internal const string UntrackedSourceInChangeSet = "untracked-source-in-change-set";
+
+    /// <summary>
+    /// An assembly was compiled from source that is untracked <em>and</em> git-ignored, so a
+    /// change to it is invisible to Reach. A blind spot, with an entry in the register.
+    /// </summary>
+    internal const string IgnoredUntrackedAssembly = "ignored-untracked-assembly";
 }

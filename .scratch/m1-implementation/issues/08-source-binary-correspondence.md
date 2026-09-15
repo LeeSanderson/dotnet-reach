@@ -1,6 +1,6 @@
 # Source–binary correspondence verification
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 07
 Spec: [§8](../../walking-skeleton/spec.md#8-sourcebinary-correspondence), [§9.6](../../walking-skeleton/spec.md#96-what-reach-cannot-observe) · [ADR-0003](../../../docs/adr/0003-verify-source-binary-correspondence-via-pdb-checksums.md)
 
@@ -88,3 +88,60 @@ both operating systems for exactly this reason.
 
 Doing anything with the classification beyond reporting it. MVID comparison — registered as an
 upgrade path, needs the baseline's binaries, out of scope for M1.
+
+## Comments
+
+### The mechanism holds
+
+**Acceptance criterion 1 passed, and the design stands.** ADR-0003's load-bearing claim was
+checked against real build output before anything was implemented, in
+`tests/Reach.Tests/Assemblies/PortablePdbChecksumTests.cs`. The subject is Reach's own
+`Reach.Core.dll`, which a real SDK build produces with the project's own settings and which is
+on disk whenever the suite runs. Findings:
+
+- Every document in the PDB carries a checksum and an algorithm GUID. None was missing.
+- The algorithm a current SDK uses is **SHA-256** (`8829d00f-11b8-4213-878b-770e8597ac16`).
+- **`SHA256.HashData(File.ReadAllBytes(document.Path))` reproduces the recorded checksum
+  exactly** for every document that has a file on disk.
+- Documents with no file on disk exist and are exactly the compiler-generated ones, which is
+  what the skip rule is for.
+
+Production code still reads the algorithm from the document rather than assuming SHA-256;
+SHA-1 and MD5 are handled, and an unrecognised GUID reads as unverifiable rather than as a
+mismatch.
+
+### What was built
+
+`Reach.Core/Assemblies/Correspondence.cs` (the check and the five document classes),
+`SourceVisibility.cs` (what git can see), and one new git operation — `git ls-files --cached`
+on `GitAdapter`. The ticket's table has no tracked-file command, and the untracked-**and**-
+ignored class cannot be named without one: it is the complement of tracked ∪ ordinarily-untracked.
+
+**The document enumeration does its triple duty from one place.** `ScannedAssembly.Documents`
+already existed for ticket 07's first-party classification; correspondence reads the same list,
+and tier 2's "which assemblies list this document" lookup will too.
+
+**Documents are hashed once per run, not once per assembly instance.** A multi-targeted project
+records the same document in every instance, and hashing it three times would also list it
+three times in the report.
+
+### Two fixture facts worth keeping
+
+- **`Compiled` must use UTF-8 without a byte-order mark.** Roslyn hashes the encoding's
+  preamble along with the text; `File.WriteAllText` writes none. With the `Encoding.UTF8`
+  singleton, every document a fixture wrote to disk read as a correspondence failure. This cost
+  three red tests before it was found and is exactly the kind of thing that would have been
+  written off as "the check is too strict".
+- **`Compiled.Assembly(..., embedSymbols: true)`** emits `DebugInformationFormat.Embedded`, so
+  the embedded-symbols criterion is a parameter rather than a second fixture.
+  `PEReader.TryOpenAssociatedPortablePdb` handles both shapes, which is why production code has
+  no branch for it.
+
+### Acceptance criteria 2 and 3
+
+Asserted through the whole pipeline in `CorrespondenceInBothModesTests`, with **git real and
+only the build scripted** (`SplitRunner`). `ScriptedProcessRunner.Performs` is new: it runs an
+effect when a matching command is issued, so a scripted `dotnet build` does to the output
+directory what a real one would. What is being asserted is the ordering — build, then verify —
+which is the whole content of the asymmetry, and a real MSBuild invocation would not assert it
+any harder. Reach's own `dogfood.yml` (ticket 22) exercises the real build end to end.

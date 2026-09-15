@@ -20,6 +20,7 @@ namespace Reach.Tests.Fixtures;
 internal sealed class ScriptedProcessRunner : IProcessRunner
 {
     private readonly List<(string[] Arguments, ProcessResult Result)> scripts = [];
+    private readonly List<(string[] Arguments, Action Effect)> effects = [];
     private readonly List<ProcessRequest> requests = [];
 
     /// <summary>Every request made, in order, exactly as issued.</summary>
@@ -37,12 +38,30 @@ internal sealed class ScriptedProcessRunner : IProcessRunner
         return this;
     }
 
+    /// <summary>
+    /// Runs <paramref name="effect"/> when a matching command is issued, so a scripted
+    /// <c>dotnet build</c> can do to the output directory what a real one would.
+    /// </summary>
+    internal ScriptedProcessRunner Performs(Action effect, params string[] arguments)
+    {
+        effects.Add((arguments, effect));
+        return Succeeds(string.Empty, arguments);
+    }
+
     public Task<ProcessResult> RunAsync(
         ProcessRequest request,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         requests.Add(request);
+
+        foreach (var (arguments, effect) in effects)
+        {
+            if (Matches(request.Arguments, arguments))
+            {
+                effect();
+            }
+        }
 
         foreach (var (arguments, result) in Enumerable.Reverse(scripts))
         {

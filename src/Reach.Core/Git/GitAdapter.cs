@@ -65,6 +65,13 @@ internal sealed class GitAdapter(IProcessRunner runner, string workingDirectory)
         CancellationToken cancellationToken = default) =>
         RunAsync(cancellationToken, "show", $"{baseline}:{path}");
 
+    /// <summary>
+    /// Every path in the index. With <see cref="UntrackedPathsAsync"/> it spans everything git
+    /// can see, which is what makes the complement — untracked <em>and</em> ignored — nameable.
+    /// </summary>
+    internal Task<ProcessResult> TrackedPathsAsync(CancellationToken cancellationToken = default) =>
+        RunAsync(cancellationToken, "ls-files", "--cached");
+
     /// <summary>The working tree's root, which is what repository-relative paths are relative to.</summary>
     internal Task<ProcessResult> RepositoryRootAsync(CancellationToken cancellationToken = default) =>
         RunAsync(cancellationToken, "rev-parse", "--show-toplevel");

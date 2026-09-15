@@ -23,7 +23,8 @@ internal sealed record SelectRun(
     AnalysisScope? Scope = null,
     Baseline? Baseline = null,
     ChangedSet? Changes = null,
-    IReadOnlyList<AssemblyInstance>? Assemblies = null);
+    IReadOnlyList<AssemblyInstance>? Assemblies = null,
+    CorrespondenceResult? Correspondence = null);
 
 /// <summary>
 /// The phases of one run, in order. Usage errors come first and deliberately: exit 1 is the
@@ -113,6 +114,20 @@ internal sealed class ReachPipeline(IProcessRunner processRunner)
             return new SelectRun(assemblies.ExitCode, assemblies.Message, notices);
         }
 
+        // In both modes, and the mode that trusts the caller more is the mode that detects
+        // more: default mode has just recompiled the changed file, so its checksums agree.
+        var visibility = await SourceVisibility
+            .ReadAsync(git, root.Value, cancellationToken)
+            .ConfigureAwait(false);
+
+        var correspondence = Correspondence.Verify(assemblies.Instances, visibility);
+        notices.AddRange(correspondence.Notices);
+
+        if (correspondence.Verdict == CorrespondenceVerdict.Failed)
+        {
+            return new SelectRun(correspondence.ExitCode, correspondence.Message, notices);
+        }
+
         return new SelectRun(
             ExitCode.InternalError,
             "Reach resolved its target, its analysis scope, its baseline, its changed set and "
@@ -122,7 +137,8 @@ internal sealed class ReachPipeline(IProcessRunner processRunner)
             scope.Scope,
             baseline.Baseline,
             changes,
-            assemblies.Instances);
+            assemblies.Instances,
+            correspondence);
     }
 
     private static SelectRun Usage(string message) => new(ExitCode.UsageError, message, []);
