@@ -314,6 +314,28 @@ internal sealed class Renderer(
 
     private void Summarise(IReadOnlyList<RenderedEntry> entries)
     {
+        var nunit = entries
+            .Where(entry => entry.Selection.Dialect is { } dialect && FilterDialect.OverMatches(dialect))
+            .Select(entry => entry.Selection.Project.Name)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        if (nunit.Length > 0)
+        {
+            // A standing disclosure, emitted whenever a project renders into that dialect at
+            // all — not only when the over-match is non-zero. Reach cannot see a consumer's
+            // runsettings and cannot detect the failure either, so saying so is the mitigation.
+            Note(
+                NoticeCodes.NUnitFilterOvermatch,
+                NoticeKind.Widening,
+                "NUnit's filter matches by containment rather than equality, because its "
+                + "FullyQualifiedName includes a parameterised test's arguments and equality "
+                + "matching survives only through an adapter re-parse three ordinary "
+                + $"configurations disable. Affects: {string.Join(", ", nunit)}.",
+                nunit);
+        }
+
         var overMatching = entries
             .Where(entry => entry.Mode == SelectionMode.Filtered)
             .Where(entry => entry.WillRun > entry.Selection.Selected.Count)
@@ -334,6 +356,12 @@ internal sealed class Renderer(
         }
     }
 
-    private void Note(string code, NoticeKind kind, string message) =>
-        notices.Add(new Notice(code, kind, message));
+    private void Note(string code, NoticeKind kind, string message, IReadOnlyList<string>? projects = null) =>
+        notices.Add(new Notice(
+            code,
+            kind,
+            message,
+            projects is null
+                ? null
+                : new Dictionary<string, object?>(StringComparer.Ordinal) { ["projects"] = projects }));
 }

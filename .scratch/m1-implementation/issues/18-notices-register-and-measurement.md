@@ -1,6 +1,6 @@
 # The notice catalogue, the register parity test and the measurement
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 12, 13, 16, 17
 Spec: [§14.3](../../walking-skeleton/spec.md#143-notices), [§15](../../walking-skeleton/spec.md#15-the-over-selection-measurement) · [ADR-0008](../../../docs/adr/0008-m1-accepts-named-under-selection.md), [ADR-0012](../../../docs/adr/0012-m1-resolves-open-design-questions-at-80-20.md)
 
@@ -147,3 +147,55 @@ Notice suppression. A second walk. A replay harness. Any generation of the regis
 catalogue, or of the catalogue from the register — the two carry different content, and generating
 either from the other would mean putting explanatory prose in a JSON schema or run-time state in a
 document. **The code is what binds them, plus this test.**
+
+## Comments
+
+**Implemented** as `Reach.Core/Reporting/NoticeCatalogue.cs` (code → kind, in one place),
+`Reach.Core/Reporting/Measurement.cs`, `Reach.Core/Selection/TestRunnerConfiguration.cs`, and
+`tests/Reach.Tests/Reporting/RegisterParityTests.cs`.
+
+**The parity test found a real unregistered blind spot on its first run.**
+`unresolved-first-party-member` had no entry, and now has one — direction under-selection,
+detectable, with the reason it does not widen (it is a build problem, and correspondence is
+what should have caught it). That is the mechanism working exactly as designed on the first
+occasion it could.
+
+**Two codes were renamed to match the register rather than the other way round.** The register
+already said `recompilation-widening` and `untracked-source-files`; the code said
+`recompilation-widened` and `untracked-source-in-change-set`. The register is the contract, so
+the constants moved. A third test asserts every constant on `NoticeCodes` is in the catalogue,
+so a code cannot be added without being classified.
+
+**`Detectable: partially` counts as registered.** Several entries are partially detectable —
+`parse-failed` and `calli-unresolved` among them — and they carry a code just as a fully
+detectable one does. Reading only `yes` would have forced either a false claim in the register
+or a missing entry.
+
+**The measurement's numerator is `willRun`, not `selected`**, with both carried and the gap
+between them reported. There is a named test over a fixture where the two differ, because
+getting this the wrong way round would flatter the ratio by exactly the amount NUnit's `~`
+rendering costs — and would be invisible.
+
+**Dogfooding after this ticket found a second real bug**, and it is the more serious one.
+`MetadataNames.WithoutInstantiation` cut at the *first* `<`, so a compiler-generated type name
+that **starts** with one — `<>z__ReadOnlyArray\`1`, which is what a collection expression
+compiles to — was truncated to the empty string. Every call into such a type resolved to
+nothing and was silently lost. It surfaced as four `unresolved-first-party-member` notices with
+an empty type name, which is precisely the kind of thing that notice exists to make visible.
+Fixed by matching the closing bracket from the end, with its own test.
+
+**The stop condition is in the register**, fixed before any number exists, with the row that
+matters most kept: over 70% and mostly `compiled` is *not* Reach's failure, and is the case most
+likely to cost a quarter on framework models that cannot help.
+
+**The first real datapoint**, from running Reach on this repository at this commit:
+
+```
+selected 407 of 411 tests (99%) · widenedPairs 11
+```
+
+That number is not a verdict on the design. This working tree had changed `const` values in
+`Reach.Core`, which every other assembly consumes — so the blast radius is exactly the one
+recompilation widening exists to produce, and the forward change list names the declarations
+that caused it. A meaningful median needs ordinary pull requests, which is what every run
+emitting the number is for.

@@ -395,7 +395,7 @@ public class ChangedSetTests
         // Either intentional code generation or a forgotten `git add`, and both bear on
         // trusting a surprising selection.
         var notice = Assert.Single(changes.Notices);
-        Assert.Equal(NoticeCodes.UntrackedSourceInChangeSet, notice.Code);
+        Assert.Equal(NoticeCodes.UntrackedSourceFiles, notice.Code);
         Assert.Contains("src/Core/New.cs", notice.Message);
     }
 

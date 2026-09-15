@@ -199,6 +199,18 @@ internal sealed class ReachPipeline(IProcessRunner processRunner)
 
         notices.AddRange(rendered.Notices);
 
+        if (TestRunnerConfiguration.Check(
+                rendered.Entries
+                    .Where(entry => TestRunnerConfiguration.Needs(entry.Selection.Dialect))
+                    .Select(entry => entry.Selection.Project.Name),
+                root.Value)
+            is { } misconfigured)
+        {
+            // The rendering is correct; the repository is misconfigured. Reach says so and
+            // does not stop.
+            notices.Add(misconfigured);
+        }
+
         // An empty selection exits 0. Non-zero means "do not trust my answer", which is what
         // makes the pipeline rule one line of guidance rather than a paragraph.
         return partial with

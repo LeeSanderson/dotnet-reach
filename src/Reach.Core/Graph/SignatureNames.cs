@@ -185,11 +185,35 @@ internal static class MetadataNames
     /// becomes <c>List`1</c>. A member reference against a generic instance carries the
     /// definition's own signature, so this is the name to look it up under.
     /// </summary>
+    /// <remarks>
+    /// Scanned from the end, matching the closing angle bracket rather than taking the first
+    /// opening one. A compiler-generated name can <em>start</em> with <c>&lt;</c> —
+    /// <c>&lt;&gt;z__ReadOnlyArray`1</c> is what a collection expression compiles to — and
+    /// cutting at index zero leaves an empty type name, which resolves to nothing and silently
+    /// loses every call into it.
+    /// </remarks>
     internal static string WithoutInstantiation(string typeName)
     {
-        var index = typeName.IndexOf('<', StringComparison.Ordinal);
+        if (!typeName.EndsWith('>'))
+        {
+            return typeName;
+        }
 
-        return index < 0 ? typeName : typeName[..index];
+        var depth = 0;
+
+        for (var index = typeName.Length - 1; index >= 0; index--)
+        {
+            if (typeName[index] == '>')
+            {
+                depth++;
+            }
+            else if (typeName[index] == '<' && --depth == 0)
+            {
+                return index == 0 ? typeName : typeName[..index];
+            }
+        }
+
+        return typeName;
     }
 
     /// <summary>How many generic parameters a method declares. Part of what tells overloads apart.</summary>

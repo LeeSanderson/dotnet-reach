@@ -30,7 +30,7 @@ internal static class NoticeCodes
     /// A C# file that git has never seen entered the changed set — intentional code
     /// generation, or a forgotten <c>git add</c>.
     /// </summary>
-    internal const string UntrackedSourceInChangeSet = "untracked-source-in-change-set";
+    internal const string UntrackedSourceFiles = "untracked-source-files";
 
     /// <summary>
     /// An assembly was compiled from source that is untracked <em>and</em> git-ignored, so a
@@ -119,5 +119,25 @@ internal static class NoticeCodes
     /// A removal or a changed compile-time constant widened every assembly that transitively
     /// references the declaring one.
     /// </summary>
-    internal const string RecompilationWidened = "recompilation-widened";
+    internal const string RecompilationWidening = "recompilation-widening";
+
+    /// <summary>
+    /// NUnit's filter matches by containment rather than equality, so the rendered filter can
+    /// run tests the selection did not name. A standing disclosure, emitted whenever a project
+    /// renders into that dialect at all.
+    /// </summary>
+    internal const string NUnitFilterOvermatch = "nunit-filter-overmatch";
+
+    /// <summary>
+    /// A function pointer was invoked through <c>calli</c>. Where the pointer came from is not
+    /// in the analysed instructions, so no edge could be made.
+    /// </summary>
+    internal const string CalliUnresolved = "calli-unresolved";
+
+    /// <summary>
+    /// An <c>xunit.v3</c> 4.0.0 project in a repository with no <c>global.json</c> runner
+    /// setting, where <c>dotnet test</c> is a hard build error — so every invocation Reach
+    /// emits is unrunnable and the error names nothing Reach-shaped.
+    /// </summary>
+    internal const string TestRunnerNotConfigured = "test-runner-not-configured";
 }

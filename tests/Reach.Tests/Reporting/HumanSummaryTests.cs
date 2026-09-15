@@ -165,7 +165,10 @@ public class HumanSummaryTests
         var summary = SummaryOf(report);
 
         Assert.Equal("selected", report.Outcome);
-        Assert.Contains("Selected 1 test(s)", summary);
+
+        // Over-selection stated as a percentage of the suite, because that is the number that
+        // decides adoption.
+        Assert.Contains("selected 1 of 1 tests (100%)", summary);
 
         // Counts, not names. The list lives in the report.
         Assert.DoesNotContain("Spins", summary);

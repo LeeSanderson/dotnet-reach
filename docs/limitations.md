@@ -109,6 +109,20 @@ The gaps that can cost you a regression. Listed worst first.
 - **Why no widening**: every method whose address is taken in analysed code already has its
   capture-site edge, so the only widening available is unbounded.
 
+### A first-party member a call site names but the assembly does not contain
+- **Shape**: a call site in one first-party assembly names a member of another first-party
+  assembly that is not in it — the two binaries on disk do not agree with each other, usually
+  because one of them is stale. The call site produces no edge, so whatever it would have
+  reached is not selected.
+- **Direction**: under-selection.
+- **Detectable**: **yes** — `unresolved-first-party-member`, which names each call site.
+- **Why no widening**: this is a build problem rather than an analysis one, and
+  [ADR-0003](adr/0003-verify-source-binary-correspondence-via-pdb-checksums.md)'s correspondence
+  check is what should have caught it. Widening on it would mask a broken build rather than
+  report one.
+- **Upgrade path**: none needed — fix the build. The notice exists so that a surprising
+  selection has an explanation.
+
 ### Deserialization and reflective construction
 - **Shape**: an object built by a deserializer or by reflection was never constructed by
   first-party IL, which defeats any argument leaning on the constructor being visible — including
@@ -239,6 +253,23 @@ Limitations of the numbers Reach reports about itself. They do not affect select
   higher than the number says.
 - **Upgrade path**: run the walk twice, with widened edges and without — the rigorous version
   ADR-0004 exists to enable. Needs no new data, only a second traversal.
+
+### The stop condition
+
+Fixed here **before any number exists**, which is the only way it stays credible. Every run
+emits `summary.ratio`, so a month of ordinary use accumulates the evidence for free; no replay
+harness is needed to reach a verdict.
+
+| Median pull request selects | Verdict |
+|---|---|
+| under 40% | on target |
+| 40–70% | works, but not sellable without framework models or narrowing; M2 justified |
+| **over 70%, mostly `widened`** | **stop** — widening has eaten the value |
+| over 70%, mostly `compiled` | **not Reach's failure** — the codebase is too connected for any test-impact analysis to help |
+
+The last row is the one worth keeping. It is the case most likely to be misread as a Reach
+failure, and the one most likely to cost a quarter spent on framework models that cannot help.
+Read `summary.widenedPairs` against `summary.willRun` to tell the two apart.
 
 ---
 

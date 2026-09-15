@@ -28,6 +28,7 @@ internal static class ReportBuilder
             Reasons = outcome == Outcome.NothingSelected ? Reasons(run) : null,
             Envelope = EnvelopeOf(run, request, timings),
             Scope = ScopeOf(run),
+            Summary = run.Rendered is null ? null : ReportMeasurement.Of(run.Rendered),
             Changes = ChangesOf(run),
             Entries = entries,
             Notices = NoticesOf(run),

@@ -79,17 +79,13 @@ internal static class HumanSummary
                 break;
 
             default:
-                var selected = report.Entries.Sum(entry => entry.Counts.Selected);
-                var runAll = report.Entries.Count(entry => entry.Mode == "run-all");
-
-                text.Append("Selected ").Append(selected).Append(" test(s)");
-
-                if (runAll > 0)
-                {
-                    text.Append(", and ").Append(runAll).Append(" project(s) run in full");
-                }
-
-                text.AppendLine(".");
+                // Over-selection is stated as a percentage of the suite, because that is the
+                // number that decides adoption — and always with the second number beside it,
+                // never an estimated denominator and never a silent zero.
+                text.AppendLine(
+                    report.Summary is { } measurement
+                        ? measurement.Describe() + "."
+                        : $"Selected {report.Entries.Sum(entry => entry.Counts.Selected)} test(s).");
                 break;
         }
     }

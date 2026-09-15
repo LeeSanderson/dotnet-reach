@@ -40,6 +40,10 @@ internal sealed record Report
 
     public required ReportScope Scope { get; init; }
 
+    /// <summary>The over-selection measurement. Arithmetic over inputs already carried.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ReportMeasurement? Summary { get; init; }
+
     /// <summary>
     /// Every change, with its tier and the count of tests it reached. Counts only, never test
     /// names — the pairs live once, on the test side.

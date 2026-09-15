@@ -369,7 +369,7 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
         }
 
         notices.Add(new Notice(
-            NoticeCodes.UntrackedSourceInChangeSet,
+            NoticeCodes.UntrackedSourceFiles,
             NoticeKind.Scope,
             $"{untracked.Length} untracked C# file(s) were analysed as changes: "
             + $"{string.Join(", ", untracked)}. Either intentional code generation, or a "
