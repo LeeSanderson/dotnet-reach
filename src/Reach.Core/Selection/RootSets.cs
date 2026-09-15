@@ -7,21 +7,12 @@ using Reach.Projects;
 namespace Reach.Selection;
 
 /// <summary>One change, and every method the walk should start from for it.</summary>
-/// <param name="RootsAreTheDeclaration">
-/// True when the roots <em>are</em> the changed declaration, which is the member tier. A test
-/// among them is selected by <c>own-source-changed</c> rather than by having walked anywhere, so
-/// the walk must not also claim it.
-/// <para>
-/// False for every widening, where the roots are an expansion rather than the declaration. There
-/// is no <c>own-source-changed</c> attribution for those, so excluding them would drop a test the
-/// widening is supposed to catch — under-selection, out of a rule meant only to keep two
-/// attributions from overlapping.
-/// </para>
-/// </param>
-internal sealed record Change(
-    ChangeEntry Entry,
-    IReadOnlyList<MethodId> Roots,
-    bool RootsAreTheDeclaration = false);
+/// <remarks>
+/// Whether the roots <em>are</em> the changed declaration is not carried separately: it is
+/// exactly <c>Entry.Tier == ChangeTier.Member</c>, and two fields that must agree forever is one
+/// more than the fact needs.
+/// </remarks>
+internal sealed record Change(ChangeEntry Entry, IReadOnlyList<MethodId> Roots);
 
 /// <summary>
 /// Turns a changed set into the changes the walk runs over, expanding each widening into the
@@ -96,10 +87,12 @@ internal sealed class RootSets
         {
             if (result.Joined)
             {
+                // The one place ChangeTier.Member is constructed, which is what lets the walk
+                // read the tier to tell "these roots are the declaration" from "these roots
+                // are an expansion".
                 changes.Add(new Change(
                     Entry(changes.Count, result.Member.ToString(), ChangeTier.Member, "the member changed"),
-                    result.Methods,
-                    RootsAreTheDeclaration: true));
+                    result.Methods));
 
                 continue;
             }

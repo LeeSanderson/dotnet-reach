@@ -30,13 +30,9 @@ jobs:
       # bands, and global.json pins the floor.
       - uses: actions/checkout@v5
 
-      # Unset on hosted runners, and `git commit` fails without them. The suite's
-      # temp-repository fixtures depend on this.
-      - name: Configure git identity
-        run: |
-          git config --global user.email "ci@dotnet-reach.invalid"
-          git config --global user.name "Reach CI"
-
+      # No git identity step: TempRepository.Create sets user.name and user.email on each
+      # repository it makes, so the suite never depends on the machine's own — which is also
+      # what lets dogfood.yml be a recipe an adopter can copy unchanged.
       - name: Restore
         run: dotnet restore
 

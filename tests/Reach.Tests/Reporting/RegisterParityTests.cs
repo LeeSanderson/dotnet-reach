@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Reach.Reporting;
 
@@ -82,9 +81,9 @@ public partial class RegisterParityTests
     /// carry their code in backticks on the line that says so; undetectable ones have none, and
     /// live only in the document — which is the argument for the document existing at all.
     /// </summary>
-    private static HashSet<string> RegisteredCodes([CallerFilePath] string testFile = "")
+    private static HashSet<string> RegisteredCodes()
     {
-        var path = Path.Combine(RepositoryRoot(testFile), "docs", "limitations.md");
+        var path = Fixtures.RepositoryRoot.Combine("docs", "limitations.md");
 
         Assert.True(File.Exists(path), $"No limitations register at {path}.");
 
@@ -118,20 +117,6 @@ public partial class RegisterParityTests
         Assert.NotEmpty(codes);
 
         return codes;
-    }
-
-    private static string RepositoryRoot(string testFile)
-    {
-        var directory = Path.GetDirectoryName(testFile);
-
-        while (directory is not null && !Directory.Exists(Path.Combine(directory, ".git")))
-        {
-            directory = Path.GetDirectoryName(directory);
-        }
-
-        Assert.NotNull(directory);
-
-        return directory;
     }
 
     /// <summary>

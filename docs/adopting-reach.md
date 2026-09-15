@@ -93,25 +93,30 @@ jobs:
       - name: Select the tests this change could affect
         run: dnx dotnet-reach@0.1.0-alpha.1 select -c Release --no-build
 
-      # An empty selection emits no command, so the loop runs nothing. A failing test still
-      # fails the step: `eval` inside a loop does not propagate on its own.
+      # An empty selection emits no command, so the loop runs nothing. Two things the obvious
+      # one-liner gets wrong: `eval` inside a loop does not propagate failure, so a failing
+      # test leaves the step green; and a child that reads stdin swallows the commands still
+      # queued behind it.
       - name: Run the selection
         run: |
           status=0
           while read -r command; do
             [ -z "$command" ] && continue
             echo "$command"
-            eval "$command" || status=1
+            eval "$command" < /dev/null || status=1
           done <<< "$(jq -r '.entries[].invocations[] | @sh' .reach/report.json)"
           exit $status
 
+      # The full suite is what gates, so it runs even when the step above failed. Without this
+      # the one run where the two disagree is the one that never compares them.
       - name: Run the whole suite
+        if: ${{ !cancelled() }}
         run: dotnet test -c Release --no-build
 
       # The gap between what Reach selected and what the whole suite ran is the number worth
       # looking at, so keep the report whatever happened above.
       - name: Keep the report
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: reach-report

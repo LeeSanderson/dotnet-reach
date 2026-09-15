@@ -91,6 +91,13 @@ public sealed partial class ExampleReportTests : IDisposable
 
     /// <summary>
     /// Only the two the SHA pass cannot reach: the version of the tool that ran, and the clock.
+    /// <para>
+    /// <strong>Pinning the version means this test cannot notice a version bump</strong>, which
+    /// is the intent rather than an oversight — the example illustrates the schema, and rewriting
+    /// all 224 lines on every release would make the file churn for a field nobody reads it for.
+    /// The pin the documentation <em>does</em> have to keep current is the <c>dnx</c> line, and
+    /// <c>WorkflowParityTests</c> asserts that against <c>Directory.Build.props</c>.
+    /// </para>
     /// <strong>The baseline is deliberately left alone.</strong> Substituting a plausible-looking
     /// one — a branch reference, a detection source, <c>isHead: false</c> — would put the example
     /// in contradiction with the <c>baseline-is-head</c> notice sitting beside it, and the
@@ -118,9 +125,9 @@ public sealed partial class ExampleReportTests : IDisposable
         return stabilised;
     }
 
-    private static void AssertExample(string actual, [CallerFilePath] string testFile = "")
+    private static void AssertExample(string actual)
     {
-        var path = Path.Combine(RepositoryRoot(testFile), "docs", "example-report.json");
+        var path = RepositoryRoot.Combine("docs", "example-report.json");
 
         if (Environment.GetEnvironmentVariable("REACH_UPDATE_EXAMPLE") is { Length: > 0 })
         {
@@ -133,19 +140,6 @@ public sealed partial class ExampleReportTests : IDisposable
             $"No example report at {path}. Run with REACH_UPDATE_EXAMPLE=1 to write one.");
 
         Assert.Equal(File.ReadAllText(path).ReplaceLineEndings("\n").TrimEnd(), actual.TrimEnd());
-    }
-
-    private static string RepositoryRoot(string testFile)
-    {
-        var directory = Path.GetDirectoryName(testFile);
-
-        while (directory is not null && !Directory.Exists(Path.Combine(directory, ".git")))
-        {
-            directory = Path.GetDirectoryName(directory);
-        }
-
-        Assert.NotNull(directory);
-        return directory;
     }
 
     public void Dispose() => fixture.Dispose();

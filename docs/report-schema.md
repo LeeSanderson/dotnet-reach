@@ -81,9 +81,11 @@ select differently — collapsing them would force a union and destroy the answe
 | Field | Notes |
 |---|---|
 | `project`, `targetFramework` | the key. Always present |
-| `framework`, `packageVersion`, `runnerHost`, `dialect` | all four matter — the package version changed xUnit's filter surface. **Absent when the framework is unrecognised**, which is the case the other fields describe |
+| `framework`, `dialect` | the recognised test framework, and the filter grammar it renders into. **Both absent when the framework is unrecognised** — which is the case the rest of the entry describes. In this release they carry the same string: the dialect is gated on package version as well as framework, because `xunit.v3` 4.0.0 changed the filter surface, so it is the more specific of the two and is what both fields report |
+| `packageVersion` | **reserved. Not emitted by this release**, so always absent |
+| `runnerHost` | `dotnet-test`, or absent on `skip`. Present on a project run in full |
 | `mode` | `filtered` · `run-all` · `skip` |
-| `delivery` | `inline` · `response-file` · `chunked` · `run-settings` |
+| `delivery` | `inline` · `response-file` · `chunked` · `run-settings`, or **absent** on an entry that carries no command of its own — see below |
 | `counts` | `selected`, `willRun`, `total` |
 | `tests` | the selected tests, enumerated |
 | `invocations` | **an array of argv vectors** |
@@ -101,14 +103,20 @@ MSBuild and XML — and a shell would be a fourth nobody should own.
 
 **A `run-all` entry can also carry zero invocations.** When a multi-targeted project's declared
 moniker cannot be recovered, one project-wide invocation is carried by the first entry in sort
-order and the rest carry empty arrays, so your loop issues exactly one command. **Do not infer
-"nothing to run" from an empty array alone — `mode` is the field that says it.**
+order and the rest carry empty arrays — and those carry no `delivery` either, because they
+deliver nothing. Your loop issues exactly one command. **Do not infer "nothing to run" from an
+empty array alone — `mode` is the field that says it.**
 
 ### `counts.total` can say `unknown`
 
 A project on a framework Reach does not recognise cannot be enumerated. It reports the string
 `"unknown"`, never `0` — reporting zero would silently corrupt the measurement in exactly the
 case where Reach is running an entire project.
+
+**On that entry `willRun` reads `0` while every test in the project runs.** It cannot read
+anything else: the count is unknown, and inventing one would be worse. So `willRun` is the
+tests Reach can *account* for, not the tests that will execute — do not sum it across entries and
+call it a total. `summary.projectsRunInFull` is how many entries are in this state.
 
 `selected` and `willRun` deliberately disagree where the dialect matches by containment: see
 `nunit-filter-overmatch`.

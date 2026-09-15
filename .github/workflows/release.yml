@@ -25,12 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # The temp-repository fixtures commit, and hosted runners have no git identity.
-      - name: Configure git identity
-        run: |
-          git config --global user.email "ci@dotnet-reach.invalid"
-          git config --global user.name "Reach CI"
-
       # The one guard worth having on an irreversible step. Publishing 0.1.0-alpha.1 from a
       # tag reading v0.1.0-alpha.2 is a mistake nobody can take back, and the two values are
       # edited in different files by different acts.

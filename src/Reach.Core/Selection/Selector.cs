@@ -51,16 +51,15 @@ internal static class Selector
                 continue;
             }
 
-            // Only the member tier, where own-source-changed picks the test up instead. A
-            // widening's roots are an expansion, not the declaration, and nothing else would
-            // select the tests among them.
-            var ownRoots = change.RootsAreTheDeclaration ? change.Roots.ToHashSet() : [];
+            // A test that is itself a root is excluded only at the member tier, where the roots
+            // *are* the changed declaration and own-source-changed picks the test up instead —
+            // two attributions for one fact read badly. A widening's roots are an expansion, so
+            // nothing else would select the tests among them and excluding them under-selects.
+            var ownRoots = change.Entry.Tier == ChangeTier.Member ? change.Roots.ToHashSet() : [];
             var reached = ReverseWalk.From(graph, change.Roots);
 
             foreach (var (method, pathClass) in reached)
             {
-                // A test that is itself a root of this change is selected by
-                // own-source-changed, not by having walked anywhere.
                 if (!allTests.ContainsKey(method) || ownRoots.Contains(method))
                 {
                     continue;
@@ -76,7 +75,7 @@ internal static class Selector
 
             if (pathsOf is not null)
             {
-                RecordPaths(graph, change, allTests, reached, pathsOf);
+                RecordPaths(graph, change, allTests, reached, ownRoots, pathsOf);
             }
         }
 
@@ -231,18 +230,25 @@ internal static class Selector
             .SelectMany(result => result.Methods)
     ];
 
+    /// <param name="ownRoots">
+    /// The same exclusion the counting loop applies, and for the same reason: a test excluded
+    /// there carries no change index, so recording a path for it here would put a path in the
+    /// report next to an empty <c>changes</c> — a hop-by-hop answer to a question the report
+    /// says was never asked.
+    /// </param>
     private static void RecordPaths(
         CallGraph graph,
         Change change,
         IReadOnlyDictionary<MethodId, TestMethod> tests,
         IReadOnlyDictionary<MethodId, PathClass> reached,
+        IReadOnlySet<MethodId> ownRoots,
         Dictionary<MethodId, List<IReadOnlyList<MethodId>>> into)
     {
         var predecessors = ReverseWalk.Predecessors(graph, change.Roots);
 
         foreach (var method in reached.Keys)
         {
-            if (tests.ContainsKey(method))
+            if (tests.ContainsKey(method) && !ownRoots.Contains(method))
             {
                 Bucket(into, method).Add(ReverseWalk.PathFrom(predecessors, method));
             }

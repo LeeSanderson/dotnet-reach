@@ -1,4 +1,5 @@
-using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
+using Reach.Tests.Fixtures;
 
 namespace Reach.Tests.Reporting;
 
@@ -20,7 +21,7 @@ namespace Reach.Tests.Reporting;
 /// worse test of a worse artifact.
 /// </para>
 /// </remarks>
-public class WorkflowParityTests
+public partial class WorkflowParityTests
 {
     private const string Open = "<!-- reach:dogfood-workflow -->";
     private const string Close = "<!-- /reach:dogfood-workflow -->";
@@ -49,19 +50,57 @@ public class WorkflowParityTests
     }
 
     [Fact]
+    public void Every_documented_dnx_line_pins_the_version_this_repository_builds()
+    {
+        // The version is hand-edited in one file and repeated in the prose, which is the cost
+        // of having no version derivation — a deliberate trade, since a published package
+        // cannot be deleted. What is not acceptable is the bump landing in Directory.Build.props
+        // and leaving the quickstart pointing at a release that is no longer the current one.
+        var version = Version();
+
+        foreach (var document in new[] { "README.md", Path.Combine("docs", "adopting-reach.md") })
+        {
+            var pins = Pins().Matches(Read(RepositoryRoot.Combine(document))).Cast<Match>().ToArray();
+
+            // Otherwise a document that lost its quickstart passes this test by having nothing
+            // to check, which is the failure it is least able to afford.
+            Assert.NotEmpty(pins);
+            Assert.All(pins, pinned => Assert.Equal(version, pinned.Groups[1].Value));
+        }
+
+        Assert.Equal(version, Assert.Single(Pins().Matches(Workflow()).Cast<Match>()).Groups[1].Value);
+    }
+
+    [GeneratedRegex(@"dnx dotnet-reach@([^\s`]+)")]
+    private static partial Regex Pins();
+
+    private static string Version()
+    {
+        var properties = Read(RepositoryRoot.Combine("Directory.Build.props"));
+        var version = VersionElement().Match(properties);
+
+        Assert.True(version.Success, "Directory.Build.props declares no <Version>.");
+
+        return version.Groups[1].Value;
+    }
+
+    [GeneratedRegex(@"<Version>([^<]+)</Version>")]
+    private static partial Regex VersionElement();
+
+    [Fact]
     public void The_documented_recipe_fetches_the_whole_history() =>
         Assert.Contains("fetch-depth: 0", FencedBlock(), StringComparison.Ordinal);
 
-    private static string Workflow([CallerFilePath] string testFile = "") =>
-        Read(Path.Combine(RepositoryRoot(testFile), ".github", "workflows", "dogfood.yml"));
+    private static string Workflow() =>
+        Read(RepositoryRoot.Combine(".github", "workflows", "dogfood.yml"));
 
     /// <summary>
     /// The YAML between the markers, with the fence itself removed. The markers are HTML
     /// comments, so they are invisible on GitHub and the block reads as an ordinary example.
     /// </summary>
-    private static string FencedBlock([CallerFilePath] string testFile = "")
+    private static string FencedBlock()
     {
-        var document = Read(Path.Combine(RepositoryRoot(testFile), "docs", "adopting-reach.md"));
+        var document = Read(RepositoryRoot.Combine("docs", "adopting-reach.md"));
 
         var start = document.IndexOf(Open, StringComparison.Ordinal);
         var end = document.IndexOf(Close, StringComparison.Ordinal);
@@ -87,19 +126,5 @@ public class WorkflowParityTests
         Assert.True(File.Exists(path), $"Nothing at {path}.");
 
         return File.ReadAllText(path).ReplaceLineEndings("\n");
-    }
-
-    private static string RepositoryRoot(string testFile)
-    {
-        var directory = Path.GetDirectoryName(testFile);
-
-        while (directory is not null && !Directory.Exists(Path.Combine(directory, ".git")))
-        {
-            directory = Path.GetDirectoryName(directory);
-        }
-
-        Assert.NotNull(directory);
-
-        return directory;
     }
 }
