@@ -110,6 +110,40 @@ public class WholeProjectAndWideningTests
     }
 
     [Fact]
+    public void Widening_a_test_assembly_selects_the_tests_in_it()
+    {
+        // An interface member has no IL and no sequence points, so it cannot join and widens
+        // its whole assembly — which here is the test assembly itself. Found by dogfooding:
+        // two `const` fields in a test class did exactly this and selected nothing at all.
+        using var selections = Selections.Of(
+            "namespace N; public class Widget { public int Spin() => 1; }",
+            """
+            namespace N.Tests;
+
+            public interface IMarker { int Describe(); }
+
+            public class WidgetTests
+            {
+                [Xunit.Fact]
+                public void Spins() => new N.Widget().Spin();
+
+                [Xunit.Fact]
+                public void Also_spins() => new N.Widget().Spin();
+            }
+            """,
+            changed: ["IMarker.Describe"]);
+
+        var change = Assert.Single(selections.Changes);
+
+        Assert.Equal(ChangeTier.WholeAssembly, change.Tier);
+
+        // The whole point of widening is that it over-selects. A test that is itself one of the
+        // widening's roots is still selected by it — the direction that fails safely.
+        Assert.Equal(["Also_spins", "Spins"], selections.SelectedNames);
+        Assert.Equal(2, change.TestsReached);
+    }
+
+    [Fact]
     public void A_declaration_that_fails_to_join_falls_through_to_whole_assembly_widening()
     {
         using var graphs = Graphs.Of(("Core", "namespace N; public class A { public int M() => 1; }"));

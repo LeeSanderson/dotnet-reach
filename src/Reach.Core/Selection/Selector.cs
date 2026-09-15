@@ -51,7 +51,10 @@ internal static class Selector
                 continue;
             }
 
-            var ownRoots = change.Roots.ToHashSet();
+            // Only the member tier, where own-source-changed picks the test up instead. A
+            // widening's roots are an expansion, not the declaration, and nothing else would
+            // select the tests among them.
+            var ownRoots = change.RootsAreTheDeclaration ? change.Roots.ToHashSet() : [];
             var reached = ReverseWalk.From(graph, change.Roots);
 
             foreach (var (method, pathClass) in reached)
