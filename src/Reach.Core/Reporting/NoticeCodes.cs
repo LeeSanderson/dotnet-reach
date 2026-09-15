@@ -19,4 +19,10 @@ internal static class NoticeCodes
 
     /// <summary>No baseline could be resolved. The run failed; the message says how to fix it.</summary>
     internal const string BaselineUnresolvable = "baseline-unresolvable";
+
+    /// <summary>
+    /// Reach was pointed at a project that no solution above it lists, so there is no expected
+    /// project list to check the build output against.
+    /// </summary>
+    internal const string ProjectOutsideEverySolution = "project-outside-every-solution";
 }
