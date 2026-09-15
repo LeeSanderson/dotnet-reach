@@ -6,12 +6,18 @@ using Reach.Reporting;
 namespace Reach.Graph;
 
 /// <summary>The graph, plus everything the pass had to disclose while building it.</summary>
+/// <param name="HierarchyConstructions">
+/// How many type hierarchy indexes this run built. One of M1's two committed algorithmic
+/// constraints is that it is exactly one, and this is what makes that a test rather than a
+/// review comment.
+/// </param>
 internal sealed record CallGraphResult(
     CallGraph Graph,
     IReadOnlyList<GraphAssembly> Assemblies,
     ExternalAnchors Externals,
     IReadOnlyList<Notice> Notices,
-    TimeSpan Elapsed);
+    TimeSpan Elapsed,
+    int HierarchyConstructions);
 
 /// <summary>
 /// One pass over the analysis scope's assemblies, producing nodes and compiled edges.
@@ -54,6 +60,18 @@ internal sealed class CallGraphBuilder
     private readonly HashSet<string> implementedExternalTypes = new(StringComparer.Ordinal);
 
     /// <summary>
+    /// Dispatch declarations some call site actually reached, and the member key each one
+    /// names. Widening hangs off these nodes, never off the call sites — smearing widened edges
+    /// across the graph would leave them neither isolable nor countable, which breaks the
+    /// measurement.
+    /// </summary>
+    private readonly Dictionary<MethodId, (string Type, string Member)> dispatchTargets = [];
+
+    private TypeHierarchy hierarchy = null!;
+
+    private int hierarchyConstructions;
+
+    /// <summary>
     /// Ordinals are assigned in a deterministic order — assembly simple name, then target
     /// framework — so a debugging session is reproducible. No ordinal ever reaches the report,
     /// so report determinism does not depend on this.
@@ -93,11 +111,18 @@ internal sealed class CallGraphBuilder
             CollectExternalSlots(assembly);
         }
 
+        // Exactly one, built here and passed down. Resolving implementations per call site is
+        // accidentally quadratic and will look fine on a sample repository and fail on a
+        // client's.
+        hierarchy = new TypeHierarchy(assemblies);
+        hierarchyConstructions++;
+
         foreach (var assembly in assemblies)
         {
             Walk(assembly);
         }
 
+        Widen();
         NoteUnresolved();
 
         return new CallGraphResult(
@@ -105,7 +130,8 @@ internal sealed class CallGraphBuilder
             assemblies,
             externals,
             notices,
-            started.Elapsed);
+            started.Elapsed,
+            hierarchyConstructions);
     }
 
     /// <summary>
@@ -170,10 +196,14 @@ internal sealed class CallGraphBuilder
             }
 
             byte[] il;
+            IReadOnlyDictionary<int, string> receivers;
 
             try
             {
-                il = assembly.PEReader.GetMethodBody(method.RelativeVirtualAddress).GetILBytes() ?? [];
+                var body = assembly.PEReader.GetMethodBody(method.RelativeVirtualAddress);
+
+                il = body.GetILBytes() ?? [];
+                receivers = ReceiverTypes.Infer(assembly, method, body, il);
             }
             catch (BadImageFormatException)
             {
@@ -191,7 +221,151 @@ internal sealed class CallGraphBuilder
 
                 foreach (var to in Resolve(assembly, instruction.Token))
                 {
-                    edges.Add(new Edge(from, to, provenance.Value));
+                    edges.Add(new Edge(
+                        from,
+                        Anchor(assembly, instruction, receivers, to),
+                        provenance.Value));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Re-anchors a dispatch to the slot as seen from the inferred receiver type, and records
+    /// the node so widening can hang off it.
+    /// </summary>
+    /// <remarks>
+    /// This is where the whole ticket earns its place. Taking the instruction's own token would
+    /// send every <c>ToString()</c> call site to one <c>object::ToString</c> node, which widens
+    /// to every override anywhere — not conservatism, but a graph with no information in it.
+    /// </remarks>
+    private MethodId Anchor(
+        GraphAssembly assembly,
+        TokenInstruction instruction,
+        IReadOnlyDictionary<int, string> receivers,
+        MethodId token)
+    {
+        // callvirt and ldvirtftn *are* dispatch, whatever the declaring type is — which
+        // matters, because the slot is routinely object::ToString or IDisposable::Dispose in an
+        // assembly Reach never reads. `call` is included only because a static abstract
+        // interface member dispatches with it, and it needs the check: widening an ordinary
+        // call would reach a subtype's `new`-shadowed method, which never runs from that site.
+        var isDispatch = instruction.OpCode is ILOpCode.Callvirt or ILOpCode.Ldvirtftn;
+
+        if (!isDispatch && instruction.OpCode != ILOpCode.Call)
+        {
+            return token;
+        }
+
+        var member = MemberKeyOf(assembly, instruction.Token);
+
+        if (member is null)
+        {
+            return token;
+        }
+
+        if (!isDispatch && !hierarchy.IsDispatchable(member.Value.Type, member.Value.Member))
+        {
+            return token;
+        }
+
+        if (!receivers.TryGetValue(instruction.Offset, out var receiver))
+        {
+            Remember(token, member.Value);
+            return token;
+        }
+
+        var slot = hierarchy.SlotFor(receiver, member.Value.Member);
+
+        if (slot is null || hierarchy.MethodOf(slot, member.Value.Member) is not { } anchored)
+        {
+            Remember(token, member.Value);
+            return token;
+        }
+
+        Remember(anchored, (slot, member.Value.Member));
+
+        return anchored;
+    }
+
+    private void Remember(MethodId node, (string Type, string Member) member) =>
+        dispatchTargets[node] = member;
+
+    /// <summary>The declaring type and member key a call instruction names, as the hierarchy spells them.</summary>
+    private (string Type, string Member)? MemberKeyOf(GraphAssembly assembly, int token)
+    {
+        try
+        {
+            var reader = assembly.Reader;
+            var handle = MetadataTokens.EntityHandle(token);
+            var names = new SignatureNames();
+
+            switch (handle.Kind)
+            {
+                case HandleKind.MethodDefinition:
+                    {
+                        var method = reader.GetMethodDefinition((MethodDefinitionHandle)handle);
+
+                        return (
+                            MetadataNames.FullNameOf(reader, method.GetDeclaringType()),
+                            MetadataNames.Key(
+                                reader.GetString(method.Name),
+                                MetadataNames.GenericArityOf(reader, method),
+                                method.DecodeSignature(names, genericContext: null)));
+                    }
+
+                case HandleKind.MemberReference:
+                    {
+                        var reference = reader.GetMemberReference((MemberReferenceHandle)handle);
+
+                        if (reference.GetKind() != MemberReferenceKind.Method)
+                        {
+                            return null;
+                        }
+
+                        var signature = reference.DecodeMethodSignature(names, genericContext: null);
+                        var (declaringType, _) = ParentOf(reader, reference.Parent, names);
+
+                        return declaringType is null
+                            ? null
+                            : (declaringType,
+                                MetadataNames.Key(
+                                    reader.GetString(reference.Name),
+                                    signature.GenericParameterCount,
+                                    signature));
+                    }
+
+                case HandleKind.MethodSpecification:
+                    return MemberKeyOf(
+                        assembly,
+                        MetadataTokens.GetToken(
+                            reader.GetMethodSpecification((MethodSpecificationHandle)handle).Method));
+
+                default:
+                    return null;
+            }
+        }
+        catch (BadImageFormatException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Edges from every dispatch declaration a call site reached to every implementation it
+    /// could run, computed once per node rather than once per call site.
+    /// </summary>
+    private void Widen()
+    {
+        foreach (var (node, (type, member)) in dispatchTargets)
+        {
+            foreach (var implementation in hierarchy.ImplementationsOf(type, member))
+            {
+                if (implementation != node)
+                {
+                    // The only speculative class, and therefore the only class any future
+                    // narrowing may touch.
+                    edges.Add(new Edge(node, implementation, EdgeProvenance.Widened));
                 }
             }
         }

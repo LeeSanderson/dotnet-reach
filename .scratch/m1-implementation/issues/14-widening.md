@@ -1,6 +1,6 @@
 # Widening: the type hierarchy index and receiver-type inference
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 09
 Spec: [§11.7](../../walking-skeleton/spec.md#117-widening) · [ADR-0007](../../../docs/adr/0007-widening-targets-the-inferred-receiver-type.md), [ADR-0006](../../../docs/adr/0006-a-graph-node-is-an-il-method-definition.md)
 
@@ -111,3 +111,50 @@ and was built for exactly this.
 
 Narrowing of any kind. Containment and type-initializer edges — ticket 15. Any attempt to bound
 the interface-typed receiver — that is what framework models are for, in M2.
+
+## Comments
+
+**Implemented** in `Reach.Core/Graph`: `TypeHierarchy` (the index), `ReceiverTypes` (the
+abstract interpreter) and a `Widen` pass on `CallGraphBuilder`.
+
+**The ladder works by re-anchoring the call site's edge, not by adding edges at the call
+site.** Given an inferred receiver type, `TypeHierarchy.SlotFor` finds the type that declares
+the member as seen from there, and the compiled edge points at *that* node; widening then hangs
+off it, computed once per node. So `square.ToString()` edges to `N.Square::ToString` rather
+than to `object::ToString`, and widening from it reaches Square's subtree and nothing else.
+That is the assertion the whole ticket exists for, and it has a named test with a sibling class
+asserted *not* reachable.
+
+**Two things had to be true at once that the ticket states separately.**
+
+- **`callvirt` and `ldvirtftn` are dispatch whatever the declaring type is.** The slot is
+  routinely `object::ToString` or `IDisposable::Dispose`, in an assembly Reach never reads, so
+  a check against the first-party hierarchy would have refused to widen exactly the cases the
+  ticket names.
+- **A static abstract interface member dispatches with `call`, not `callvirt`.** The opcode
+  therefore cannot be the test on its own, and widening every `call` would reach a subtype's
+  `new`-shadowed method, which never runs from that site. `TypeHierarchy.IsDispatchable` —
+  interface member, or virtual, or abstract — is what keeps both true. The static-abstract test
+  failed on exactly this before the rule was split.
+
+**The stack is cleared at every branch target and every exception-handler entry.** That is a
+linear pass rather than a worklist over basic blocks, and it *is* the stack-merge residue the
+design accepts: a ternary compiling to branches pushing different types reads as unknown and
+keeps full fan-out. Named test, so the residue stays a decision.
+
+**The pop/push table is reflected out of `System.Reflection.Emit.OpCodes`**, like the operand
+sizes, so the generic cases are the BCL's own arithmetic rather than a hand-written copy. Only
+the instructions the ladder cares about are modelled precisely.
+
+**The "exactly once per run" counter is on `CallGraphResult`, not a static.** A process-wide
+counter read 3 when the suite ran in parallel and 1 when the file ran alone — a flaky assertion
+about a real constraint is worse than none. `HierarchyConstructions` is per run and cannot race.
+
+**Dogfooding after this ticket**: 215 of 351 test methods selected for the working tree's
+changes, against 197 of 336 before. Widening is adding reach without collapsing the graph,
+which is the shape the ladder exists to produce.
+
+One assertion the ticket asks for that is worth restating because it is a *negative* result:
+**an interface-typed parameter infers to the interface**, so the dependency-injection shape is
+untouched by this ticket. That has its own named test, and PRD §11's main technical risk
+remains unmeasured until the over-selection number exists.
