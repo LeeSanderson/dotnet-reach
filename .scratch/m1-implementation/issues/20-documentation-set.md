@@ -1,6 +1,6 @@
 # The documentation set and the committed example report
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 18, 19
 Spec: [§16.4](../../walking-skeleton/spec.md#164-documentation-ci-and-publishing)
 
@@ -129,3 +129,45 @@ documentation site (in-repo Markdown reads fine on GitHub); a JSON Schema file; 
 recipes in full (trigger: the first adopter on that provider, which is also the first time one
 could be verified); a troubleshooting or FAQ page; contributor documentation; a migration guide
 (nothing to migrate from at `schemaVersion` 1).
+
+## Implementation notes
+
+Four documents, one new test, no new machinery. `docs/limitations.md` needed no reshaping — the
+register parity test had already forced it into agreement with the catalogue, which is the
+mechanism working as designed rather than a reconciliation.
+
+**The committed example is generated, never hand-written.** `ExampleReportTests` runs ticket 19's
+determinism fixture, stabilises the three things that are true of one *machine* rather than of one
+*input* — the tool version, the clock, and every 40-hex SHA — and asserts the result byte for byte
+against `docs/example-report.json`. `REACH_UPDATE_EXAMPLE=1` rewrites it. Path separators are
+normalised because the example is read on every machine but produced on one.
+
+**Stabilising too much made the example lie**, and that is the note worth keeping. The first
+version substituted a whole plausible-looking baseline object — `reference: "origin/main"`,
+`detectedFrom: "GitHubActions"`, `isHead: false` — and so shipped an example whose envelope
+contradicted the `baseline-is-head` notice three screens below it, in a document whose entire
+purpose is making a report explicable. Anything invented rather than stabilised can disagree with
+the rest of the file. The baseline is now left exactly as the run produced it: `detectedFrom:
+"Option"`, `isHead: true`, and §"Reading a surprising selection" walks that as step 2 — the
+empty-change-set trap, visible in the example a reader already has.
+
+**The index is complete because it was checked mechanically once, not because a test guards it.**
+All 23 codes in `NoticeCodes` appear; the five `blind-spot` codes and the six widening ones carry
+one line and a register link, and the `scope` and `environment` codes carry their full entry with
+`data` keys, since those are not holes and the register is not their home. Per the ticket, no
+second parity test — the check was a throwaway script over `NoticeCodes.cs` and the index section,
+and the same script verified every relative link and anchor across the four documents resolves.
+
+**Three facts the schema reference had to state that no ticket had banked**: `summary` is absent
+when the run failed before rendering; `framework`/`packageVersion`/`runnerHost`/`dialect` are
+absent exactly when the framework is unrecognised, which is the case the surrounding fields
+describe; and `ratio` is `null` rather than absent when nothing was enumerable. All three come
+from the serializer's actual behaviour, not from the DTO's intent.
+
+**`dotnet test` cannot run this suite on the development machine** — it reports *Zero tests ran*
+and exits 5 against any Microsoft.Testing.Platform host, including a stock `dotnet new xunit3`
+project outside this repository, under both the MTP v1 and v2 packages. It is environmental and
+not a defect in this repository's project files, but CI's test step runs `dotnet test`, so it is
+worth knowing before the first CI run. The full suite here was run through the executable the
+build produces, which is the same engine: **510 tests green**, `dotnet build -warnaserror` clean,
+`dotnet format --verify-no-changes` clean.
