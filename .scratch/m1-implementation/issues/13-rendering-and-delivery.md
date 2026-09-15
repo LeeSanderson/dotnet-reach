@@ -1,6 +1,6 @@
 # Rendering and delivery
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 11, 12
 Spec: [§12.3](../../walking-skeleton/spec.md#123-rendering)–[§12.6](../../walking-skeleton/spec.md#126-exit-8-is-an-instrument-not-a-hazard) · [ADR-0009](../../../docs/adr/0009-per-host-private-filter-channels-over-runsettings.md), [ADR-0015](../../../docs/adr/0015-invocations-pin-the-target-framework-where-it-is-derivable.md)
 
@@ -153,3 +153,60 @@ mean a Reach rendering bug and nothing else.
 The direct-executable host and VSTest-native rendering — out of scope for M1 with **no notice**,
 since it would fire on nearly every xUnit v3 project and mean nothing. MTP test-node UIDs — out of
 scope; UIDs come from a discovery pass Reach does not run.
+
+## Comments
+
+**Implemented** in `Reach.Core/Rendering`: `FilterDialect`, `CommandLineCeiling`, `Chunker`,
+`FrameworkSelector`, `RunSettings` and `Renderer`. The report's `invocations`, `delivery` and
+`willRun` now come from it.
+
+**Stage A is complete.** Pointed at its own repository, Reach selects tests for the working
+tree's changes, writes a response file, and emits an argv that runs:
+
+```
+Selected 197 test(s).
+  Reach.Tests (net10.0)  filtered  197/336
+
+"invocations": [["dotnet","test",".../Reach.Tests.csproj","--configuration","Release",
+                 "@.../.reach/Reach.Tests.net10.0.0.rsp"]]
+```
+
+Running that command by hand: 251 cases, all passing. 197 methods against 251 cases is the
+parameterised-test expansion, and is why selection granularity is the method.
+
+**One rule had to be read at project scope rather than instance scope.** The ticket says a
+`TargetPlatformAttribute` on a multi-instance project degrades it to one project-wide
+invocation. The first implementation checked the *current* instance, so a
+`net10.0`/`net10.0-windows` pair rendered a pinned filter for `net10.0` and degraded only the
+windows half — which is wrong, because `dotnet test` runs every target framework: one sibling
+that cannot be pinned makes every sibling's filter reach it, and pinning the others correctly
+would not save the run. Underivability is a property of the project. Named test.
+
+**`--configuration` is on the emitted argv when the caller gave one**, which the ticket does
+not mention. The same reasoning that passes it to the build applies here: a selection computed
+over Release output that the runner then executes against Debug is a different set of tests.
+`-o` and `--output` are never emitted, asserted directly.
+
+**Delivery is chosen by host, from the dialect.** `xunit-v3*` answers to Microsoft.Testing.
+Platform and gets a response file; everything else under `dotnet test` has no private channel
+and gets chunks. That follows the ticket's table. A project that opts NUnit or MSTest into MTP
+would be chunked unnecessarily — over-delivery, never a wrong selection, and not worth a
+detection rule until something shows it matters.
+
+**`willRun` is computed against every enumerated test**, which is why `ProjectSelection` now
+carries `AllTests`. Computing it against the selection alone would have made the `~` dialect's
+over-match invisible, and the over-selection measurement would read the wrong number — the one
+thing this half of the ticket exists to prevent.
+
+**Escaping is asserted character by character**, including a name carrying all nine grammar
+characters at once, with the assertion counting *unescaped* separators rather than splitting
+naively — the first version of that test split on `|` and failed on its own escaping.
+
+**The consumer's half is driven, not inferred.** `ConsumerLoopTests` loops over a report's
+`invocations` with a fake runner and asserts that an empty selection and a `no-changes` report
+each start no process, and that a real selection starts exactly one. That is spec §16.2's
+second mandatory assertion.
+
+Not covered here, and correctly so: a golden argv per *runner host* is one row wide, because M1
+renders for `dotnet test` only — which is what keeps the exit-8 claim honest rather than a gap
+left open.

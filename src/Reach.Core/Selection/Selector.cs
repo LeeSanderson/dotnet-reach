@@ -100,7 +100,8 @@ internal static class Selector
                 SelectionMode.RunAll,
                 [],
                 null,
-                null);
+                null,
+                project.Tests);
         }
 
         var selected = new List<SelectedTest>();
@@ -145,7 +146,8 @@ internal static class Selector
             selected.Count == 0 ? SelectionMode.Skip : SelectionMode.Filtered,
             [.. selected.OrderBy(test => test.Test.FullyQualifiedName, StringComparer.Ordinal)],
             project.Tests.Count,
-            project.Framework.Dialect);
+            project.Framework.Dialect,
+            project.Tests);
     }
 
     private static IReadOnlyList<EnumeratedProject> Enumerate(

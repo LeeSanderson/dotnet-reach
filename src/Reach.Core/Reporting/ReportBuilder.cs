@@ -1,6 +1,7 @@
 using Reach.Assemblies;
 using Reach.Baselines;
 using Reach.Changes;
+using Reach.Rendering;
 using Reach.Selection;
 
 namespace Reach.Reporting;
@@ -153,32 +154,38 @@ internal static class ReportBuilder
     /// </summary>
     private static IReadOnlyList<ReportEntry> EntriesOf(SelectRun run) =>
     [
-        .. (run.Selection?.Projects ?? [])
-            .Select(project => new ReportEntry
-            {
-                Project = Relative(project.Project.Path, run.RepositoryRoot),
-                TargetFramework = project.TargetFramework,
-                Framework = project.Dialect,
-                Dialect = project.Dialect,
-                RunnerHost = project.Mode == SelectionMode.Skip ? null : "dotnet-test",
-                Mode = Kebab(project.Mode.ToString()),
-                Counts = new ReportCounts(
-                    project.Selected.Count,
-                    project.Mode == SelectionMode.RunAll ? 0 : project.Selected.Count,
-                    project.Total),
-                Tests =
-                [
-                    .. project.Selected
-                        .Select(TestOf)
-                        .OrderBy(test => test.Display, StringComparer.Ordinal)
-                ],
-                // Filled by rendering. Zero for skip is the load-bearing case and is already
-                // true here.
-                Invocations = [],
-            })
+        .. (run.Rendered?.Entries ?? [])
+            .Select(rendered => EntryOf(rendered, run.RepositoryRoot))
             .OrderBy(entry => entry.Project, StringComparer.Ordinal)
             .ThenBy(entry => entry.TargetFramework, StringComparer.Ordinal)
     ];
+
+    private static ReportEntry EntryOf(RenderedEntry rendered, string? root)
+    {
+        var project = rendered.Selection;
+
+        return new ReportEntry
+        {
+            Project = Relative(project.Project.Path, root),
+            TargetFramework = project.TargetFramework,
+            Framework = project.Dialect,
+            Dialect = project.Dialect,
+            RunnerHost = rendered.Mode == SelectionMode.Skip ? null : "dotnet-test",
+            Mode = Kebab(rendered.Mode.ToString()),
+            Delivery = rendered.Delivery == Delivery.None ? null : Kebab(rendered.Delivery.ToString()),
+            Counts = new ReportCounts(
+                project.Selected.Count,
+                rendered.Mode == SelectionMode.RunAll ? (project.Total ?? 0) : rendered.WillRun,
+                project.Total),
+            Tests =
+            [
+                .. project.Selected
+                    .Select(TestOf)
+                    .OrderBy(test => test.Display, StringComparer.Ordinal)
+            ],
+            Invocations = rendered.Invocations,
+        };
+    }
 
     private static ReportTest TestOf(SelectedTest test) =>
         new()

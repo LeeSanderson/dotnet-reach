@@ -88,13 +88,18 @@ internal sealed record SelectedTest(
 /// analyse would silently corrupt the over-selection ratio in exactly the case where Reach is
 /// running an entire project.
 /// </param>
+/// <param name="AllTests">
+/// Every test method in the project, not only the selected ones. The rendered-match
+/// computation reads it, and so does the over-selection measurement.
+/// </param>
 internal sealed record ProjectSelection(
     ProjectFile Project,
     string TargetFramework,
     SelectionMode Mode,
     IReadOnlyList<SelectedTest> Selected,
     int? Total,
-    string? Dialect);
+    string? Dialect,
+    IReadOnlyList<TestMethod> AllTests);
 
 /// <summary>The whole selection, plus the forward change list and anything it had to disclose.</summary>
 internal sealed record SelectionResult(

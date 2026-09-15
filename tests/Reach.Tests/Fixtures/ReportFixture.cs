@@ -6,19 +6,49 @@ namespace Reach.Tests.Fixtures;
 /// <summary>Builds a report from a <see cref="Selections"/> fixture, or from a real run.</summary>
 internal static class ReportFixture
 {
-    internal static Report Build(Selections selections, bool noChanges = false)
+    internal static Report Build(Selections selections, bool noChanges = false, SelectRequest? request = null)
     {
+        using var directory = TempDirectory.Create("reach-render");
+
+        var actual = (request ?? new SelectRequest()) with { WorkingDirectory = directory.Path };
+
+        // With no changes there are no roots, so the selector selects nothing and every entry
+        // is a skip — which is what the pipeline itself produces, and what the report's
+        // "a consumer's loop behaves identically across all four outcomes" rests on.
+        var selection = noChanges ? Emptied(selections.Result) : selections.Result;
+
+        var rendered = new Reach.Rendering.Renderer(
+                selections.Instances,
+                actual,
+                Reach.Output.ReachDirectory.For(directory.Path, null))
+            .Render(selection);
+
         var run = new SelectRun(
             ExitCode.Success,
             string.Empty,
-            selections.Result.Notices,
+            [.. selections.Result.Notices, .. rendered.Notices],
             Scope: selections.Scope,
             Changes: noChanges ? ChangedSet.Empty : selections.Changed,
             Assemblies: selections.Instances,
-            Selection: selections.Result);
+            Selection: selection,
+            Rendered: rendered);
 
-        return ReportBuilder.Build(run, new SelectRequest(), new PhaseTimings());
+        return ReportBuilder.Build(run, actual, new PhaseTimings());
     }
+
+    private static Reach.Selection.SelectionResult Emptied(Reach.Selection.SelectionResult selection) =>
+        selection with
+        {
+            Projects =
+            [
+                .. selection.Projects.Select(project => project with
+                {
+                    Mode = Reach.Selection.SelectionMode.Skip,
+                    Selected = [],
+                })
+            ],
+            Changes = [],
+        };
 
     /// <summary>The smallest report that serialises, for assertions about the shape itself.</summary>
     internal static Report Minimal(ReportCounts? counts = null) =>

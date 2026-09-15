@@ -71,4 +71,28 @@ internal static class NoticeCodes
     /// canonical form is unchanged.
     /// </summary>
     internal const string ChangesWereFormattingOnly = "changes-were-formatting-only";
+
+    /// <summary>
+    /// The rendered filter matches more tests than were selected, because the dialect matches
+    /// by containment rather than equality.
+    /// </summary>
+    internal const string DialectOverSelects = "dialect-over-selects";
+
+    /// <summary>
+    /// A selection exceeded the command-line ceiling and went through a response file or across
+    /// several invocations.
+    /// </summary>
+    internal const string SelectionDeliveredOutOfBand = "selection-delivered-out-of-band";
+
+    /// <summary>
+    /// The caller's runsettings file already carries a <c>TestCaseFilter</c>, which would be
+    /// AND-ed with Reach's, so the project runs in full instead.
+    /// </summary>
+    internal const string RunSettingsFilterConflict = "runsettings-filter-conflict";
+
+    /// <summary>
+    /// A multi-targeted project carries a platform suffix, whose declared moniker cannot be
+    /// recovered from metadata, so no <c>-f</c> selector can be rendered.
+    /// </summary>
+    internal const string FrameworkSelectorUnderivable = "framework-selector-underivable";
 }

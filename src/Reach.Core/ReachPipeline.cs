@@ -8,6 +8,7 @@ using Reach.Join;
 using Reach.Output;
 using Reach.Processes;
 using Reach.Projects;
+using Reach.Rendering;
 using Reach.Reporting;
 using Reach.Selection;
 
@@ -37,6 +38,7 @@ internal sealed record SelectRun(
     CallGraphResult? Graph = null,
     IReadOnlyList<JoinResult>? Roots = null,
     SelectionResult? Selection = null,
+    RenderedSelection? Rendered = null,
     string? RepositoryRoot = null,
     bool WritesReport = true);
 
@@ -186,6 +188,16 @@ internal sealed class ReachPipeline(IProcessRunner processRunner)
 
         notices.AddRange(selection.Notices);
 
+        var rendered = timings.Measure(
+            "rendering",
+            () => new Renderer(
+                    assemblies.Instances,
+                    request,
+                    ReachDirectory.For(request.WorkingDirectory, request.ReportDirectory))
+                .Render(selection));
+
+        notices.AddRange(rendered.Notices);
+
         // An empty selection exits 0. Non-zero means "do not trust my answer", which is what
         // makes the pipeline rule one line of guidance rather than a paragraph.
         return partial with
@@ -193,6 +205,7 @@ internal sealed class ReachPipeline(IProcessRunner processRunner)
             Graph = graph,
             Roots = roots,
             Selection = selection,
+            Rendered = rendered,
         };
     }
 
