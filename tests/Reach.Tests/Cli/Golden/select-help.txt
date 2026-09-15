@@ -1,0 +1,23 @@
+Description:
+  Work out which tests a change could possibly affect, and write a report naming them.
+
+Usage:
+  reach select [<SOLUTION|PROJECT>] [options]
+
+Arguments:
+  <SOLUTION|PROJECT>  The solution or single test project. Discovered in the working directory when omitted.
+
+Options:
+  --base <ref>                The branch this work merges into. The baseline is merge-base(HEAD, <ref>). Auto-detected when omitted.
+  -c, --configuration <name>  Build configuration. The SDK's default when omitted.
+  -o, --output <dir>          The build's output directory. Never where Reach writes — see --report-dir.
+  --artifacts-path <dir>      The build's artifacts path.
+  --no-build                  Analyse the output already on disk instead of building first.
+  --report <path|->           Where to write report.json. '-' sends it to standard output and moves the summary to standard error.
+  --report-dir <dir>          The directory Reach owns, holding the report and every response file and testlist. Defaults to .reach under the working directory.
+  --paths                     Include the source path of every changed member in the report.
+  --list-unselected           Include the tests that were not selected in the report.
+  --runsettings <path>        Merge Reach's filter into this runsettings file and write the result. Reach runs no tests.
+  -v, --verbosity <level>     Set the verbosity level. Allowed values are q[uiet], m[inimal], n[ormal], d[etailed] and diag[nostic].
+  --no-color                  Do not colour the summary. Auto-detected, and NO_COLOR is honoured too.
+  -?, -h, --help              Show help and usage information

@@ -3,9 +3,6 @@ using Reach.Reporting;
 
 namespace Reach.Baselines;
 
-/// <summary>Reads one environment variable. Not a port — there is nothing here to fake but a lookup.</summary>
-internal delegate string? EnvironmentLookup(string name);
-
 /// <summary>
 /// Turns "no arguments in a CI job" into a baseline SHA, or into exit 4 with a message that
 /// fixes the problem in one line.

@@ -1,0 +1,12 @@
+Description:
+  Reach works out which tests a code change could possibly affect, by reading compiled assemblies and walking the call graph backwards from changed code to tests.
+
+Usage:
+  reach [command] [options]
+
+Options:
+  -?, -h, --help  Show help and usage information
+  --version       Show version information
+
+Commands:
+  select <SOLUTION|PROJECT>  Work out which tests a change could possibly affect, and write a report naming them.

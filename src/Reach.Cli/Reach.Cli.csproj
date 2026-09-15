@@ -24,4 +24,8 @@
     <ProjectReference Include="../Reach.Core/Reach.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Reach.Tests" />
+  </ItemGroup>
+
 </Project>
