@@ -101,4 +101,23 @@ internal static class NoticeCodes
     /// nothing was selected for it. The one rule in Reach that errs toward selecting nothing.
     /// </summary>
     internal const string UnmappedFileNoProject = "unmapped-file-no-project";
+
+    /// <summary>
+    /// A changed file produced an error diagnostic or skipped tokens, so its project widened.
+    /// Reach's parser did not understand the source it was given.
+    /// </summary>
+    internal const string ParseFailed = "parse-failed";
+
+    /// <summary>
+    /// A project declares a language version above what Reach's parser understands. Reported
+    /// rather than widened — the window is narrow and widening would fire across whole modern
+    /// codebases for a hazard that usually is not present.
+    /// </summary>
+    internal const string LangVersionAboveCeiling = "langversion-above-ceiling";
+
+    /// <summary>
+    /// A removal or a changed compile-time constant widened every assembly that transitively
+    /// references the declaring one.
+    /// </summary>
+    internal const string RecompilationWidened = "recompilation-widened";
 }

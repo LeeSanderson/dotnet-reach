@@ -1,6 +1,6 @@
 # Recompilation widening and the parse-failure rules
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 06, 16
 Spec: [§9.4](../../walking-skeleton/spec.md#94-recompilation-widening), [§9.5](../../walking-skeleton/spec.md#95-parsing-c-reach-does-not-know) · [ADR-0014](../../../docs/adr/0014-removals-and-constant-changes-widen-transitive-referencers.md), [ADR-0013](../../../docs/adr/0013-the-tool-targets-net10-0.md)
 
@@ -121,3 +121,41 @@ changed method inside one never enters the changed set at all.
 
 MVID comparison. Any attempt to detect the silent misparse — it is a documented hole, and the
 mitigation is shipping current Roslyn.
+
+## Comments
+
+**Implemented** as `Reach.Core/Changes/RecompilationWidening.cs` and
+`Reach.Core/Changes/ParseHealth.cs`, consumed by `RootSets.ChangesFrom` and `ChangedSetBuilder`
+respectively.
+
+**Recompilation widening reads nothing about accessibility, and that is the point.** The
+rejected narrowing to public surface would have needed a friend-relationship check;
+`RecompilationWidening` never looks at a modifier, so an `internal const` consumed by a friend
+assembly triggers exactly like a public one. There is a named test for it, so the narrowing
+cannot be re-added without turning a green test red.
+
+**Each triggering member is its own entry in the forward change list, carrying its own reason.**
+That is what makes the blast radius accepted rather than merely tolerated: a pull request that
+selected everything shows exactly which `const` did it, and the reader can move the constant or
+accept the cost knowing why.
+
+**Additions triggering nothing has its own assertion**, because the narrow trigger is only
+sufficient if that holds — an added member is in the changed set and the rebound call site's
+recompiled IL points at it, so the reverse walk finds it for free.
+
+**The parse check runs over both revisions.** A baseline revision that does not parse is as much
+a reason to distrust the members read out of a file as a working-tree one, and reading only the
+current side would miss a file that *stopped* being unparseable.
+
+**`ExceedsCeiling` reports and does not widen**, as the ticket requires. It returns false for
+`preview`, `latest`, `default` and every numeric version the shipped parser understands — and
+only a numeric version above the ceiling is reported, which with current Roslyn shipped is a
+narrow window.
+
+One thing worth naming because it is *not* implemented: nothing here detects the silent
+misparse, and nothing can. `record Person(string First)` on an older parser reads as a method
+with zero diagnostics. The mitigations are the two the ticket names — parse with
+`LanguageVersion.Preview`, which is asserted, and ship current Roslyn — plus the structural
+reason the hole is narrower than it looks: the same parser reads both revisions, so a
+deterministic misparse diffs stably and a phantom member fails the join and falls through to
+whole-assembly widening.

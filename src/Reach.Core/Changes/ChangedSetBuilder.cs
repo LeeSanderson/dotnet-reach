@@ -35,6 +35,7 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
 
         var unmappable = new List<ChangedPath>();
         var notices = new List<Notice>();
+        var unparseable = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var path in paths)
         {
@@ -52,11 +53,14 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
             {
                 var text = await BaselineTextAsync(baseline, path.Path, cancellationToken).ConfigureAwait(false);
                 declaredAnything |= Collect(baselineTypes, path.Path, text);
+                Check(path, text, unparseable);
             }
 
             if (path.HasWorkingTree)
             {
-                declaredAnything |= Collect(currentTypes, path.Path, WorkingTreeText(path.Path));
+                var text = WorkingTreeText(path.Path);
+                declaredAnything |= Collect(currentTypes, path.Path, text);
+                Check(path, text, unparseable);
             }
 
             // A source file that declares no type at all — global usings, assembly-level
@@ -98,6 +102,18 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
         }
 
         NoteUntracked(paths, notices);
+        NoteUnparseable(unparseable, notices);
+
+        // A file Reach could not parse is a file whose members it cannot trust, so its whole
+        // assembly widens rather than being read as unchanged.
+        foreach (var path in unparseable.Order(StringComparer.Ordinal))
+        {
+            assemblyWidenings.Add(new AssemblyWidening(
+                path,
+                WideningReason.DeletedType,
+                path,
+                ProjectContaining(path)));
+        }
 
         return new ChangedSet(members, typeWidenings, assemblyWidenings, paths, unmappable, notices);
     }
@@ -154,6 +170,37 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
         {
             return string.Empty;
         }
+    }
+
+    /// <summary>
+    /// Records a file Reach's parser did not fully understand. An error diagnostic or skipped
+    /// tokens are both structural enough to distrust the members read out of the file — and
+    /// skipped tokens especially, because a construct whose members are swallowed never puts a
+    /// changed method into the changed set at all.
+    /// </summary>
+    private static void Check(ChangedPath path, string text, HashSet<string> unparseable)
+    {
+        if (!ParseHealthCheck.Of(text).IsSound)
+        {
+            unparseable.Add(path.Path);
+        }
+    }
+
+    private static void NoteUnparseable(IReadOnlyCollection<string> unparseable, List<Notice> notices)
+    {
+        if (unparseable.Count == 0)
+        {
+            return;
+        }
+
+        var paths = unparseable.Order(StringComparer.Ordinal).ToArray();
+
+        notices.Add(new Notice(
+            NoticeCodes.ParseFailed,
+            NoticeKind.BlindSpot,
+            $"{paths.Length} changed file(s) did not parse cleanly, so their projects widened "
+            + "rather than being read as unchanged: " + string.Join(", ", paths),
+            new Dictionary<string, object?>(StringComparer.Ordinal) { ["paths"] = paths }));
     }
 
     private static bool Collect(

@@ -117,6 +117,22 @@ internal sealed class RootSets
                 widening.Project is null ? [] : InAssembly(widening.Project.AssemblyName)));
         }
 
+        // The blast radius is real and accepted because it is legible: each one is its own
+        // entry, so a pull request that selected everything shows exactly which const did it.
+        foreach (var widened in RecompilationWidening.From(
+            changed,
+            scope,
+            member => ProjectFor(scope, member.Path)))
+        {
+            changes.Add(new Change(
+                Entry(
+                    changes.Count,
+                    widened.Trigger.ToString(),
+                    ChangeTier.WholeAssembly,
+                    widened.Reason),
+                [.. widened.Consumers.SelectMany(project => InAssembly(project.AssemblyName)).Distinct()]));
+        }
+
         foreach (var routed in ladder.RouteAll(
             changed.UnmappablePaths.OrderBy(path => path.Path, StringComparer.Ordinal)))
         {
