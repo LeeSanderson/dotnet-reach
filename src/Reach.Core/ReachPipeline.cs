@@ -1,4 +1,5 @@
 using Reach.Baselines;
+using Reach.Changes;
 using Reach.Git;
 using Reach.Output;
 using Reach.Processes;
@@ -18,7 +19,8 @@ internal sealed record SelectRun(
     string Message,
     IReadOnlyList<Notice> Notices,
     AnalysisScope? Scope = null,
-    Baseline? Baseline = null);
+    Baseline? Baseline = null,
+    ChangedSet? Changes = null);
 
 /// <summary>
 /// The phases of one run, in order. Usage errors come first and deliberately: exit 1 is the
@@ -62,8 +64,9 @@ internal sealed class ReachPipeline(IProcessRunner processRunner)
         ReachDirectory.For(request.WorkingDirectory, request.ReportDirectory).EnsureCreated();
 
         var notices = new List<Notice>(scope.Notices);
+        var git = new GitAdapter(processRunner, target.Directory);
 
-        var baseline = await new BaselineResolver(new GitAdapter(processRunner, target.Directory))
+        var baseline = await new BaselineResolver(git)
             .ResolveAsync(request.Base, environment, cancellationToken)
             .ConfigureAwait(false);
 
@@ -74,13 +77,22 @@ internal sealed class ReachPipeline(IProcessRunner processRunner)
             return new SelectRun(ExitCode.BaselineUnresolvable, baseline.Message, notices);
         }
 
+        var root = await git.RepositoryRootAsync(cancellationToken).ConfigureAwait(false);
+
+        var changes = await new ChangedSetBuilder(git, root.Value, scope.Scope!)
+            .BuildAsync(baseline.Baseline!.Sha, cancellationToken)
+            .ConfigureAwait(false);
+
+        notices.AddRange(changes.Notices);
+
         return new SelectRun(
             ExitCode.InternalError,
-            "Reach resolved its target, its analysis scope and its baseline, but the build, "
-            + "call-graph and selection phases are not implemented yet.",
+            "Reach resolved its target, its analysis scope, its baseline and its changed set, "
+            + "but the build, call-graph and selection phases are not implemented yet.",
             notices,
             scope.Scope,
-            baseline.Baseline);
+            baseline.Baseline,
+            changes);
     }
 
     private static SelectRun Usage(string message) => new(ExitCode.UsageError, message, []);

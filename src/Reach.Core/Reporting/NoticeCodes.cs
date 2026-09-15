@@ -25,4 +25,10 @@ internal static class NoticeCodes
     /// project list to check the build output against.
     /// </summary>
     internal const string ProjectOutsideEverySolution = "project-outside-every-solution";
+
+    /// <summary>
+    /// A C# file that git has never seen entered the changed set — intentional code
+    /// generation, or a forgotten <c>git add</c>.
+    /// </summary>
+    internal const string UntrackedSourceInChangeSet = "untracked-source-in-change-set";
 }

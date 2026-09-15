@@ -1,6 +1,6 @@
 # The changed set
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 02, 03
 Spec: [§9.1](../../walking-skeleton/spec.md#91-sources)–[§9.3](../../walking-skeleton/spec.md#93-deletions-moves-and-renames) · [ADR-0005](../../../docs/adr/0005-change-detection-is-keyed-on-declared-type.md)
 
@@ -119,3 +119,54 @@ That heuristic can only ever cost a warning, never a test.
 
 Routing an unmappable change — ticket 16. Recompilation widening and the parse-failure rules —
 ticket 17. Turning a changed member into a `MethodId` — ticket 09.
+
+## Comments
+
+**Implemented** in `Reach.Core/Changes`: `Canonicaliser`, `SourceRevision` (the only two files
+that touch Roslyn), `MemberKey`, `ChangedPath`, `ChangedSet` and `ChangedSetBuilder`. Roslyn is
+confined by convention, as the ticket asks; no architecture test, and no `MSBuildWorkspace`
+anywhere. `LanguageVersion.Preview` is set in one place, `SourceRevision.Options`.
+
+**Type matching is global across the changed set, not per file.** That is what makes a move
+fall out of the existing rules rather than needing a case of its own: with `--no-renames` a
+move is a delete plus an add, the type is found on both sides under the same name, and the
+comparison is the ordinary one. It also makes partial types work without effort — the
+declarations merge in path order, which is deterministic.
+
+**Two rules the canonicaliser keeps that the ticket did not name**, both because dropping them
+would under-select:
+
+- **Disabled `#if` text is part of the declaration.** The branch the parser did not take is
+  trivia, so the token stream is identical either way, and a change inside `#else` would
+  otherwise vanish. Conditional directives themselves are kept for the same reason.
+- **`#region`, `#pragma`, `#nullable`, `#line` and every comment form are dropped**, because
+  they are formatting or tooling and cannot change what compiles.
+
+**The directory-move rule is implemented as "the set of paths declaring this type changed".**
+The file a type lives in decides which project compiles it, so a directory-only move can move
+the type between assemblies without changing a line of its source.
+
+**The ticket and the spec contradict each other on one row.** The ticket says "a deleted file
+declaring nothing *inside* a type"; spec §9.3 says "*outside* a type". Implemented as the
+widening reading, which is also the only one that does anything useful: a changed `.cs` file
+that declares **no type at all** on either revision — global usings, assembly attributes,
+top-level statements — goes to the tier ladder, because there is nothing to route it through.
+Applied to modified files as well as deleted ones, since the problem is identical.
+
+**Removed members are recorded as well as widened.** The whole-type widening is what the
+rule table asks for; the removal itself is one of recompilation widening's two triggers, and
+this is the only phase that can see it. Compile-time constants — `const` fields, enum members,
+and declarations carrying a parameter default — are flagged on `ChangedMember` for the same
+reason. Ticket 17 consumes both.
+
+**`ProjectContaining` is the directory-containment rule**, resolved against the analysis
+scope's project list, longest ancestor wins. Ticket 16's rule table can reuse it.
+
+**`MemberKey` uses source spellings for parameter types** (`int`, not `System.Int32`). That is
+sound here and only here, because the same parser reads both revisions, so the two sides agree
+by construction. The join is a separate step with a separate mechanism, and ticket 10 owns it.
+
+One thing not verified here: the metadata spelling of a nested generic type's arity. Types are
+keyed `Ns.Outer\`1+Inner\`1`, with each level carrying its own declared arity. That is a stable
+matching key either way — both sides come from the same code — but ticket 10 should check it
+against real metadata before relying on it for the join.
