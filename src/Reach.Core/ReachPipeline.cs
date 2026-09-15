@@ -3,6 +3,7 @@ using Reach.Baselines;
 using Reach.Build;
 using Reach.Changes;
 using Reach.Git;
+using Reach.Graph;
 using Reach.Output;
 using Reach.Processes;
 using Reach.Projects;
@@ -24,7 +25,8 @@ internal sealed record SelectRun(
     Baseline? Baseline = null,
     ChangedSet? Changes = null,
     IReadOnlyList<AssemblyInstance>? Assemblies = null,
-    CorrespondenceResult? Correspondence = null);
+    CorrespondenceResult? Correspondence = null,
+    CallGraphResult? Graph = null);
 
 /// <summary>
 /// The phases of one run, in order. Usage errors come first and deliberately: exit 1 is the
@@ -128,17 +130,23 @@ internal sealed class ReachPipeline(IProcessRunner processRunner)
             return new SelectRun(correspondence.ExitCode, correspondence.Message, notices);
         }
 
+        using var open = OpenAssemblies.Open(assemblies.Instances);
+
+        var graph = CallGraphBuilder.Build(open.Assemblies);
+        notices.AddRange(graph.Notices);
+
         return new SelectRun(
             ExitCode.InternalError,
-            "Reach resolved its target, its analysis scope, its baseline, its changed set and "
-            + $"{assemblies.Instances.Count} assembly instance(s), but the call-graph and "
-            + "selection phases are not implemented yet.",
+            $"Reach built a call graph of {graph.Graph.Nodes.Count} nodes and "
+            + $"{graph.Graph.EdgeCount} compiled edges over {assemblies.Instances.Count} assembly "
+            + "instance(s), but the join, the reverse walk and selection are not implemented yet.",
             notices,
             scope.Scope,
             baseline.Baseline,
             changes,
             assemblies.Instances,
-            correspondence);
+            correspondence,
+            graph);
     }
 
     private static SelectRun Usage(string message) => new(ExitCode.UsageError, message, []);

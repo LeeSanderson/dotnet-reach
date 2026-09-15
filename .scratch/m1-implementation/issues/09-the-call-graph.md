@@ -1,6 +1,6 @@
 # The call graph: identity, the metadata pass and compiled edges
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 07
 Spec: [§11.1](../../walking-skeleton/spec.md#111-a-node-is-an-il-method-definition)–[§11.4](../../walking-skeleton/spec.md#114-the-seven-edge-kinds), [§11.6](../../walking-skeleton/spec.md#116-the-address-taken-rule) · [ADR-0004](../../../docs/adr/0004-call-graph-edges-carry-provenance.md), [ADR-0006](../../../docs/adr/0006-a-graph-node-is-an-il-method-definition.md)
 
@@ -138,3 +138,57 @@ every run.
 
 Widening (ticket 14), containment and type-initializer edges (ticket 15), the walk (ticket 11),
 the join (ticket 10).
+
+## Comments
+
+**Implemented** in `Reach.Core/Graph`: `MethodId`, `EdgeProvenance`, `ILInstructions`,
+`SignatureNames`/`MetadataNames`, `GraphAssembly`, `ExternalAnchors`, `CallGraphBuilder`,
+`CallGraph` and `OpenAssemblies`.
+
+**The IL operand-size table is built by reflecting over `System.Reflection.Emit.OpCodes`, not
+typed out.** The BCL owns that table; a hand-written copy is about a hundred and eighty chances
+to be wrong in a way no test would obviously catch, and a mis-decoded body is a missed edge,
+which is under-selection. An unrecognised opcode stops the walk for that body rather than
+guessing at a length and reading operand bytes as instructions.
+
+**Every token-carrying instruction is recorded, not just the calls.** `ILInstructions.Tokens`
+returns offsets and opcodes for all of them, so ticket 15 can read the field and type tokens
+for type-initializer edges and ticket 14 can see the `constrained.` prefix, without a second
+pass over the IL.
+
+**Signature ambiguity has a real fixture.** `modopt`/`modreq` and varargs are hard to produce
+from C#, but two function-pointer parameter types differing only by calling convention —
+`delegate*<int>` and `delegate* unmanaged<int>` — are distinct types to the compiler and
+identical once canonicalised. The test asserts both halves: an edge to each candidate, and the
+`signature-ambiguous` notice. `Compiled` now sets `allowUnsafe`.
+
+**`SignatureNames` captures the first type handle it reaches.** A member reference against a
+generic type instance names its parent by a `TypeSpecification`, which carries no assembly of
+its own, so that capture is how the assembly behind one is recovered. Without it, every call
+into a generic type in another first-party assembly would resolve to nothing.
+
+**A member reference against a generic instance is looked up under the generic definition's
+name**, because that is the signature metadata actually carries — `List\`1<System.Int32>::Add`
+is stored as `Add(!0)`. `MetadataNames.WithoutInstantiation` cuts at the first `<`, which is
+also correct for a nested type under a generic instance.
+
+**Two ordinal rules that fell out of the design rather than being added to it:**
+
+- A multi-targeted project is several instances with several ordinals, and a reference resolves
+  to the instance whose target framework matches the *caller's* — a `net8.0` assembly
+  references the `net8.0` build. `TargetFor` does that, falling back to the first candidate.
+- `System.Object` is a base type of everything, so its slots always anchor. That is four
+  anchors at most, and is exactly what "bounded by the slots first-party types occupy" means.
+  The first version of one test assumed a single anchor and was wrong.
+
+**`OpenAssemblies` prefetches the entire image.** `PrefetchMetadata` leaves method bodies in
+the file, so `GetMethodBody` needs the stream alive for the whole run — which means a file
+handle held open on every assembly in the solution. Three tests failed on exactly that before
+it was changed.
+
+**The unresolved-first-party test compiles a consumer against one revision of a library and
+puts a different revision in the graph**, which is what a stale assembly on disk looks like
+from here. `Graphs.OfMismatched` does it in three lines.
+
+Phase timing is on `CallGraphResult.Elapsed`. It reaches the report's timings envelope with
+ticket 12.

@@ -120,6 +120,8 @@ internal static class Compiled
             new CSharpCompilationOptions(
                 OutputKind.DynamicallyLinkedLibrary,
                 optimizationLevel: OptimizationLevel.Debug,
+                // Function pointers are one of the IL shapes the graph has to get right.
+                allowUnsafe: true,
                 // The tests emit types the framework also defines; nothing here is run.
                 specificDiagnosticOptions: new Dictionary<string, ReportDiagnostic>
                 {

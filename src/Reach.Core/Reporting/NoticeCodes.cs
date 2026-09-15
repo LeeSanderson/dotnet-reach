@@ -37,4 +37,16 @@ internal static class NoticeCodes
     /// change to it is invisible to Reach. A blind spot, with an entry in the register.
     /// </summary>
     internal const string IgnoredUntrackedAssembly = "ignored-untracked-assembly";
+
+    /// <summary>
+    /// A call site names a member of a first-party assembly that is not in it. A build
+    /// problem rather than an analysis one, and the run continues.
+    /// </summary>
+    internal const string UnresolvedFirstPartyMember = "unresolved-first-party-member";
+
+    /// <summary>
+    /// A signature matched more than one method, so every candidate got an edge. Widening is
+    /// the safe direction.
+    /// </summary>
+    internal const string SignatureAmbiguous = "signature-ambiguous";
 }
