@@ -66,6 +66,10 @@ on your first run**, and it is one line.
 
 ### GitHub Actions — the complete recipe
 
+**This block is not an illustration — it is the workflow this repository runs on its own pull
+requests**, `.github/workflows/dogfood.yml`, and a test in Reach's suite fails the build if the
+two differ by one character. Copy it as `.github/workflows/tests.yml`.
+
 <!-- reach:dogfood-workflow -->
 ```yaml
 name: Tests
@@ -89,13 +93,30 @@ jobs:
       - name: Select the tests this change could affect
         run: dnx dotnet-reach@0.1.0-alpha.1 select -c Release --no-build
 
+      # An empty selection emits no command, so the loop runs nothing. A failing test still
+      # fails the step: `eval` inside a loop does not propagate on its own.
       - name: Run the selection
         run: |
-          jq -r '.entries[].invocations[] | @sh' .reach/report.json \
-            | while read -r command; do eval "$command"; done
+          status=0
+          while read -r command; do
+            [ -z "$command" ] && continue
+            echo "$command"
+            eval "$command" || status=1
+          done <<< "$(jq -r '.entries[].invocations[] | @sh' .reach/report.json)"
+          exit $status
 
       - name: Run the whole suite
         run: dotnet test -c Release --no-build
+
+      # The gap between what Reach selected and what the whole suite ran is the number worth
+      # looking at, so keep the report whatever happened above.
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-report
+          path: .reach/report.json
+          if-no-files-found: ignore
 ```
 <!-- /reach:dogfood-workflow -->
 
@@ -103,6 +124,10 @@ That recipe runs **both** the selection and the full suite, and only the full su
 is deliberate for now: gating on a selection nobody has measured is the unproven narrowing this
 tool exists not to do. Running both is a miniature shadow mode, and the gap between them is the
 first real datapoint.
+
+`jq` is preinstalled on GitHub's hosted runners. The `@sh` filter quotes each argv element, which
+is why `eval` is safe here and why Reach emits argv vectors rather than shell strings in the first
+place.
 
 ### Every other provider
 
