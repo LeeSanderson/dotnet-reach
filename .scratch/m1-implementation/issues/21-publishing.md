@@ -56,9 +56,15 @@ name and the verb are independent choices.
 
 1. Register the NuGet.org account and reserve `dotnet-reach` (`dotnet-` is **not** a reserved
    prefix, and all candidate ids were free).
-2. Configure Trusted Publishing on nuget.org for this repository and the `release.yml` workflow.
+2. Configure Trusted Publishing on nuget.org for this repository and the `release.yml` workflow,
+   and set the repository variable **`NUGET_USER`** to the nuget.org account name — `NuGet/login@v1`
+   takes it as an input, and it is a variable rather than a secret because an account name is not
+   one.
 3. Review `Directory.Build.props`'s `Version`.
 4. Push the `v0.1.0-alpha.1` tag.
+5. After publication, check both halves of the quickstart claim: `dnx dotnet-reach@0.1.0-alpha.1`
+   resolves and runs, and the **bare** `dnx dotnet-reach` does *not* — the second is the one the
+   documentation promises, and only publication can test it.
 
 ## Acceptance criteria
 
@@ -79,3 +85,36 @@ name and the verb are independent choices.
 
 `dogfood.yml` and the docs↔workflow parity test — ticket 22, which **cannot be written before this
 one lands**, because its recipe is a `pull_request` workflow installing a *published* package.
+
+## Implementation notes
+
+**Everything delegable is done; the ticket stays `ready-for-human` for the four steps above.**
+`release.yml` is written and `ci.yml` has its `pull_request` trigger. Nothing here publishes
+anything: the workflow fires only on a `v*` tag, and no tag has been pushed.
+
+**The workflow carries one guard the ticket did not ask for, and it is the one worth having.**
+Before it restores anything it reads `Version` out of `Directory.Build.props` and fails if the tag
+does not match. The version and the tag are edited in different files by different acts, and the
+whole reason this ticket is two deliberate human acts is that a published package cannot be
+deleted — a guard that costs four lines and turns *permanent* into *try again* belongs on that
+step.
+
+**Package metadata was added, because the pack was not publishable without it.** Ticket 20 asserts
+that a NuGet page lands a reader on GitHub, and the package had no `PackageProjectUrl`, no
+description and no licence expression, so it did not. `Description`, `Authors`,
+`PackageLicenseExpression`, `PackageProjectUrl`, `RepositoryUrl` and `PackageTags` are now set.
+
+**Deliberately no `PackageReadmeFile`,** and the `NU5039`-adjacent pack warning about a missing
+readme is accepted rather than silenced. nuget.org does not resolve relative links, and this README
+is almost entirely links into `docs/`; embedding it would render a page of dead ones. The
+`projectUrl` is how a reader reaches the documents, in the place the links work.
+
+**Verified locally**, since these are the criteria that do not need a publication:
+
+- `dotnet pack` produces `tools/net10.0/any/` whose `Reach.Cli.runtimeconfig.json` carries
+  `"rollForward": "LatestMajor"`.
+- The nuspec is well-formed, carries `<packageType name="DotnetTool" />`, and records the commit.
+- Both workflow files parse; `release.yml` triggers on `push.tags: ['v*']` and nothing else; the
+  version-guard shell was run against the real `Directory.Build.props`.
+- No API key secret exists anywhere in the repository — `NuGet/login@v1` with `id-token: write` is
+  the only credential path.

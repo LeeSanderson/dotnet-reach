@@ -7,6 +7,7 @@
 
   <PropertyGroup>
     <PackAsTool>true</PackAsTool>
+    <!-- `dotnet reach` dispatch depends on this alone, never on the package id. -->
     <ToolCommandName>reach</ToolCommandName>
     <PackageId>dotnet-reach</PackageId>
     <!--
@@ -14,6 +15,22 @@
       without this a net10.0 tool fails on a machine carrying only .NET 11.
     -->
     <RollForward>LatestMajor</RollForward>
+  </PropertyGroup>
+
+  <!--
+    Enough for the nuget.org page to say what this is and where the documentation lives.
+    Deliberately no PackageReadmeFile: nuget.org does not resolve relative links, and this
+    README is mostly links into docs/, so embedding it would render a page of dead ones.
+    PackageProjectUrl is how a reader gets to the documents instead.
+  -->
+  <PropertyGroup>
+    <Description>Works out which tests a code change could possibly affect, by reading the compiled assemblies and walking the call graph backwards from changed code to tests. Over-selects on purpose; never narrows on unproven evidence.</Description>
+    <Authors>Lee Sanderson</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/LeeSanderson/dotnet-reach</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/LeeSanderson/dotnet-reach.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>test-selection;test-impact-analysis;ci;dotnet-tool</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

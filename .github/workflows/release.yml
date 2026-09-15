@@ -1,0 +1,80 @@
+name: Release
+
+# Only a v* tag publishes. A published package cannot be deleted, only unlisted, so the two
+# acts that cause one — editing Version in Directory.Build.props, and pushing the tag — are
+# both deliberate and both human.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  # Trusted Publishing: the workflow exchanges this token for a short-lived NuGet API key.
+  # New nuget.org API keys are capped at 30 days, which closes the long-lived-secret route.
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    # One runner, not the CI matrix: the package is architecture-neutral IL, and ci.yml has
+    # already gated this commit on both operating systems.
+    runs-on: ubuntu-latest
+
+    env:
+      HUSKY: 0
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The temp-repository fixtures commit, and hosted runners have no git identity.
+      - name: Configure git identity
+        run: |
+          git config --global user.email "ci@dotnet-reach.invalid"
+          git config --global user.name "Reach CI"
+
+      # The one guard worth having on an irreversible step. Publishing 0.1.0-alpha.1 from a
+      # tag reading v0.1.0-alpha.2 is a mistake nobody can take back, and the two values are
+      # edited in different files by different acts.
+      - name: Check the tag matches the version
+        run: |
+          version=$(grep -oPm1 '(?<=<Version>)[^<]+' Directory.Build.props)
+          if [ "refs/tags/v$version" != "$GITHUB_REF" ]; then
+            echo "Directory.Build.props says $version, but the tag is ${GITHUB_REF#refs/tags/}." >&2
+            exit 1
+          fi
+          echo "Publishing $version."
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release -warnaserror --no-restore
+
+      - name: Test
+        run: dotnet test -c Release --no-build --report-xunit-trx --results-directory ./TestResults
+
+      - name: Pack
+        run: dotnet pack src/Reach.Cli/Reach.Cli.csproj -c Release --no-build -o ./artifacts
+
+      # Keep the package whatever happens to the push, so a failed publish is diagnosable
+      # without rebuilding from a tag.
+      - name: Upload the package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: ./artifacts/*.nupkg
+          if-no-files-found: ignore
+
+      # NUGET_USER is a repository variable holding the nuget.org account name, set alongside
+      # the Trusted Publishing policy on nuget.org. There is no API key secret.
+      - name: NuGet login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      - name: Push
+        run: >
+          dotnet nuget push ./artifacts/*.nupkg
+          --source https://api.nuget.org/v3/index.json
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}

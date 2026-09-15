@@ -1,9 +1,11 @@
 name: CI
 
-# Gains a pull_request trigger at first publish (ticket 21), not before.
+# Pull requests exist in this repository to set GITHUB_BASE_REF for the dogfood workflow, not
+# to find a reviewer who does not exist — so there is no branch protection requiring approvals.
 on:
   push:
     branches: [main]
+  pull_request:
 
 jobs:
   build:
