@@ -9,6 +9,7 @@ using Reach.Output;
 using Reach.Processes;
 using Reach.Projects;
 using Reach.Reporting;
+using Reach.Selection;
 
 namespace Reach;
 
@@ -28,7 +29,8 @@ internal sealed record SelectRun(
     IReadOnlyList<AssemblyInstance>? Assemblies = null,
     CorrespondenceResult? Correspondence = null,
     CallGraphResult? Graph = null,
-    IReadOnlyList<JoinResult>? Roots = null);
+    IReadOnlyList<JoinResult>? Roots = null,
+    SelectionResult? Selection = null);
 
 /// <summary>
 /// The phases of one run, in order. Usage errors come first and deliberately: exit 1 is the
@@ -139,13 +141,22 @@ internal sealed class ReachPipeline(IProcessRunner processRunner)
 
         var roots = new SpanJoin(open.Assemblies, root.Value).ResolveAll(changes.Members);
 
+        var selection = Selector.Select(
+            graph.Graph,
+            open.Assemblies,
+            assemblies.Instances,
+            scope.Scope!,
+            changes,
+            roots,
+            request.Paths);
+
+        notices.AddRange(selection.Notices);
+
         return new SelectRun(
             ExitCode.InternalError,
-            $"Reach built a call graph of {graph.Graph.Nodes.Count} nodes and "
-            + $"{graph.Graph.EdgeCount} compiled edges over {assemblies.Instances.Count} assembly "
-            + $"instance(s), and joined {roots.Count(result => result.Joined)} of "
-            + $"{changes.Members.Count} changed declaration(s) into it — but the reverse walk "
-            + "and selection are not implemented yet.",
+            $"Reach selected {selection.SelectedCount} test(s) from {changes.Members.Count} changed "
+            + $"declaration(s) over {assemblies.Instances.Count} assembly instance(s) — but "
+            + "rendering, delivery and the report are not implemented yet.",
             notices,
             scope.Scope,
             baseline.Baseline,
@@ -153,7 +164,8 @@ internal sealed class ReachPipeline(IProcessRunner processRunner)
             assemblies.Instances,
             correspondence,
             graph,
-            roots);
+            roots,
+            selection);
     }
 
     private static SelectRun Usage(string message) => new(ExitCode.UsageError, message, []);

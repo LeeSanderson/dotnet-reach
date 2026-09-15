@@ -49,4 +49,10 @@ internal static class NoticeCodes
     /// the safe direction.
     /// </summary>
     internal const string SignatureAmbiguous = "signature-ambiguous";
+
+    /// <summary>
+    /// A test project uses a framework Reach does not recognise, so every test in it runs and
+    /// its total is unknown rather than zero.
+    /// </summary>
+    internal const string WholeProjectFallback = "whole-project-fallback";
 }

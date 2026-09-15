@@ -1,6 +1,6 @@
 # Test recognition, the reverse walk and selection
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 09, 10
 Spec: [§12.1](../../walking-skeleton/spec.md#121-the-four-selection-rules), [§12.2](../../walking-skeleton/spec.md#122-test-recognition-is-data), [§13.3](../../walking-skeleton/spec.md#133-per-selected-test)
 
@@ -100,3 +100,55 @@ default.
 
 Widening edges themselves (ticket 14) — the walk must handle `widened` provenance correctly
 before any widened edge exists, tested with hand-built edges. Rendering (ticket 13).
+
+## Comments
+
+**Implemented** in `Reach.Core/Selection`: `TestFrameworks` (the table), `TestMethods`
+(enumeration), `ReverseWalk`, `RootSets`, `Selection` (the result types) and `Selector`.
+`TestProjectRecognition` from ticket 04 stays as the *project*-level stub it always was —
+whether a project declares tests at all, read from package references before anything is built.
+The table here answers the different question of which framework a compiled assembly is written
+against, and it is what everything downstream reads.
+
+**Path class is two passes, not a priority queue.** The first follows only non-widened edges,
+so everything it reaches is `compiled`; the second follows every edge starting from what the
+first found, so everything newly reached is `widened`. That makes "the weakest provenance on
+the *strongest* path" fall out rather than being computed, and it is the shape that makes
+getting it backwards hard. The named test uses a graph where the widened path is *shorter*,
+because that is the case where "first path found" and "worst edge seen" both give the wrong
+answer.
+
+**Synthesised edges count as compiled for path class.** Containment and type initialization are
+invented by Reach, but the control flow they describe is not in doubt — they are as
+non-removable as compiled edges, and `widened` has to keep meaning "over-selection is plausible
+here" or the measurement reads nothing.
+
+**A test that is itself a root of a change is not `reverse-reachable` by it.** Otherwise every
+changed test would trivially be reverse-reachable from itself, `own-source-changed` would never
+be the only rule, and the report's "empty roots list is valid exactly when reverse-reachable is
+absent" would never hold. That is the rule that makes a bug distinguishable from a fact.
+
+**One walk per change, not one walk with propagated root sets.** The changed set is diff-sized
+and §16.3 forbids optimising ahead of a measurement, so `|changes| x O(V+E)` is the honest
+implementation and it keeps the change-keying exact: a whole-assembly widening is one
+`ChangeEntry` whatever it expands to.
+
+**A derived test attribute still marks a test.** `[IntegrationFact] : FactAttribute` is
+ordinary in real suites, and missing it would drop every test using it. Only first-party
+derivations are followed — anything else needs the defining assembly, which is outside the
+analysis scope — and the closure is iterated to a fixed point so a two-step derivation works.
+
+**The fixture does not synthesise a test framework.** The real `xunit.v3.core` is already in
+every in-memory compilation's reference set, because the suite itself runs on it, so a fixture
+writing `[Xunit.Fact]` gets a genuine `xunit.v3.core` 4.0.0 assembly reference — exactly what
+recognition reads. A fixture that writes no Xunit type gets no reference and falls back to
+whole-project selection for the same reason a real project would. The first version compiled a
+fake `xunit.v3.core` and every test failed with `CS0433`.
+
+**Not built here, by design:** widened edges (ticket 14) do not exist yet, so the walk's
+handling of `widened` provenance is asserted over hand-built graphs. That is the ticket's own
+instruction, and it means the walk is correct before the first widened edge is produced.
+
+One thing deferred to ticket 16: an unmappable path is currently routed straight to
+whole-assembly widening for its containing project. That is the widening answer and therefore
+safe, but the tier ladder and the rule table are what decide it properly.
