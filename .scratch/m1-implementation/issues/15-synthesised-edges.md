@@ -1,6 +1,6 @@
 # Synthesised edges: containment and type initialization
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 09
 Spec: [§11.5](../../walking-skeleton/spec.md#115-containment-and-why-it-is-not-optional) · [ADR-0004](../../../docs/adr/0004-call-graph-edges-carry-provenance.md)
 
@@ -92,3 +92,40 @@ Every one is an in-memory test compiled from a source string.
 
 Widening (ticket 14). An eighth edge kind: the generator relation from ticket 16's rule table is a
 **compilation-input** relation, not a call edge, and does not enter the graph.
+
+## Comments
+
+**Implemented** as `Reach.Core/Graph/SynthesisedEdges.cs`, called from the pass that already
+exists. Both kinds carry `Containment` and `TypeInitialization` provenance, which
+`EdgeProvenances.IsSynthesised` groups and `IsWidened` excludes — so no narrowing can ever
+touch them.
+
+**This ticket found a gap in ticket 09: `newobj` produced no edge at all.** Ticket 09's edge
+kinds are `call`/`callvirt` and `ldftn`/`ldvirtftn`, and `newobj` is in neither list — so a
+change to a constructor was unreachable from `new Foo()`, and an iterator's
+`newobj '<It>d__1'::.ctor`, which the spec names as *"a real compiled edge"*, was not an edge.
+Found by a display-class test whose `.ctor` had no callers at all. `newobj` now produces a
+compiled call edge like any other constructor call.
+
+**The name-mangling fallback keys on method names as well as type names, and it has to.** A
+state machine puts the kernel's name in the *type* (`<Work>d__0`); a display class puts only an
+ordinal there (`<>c__DisplayClass0_0`) and puts the name on its *members* (`<Make>b__0`). The
+first version read only the type name and found nothing for any display class.
+
+**A local function now carries a containment edge as well as its ordinary call edge.** The
+ticket says local functions need no rule, and that is true of the call — but a local function
+*is* a compiler-generated member of its kernel method, both edges point the same way, and
+keeping it is the safe direction for any shape where nothing visibly calls one. One existing
+assertion relaxed from "exactly this edge" to "this edge among them", with the reason recorded
+in the test.
+
+**Every acceptance criterion has a named in-memory test**, including the two that would
+otherwise fail silently: a change inside an `async` body reaching a caller that awaits it, and
+a lambda captured by a `static readonly` field reaching a caller that uses the field. The
+second is the case the type-initializer edge exists for — `ldftn` inside `.cctor`, which
+nothing visibly calls.
+
+**Rendering roots as kernel methods** is ticket 12's, and is already satisfied from the other
+side: the report renders from `ChangedMember`, which is the declaration the developer wrote, so
+no `<Submit>b__0_1` or `MoveNext` can reach it. The hop detail for a containment edge is the
+part still outstanding, and belongs with `--paths` rendering.

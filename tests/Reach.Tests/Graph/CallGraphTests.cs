@@ -142,8 +142,11 @@ public class CallGraphTests
             graphs.MethodNamesOf("N.Locals"),
             name => name.Contains("Helper", StringComparison.Ordinal));
 
-        Assert.Equal(
-            [EdgeProvenance.CompiledCall],
+        // A compiled call, from the instruction. It also carries a containment edge, because a
+        // local function is a compiler-generated member of its kernel method — both point the
+        // same way, and the second is what covers a local function nothing visibly calls.
+        Assert.Contains(
+            EdgeProvenance.CompiledCall,
             graphs.EdgesBetween(outer, graphs.Method("N.Locals", helper)));
     }
 

@@ -67,6 +67,9 @@ internal sealed class CallGraphBuilder
     /// </summary>
     private readonly Dictionary<MethodId, (string Type, string Member)> dispatchTargets = [];
 
+    /// <summary>Type name to its <c>.cctor</c>, for the initialization-trigger edges.</summary>
+    private readonly Dictionary<string, MethodId> classConstructors = new(StringComparer.Ordinal);
+
     private TypeHierarchy hierarchy = null!;
 
     private int hierarchyConstructions;
@@ -119,7 +122,15 @@ internal sealed class CallGraphBuilder
 
         foreach (var assembly in assemblies)
         {
+            IndexClassConstructors(assembly);
+        }
+
+        foreach (var assembly in assemblies)
+        {
             Walk(assembly);
+
+            // Without this, every async method body in the solution is unreachable.
+            edges.AddRange(SynthesisedEdges.Containment(assembly));
         }
 
         Widen();
@@ -210,7 +221,9 @@ internal sealed class CallGraphBuilder
                 continue;
             }
 
-            foreach (var instruction in ILInstructions.Tokens(il))
+            var instructions = ILInstructions.Tokens(il);
+
+            foreach (var instruction in instructions)
             {
                 var provenance = ProvenanceOf(instruction.OpCode);
 
@@ -225,6 +238,32 @@ internal sealed class CallGraphBuilder
                         from,
                         Anchor(assembly, instruction, receivers, to),
                         provenance.Value));
+                }
+            }
+
+            edges.AddRange(SynthesisedEdges.TypeInitialization(
+                assembly,
+                from,
+                instructions,
+                type => classConstructors.TryGetValue(type, out var cctor) ? cctor : null));
+        }
+    }
+
+    private void IndexClassConstructors(GraphAssembly assembly)
+    {
+        var reader = assembly.Reader;
+
+        foreach (var handle in reader.TypeDefinitions)
+        {
+            var name = MetadataNames.FullNameOf(reader, handle);
+
+            foreach (var methodHandle in reader.GetTypeDefinition(handle).GetMethods())
+            {
+                if (reader.GetString(reader.GetMethodDefinition(methodHandle).Name) == ".cctor")
+                {
+                    classConstructors[name] = MethodId.Definition(
+                        assembly.Ordinal,
+                        MetadataTokens.GetToken(methodHandle));
                 }
             }
         }
@@ -384,7 +423,11 @@ internal sealed class CallGraphBuilder
     /// </remarks>
     private static EdgeProvenance? ProvenanceOf(ILOpCode opCode) => opCode switch
     {
-        ILOpCode.Call or ILOpCode.Callvirt => EdgeProvenance.CompiledCall,
+        // newobj calls a constructor, and the constructor is a node like any other. Without it
+        // a change to a constructor is unreachable from `new Foo()`, and an iterator's
+        // `newobj '<It>d__1'::.ctor` — which the design names as a real compiled edge — is not
+        // an edge at all.
+        ILOpCode.Call or ILOpCode.Callvirt or ILOpCode.Newobj => EdgeProvenance.CompiledCall,
 
         // From the capturing method to the target. `delegate*` values fall out for free — they
         // are ldftn like any other capture.
