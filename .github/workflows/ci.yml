@@ -1,0 +1,58 @@
+name: CI
+
+# Gains a pull_request trigger at first publish (ticket 21), not before.
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    # Both operating systems, and this is the one place worth the minutes: Reach identifies a
+    # first-party assembly by the source documents its debug symbols point at, and routes a
+    # changed file by matching those paths against the working tree. Separators and case
+    # sensitivity are exactly where Windows and Linux differ, and the tool is developed on
+    # Windows. A path-comparison bug on Linux is silent under-selection.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      # The gate runs `dotnet format` itself; the pre-commit hook has no job here.
+      HUSKY: 0
+
+    steps:
+      # No actions/setup-dotnet: both runner images already carry several .NET 10 feature
+      # bands, and global.json pins the floor.
+      - uses: actions/checkout@v5
+
+      # Unset on hosted runners, and `git commit` fails without them. The suite's
+      # temp-repository fixtures depend on this.
+      - name: Configure git identity
+        run: |
+          git config --global user.email "ci@dotnet-reach.invalid"
+          git config --global user.name "Reach CI"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release -warnaserror --no-restore
+
+      - name: Verify formatting
+        run: dotnet format --verify-no-changes --no-restore
+
+      # --report-xunit-trx needs no extra package. --report-trx and --coverage are Microsoft
+      # extensions that exit 5 without theirs; do not use them.
+      - name: Test
+        run: dotnet test -c Release --no-build --report-xunit-trx --results-directory ./TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: ./TestResults
+          if-no-files-found: ignore

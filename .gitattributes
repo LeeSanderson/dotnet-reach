@@ -1,0 +1,11 @@
+# Normalise line endings in the repository so that `dotnet format --verify-no-changes`
+# agrees with itself on both CI matrix legs.
+* text=auto eol=lf
+
+*.sln text eol=crlf
+*.slnx text eol=lf
+
+*.png binary
+*.dll binary
+*.exe binary
+*.snk binary

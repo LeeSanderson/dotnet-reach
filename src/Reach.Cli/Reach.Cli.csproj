@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Reach.Cli</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>reach</ToolCommandName>
+    <PackageId>dotnet-reach</PackageId>
+    <!--
+      The default roll-forward policy is Minor and will not cross a major version, so
+      without this a net10.0 tool fails on a machine carrying only .NET 11.
+    -->
+    <RollForward>LatestMajor</RollForward>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Reach.Core/Reach.Core.csproj" />
+  </ItemGroup>
+
+</Project>

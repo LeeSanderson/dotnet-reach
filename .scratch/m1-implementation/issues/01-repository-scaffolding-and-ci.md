@@ -1,6 +1,6 @@
 # Repository scaffolding and the CI gate
 
-Status: ready-for-agent
+Status: resolved
 Depends on: (none)
 Spec: [§16.1](../../walking-skeleton/spec.md#161-projects-ports-and-seams), [§16.4](../../walking-skeleton/spec.md#164-documentation-ci-and-publishing)
 
@@ -78,3 +78,32 @@ of the way; CI is what makes it true.
 
 `release.yml` and `dogfood.yml` — tickets 21 and 22. `ci.yml` gains its `pull_request`
 trigger at first publish, not here.
+
+## Comments
+
+**Implemented.** Layout is `src/Reach.Core`, `src/Reach.Cli`, `tests/Reach.Tests`, with
+`Reach.slnx` at the root.
+
+Four things the ticket did not anticipate, each settled the way it is because the alternative
+does not work:
+
+- **`System.Reflection.Metadata` gets no `PackageReference`.** It is in the `net10.0` shared
+  framework, and referencing the package raises `NU1510`, which is an error under
+  `TreatWarningsAsErrors`. `Reach.Core` uses the types from the framework.
+- **The tool manifest lands at `dotnet-tools.json` in the repository root**, not
+  `.config/dotnet-tools.json` — that is where the .NET 10 SDK's `dotnet new tool-manifest`
+  now puts it.
+- **The pre-commit task uses `pathMode: relative`.** With Husky.Net's default `absolute`,
+  `dotnet format --include` is handed a rooted Windows path, silently matches nothing and
+  exits 0 — a hook that always passes. Verified in both directions: an unformatted staged
+  file exits 1, a clean tree exits 0.
+- **`.gitattributes` normalises line endings** (`* text=auto eol=lf`) and `.editorconfig`
+  deliberately leaves `end_of_line` unset, so `dotnet format --verify-no-changes` agrees with
+  itself on both matrix legs.
+
+`ci.yml` builds in `Release` so that the ticket's `dotnet test -c Release --no-build` has
+output to run against, and sets `HUSKY=0` so the restore-time hook install does not run on the
+gate. The `--report-xunit-trx --results-directory` pair was verified locally against
+`xunit.v3` 4.0.0: it produces a TRX with no extra package.
+
+Not verified here: the Linux matrix leg, which only the first push to `main` can exercise.

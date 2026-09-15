@@ -1,0 +1,31 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>default</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!--
+    Hand-edited. A published package cannot be deleted, only unlisted, so the version
+    bump and the tag push are two deliberate human acts. See spec section 16.4.
+  -->
+  <PropertyGroup>
+    <Version>0.1.0-alpha.1</Version>
+  </PropertyGroup>
+
+  <!--
+    core.hooksPath is local git config and is not cloned, so a fresh clone installs the
+    pre-commit hook on its first restore. Scoped to one project so it runs once per restore;
+    CI sets HUSKY=0 because the gate runs `dotnet format` itself.
+  -->
+  <Target Name="HuskyInstall" BeforeTargets="Restore;CollectPackageReferences"
+          Condition="'$(HUSKY)' != '0' AND '$(MSBuildProjectName)' == 'Reach.Cli'">
+    <Exec Command="dotnet tool restore" StandardOutputImportance="Low" StandardErrorImportance="High" />
+    <Exec Command="dotnet husky install" StandardOutputImportance="Low" StandardErrorImportance="High"
+          WorkingDirectory="$(MSBuildThisFileDirectory)" />
+  </Target>
+
+</Project>

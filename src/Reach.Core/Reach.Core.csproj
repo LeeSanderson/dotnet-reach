@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Reach</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    System.Reflection.Metadata needs no PackageReference: it is in the net10.0 shared
+    framework, and referencing the package is an NU1510 error under TreatWarningsAsErrors.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Reach.Cli" />
+    <InternalsVisibleTo Include="Reach.Tests" />
+  </ItemGroup>
+
+</Project>

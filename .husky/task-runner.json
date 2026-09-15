@@ -1,0 +1,14 @@
+{
+  "$schema": "https://alirezanet.github.io/Husky.Net/schema.json",
+  "tasks": [
+    {
+      "name": "format-staged",
+      "group": "pre-commit",
+      "//": "relative, not absolute: `dotnet format --include` silently matches nothing when given a rooted Windows path and exits 0, which is a hook that always passes.",
+      "pathMode": "relative",
+      "command": "dotnet",
+      "args": ["format", "--verify-no-changes", "--include", "${staged}"],
+      "include": ["**/*.cs"]
+    }
+  ]
+}
