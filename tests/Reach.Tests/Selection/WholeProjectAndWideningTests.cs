@@ -69,7 +69,8 @@ public class WholeProjectAndWideningTests
                 [],
                 []),
             [],
-            new AnalysisScope([project], [project], []));
+            new AnalysisScope([project], [project], []),
+            new TierLadder(new AnalysisScope([project], [project], []), "/repo"));
 
         var change = Assert.Single(changes);
 
@@ -125,7 +126,8 @@ public class WholeProjectAndWideningTests
         var changes = roots.ChangesFrom(
             ChangedSet.Empty,
             [new JoinResult(unjoined, [])],
-            new AnalysisScope([project], [project], []));
+            new AnalysisScope([project], [project], []),
+            new TierLadder(new AnalysisScope([project], [project], []), "/repo"));
 
         var change = Assert.Single(changes);
 

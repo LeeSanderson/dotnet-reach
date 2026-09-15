@@ -95,4 +95,10 @@ internal static class NoticeCodes
     /// recovered from metadata, so no <c>-f</c> selector can be rendered.
     /// </summary>
     internal const string FrameworkSelectorUnderivable = "framework-selector-underivable";
+
+    /// <summary>
+    /// A changed file matched no rule in the tier ladder's table and sits inside no project, so
+    /// nothing was selected for it. The one rule in Reach that errs toward selecting nothing.
+    /// </summary>
+    internal const string UnmappedFileNoProject = "unmapped-file-no-project";
 }

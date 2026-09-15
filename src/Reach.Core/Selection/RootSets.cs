@@ -73,7 +73,8 @@ internal sealed class RootSets
     internal IReadOnlyList<Change> ChangesFrom(
         ChangedSet changed,
         IReadOnlyList<JoinResult> joined,
-        AnalysisScope scope)
+        AnalysisScope scope,
+        TierLadder ladder)
     {
         var changes = new List<Change>();
 
@@ -116,17 +117,12 @@ internal sealed class RootSets
                 widening.Project is null ? [] : InAssembly(widening.Project.AssemblyName)));
         }
 
-        foreach (var path in changed.UnmappablePaths.OrderBy(p => p.Path, StringComparer.Ordinal))
+        foreach (var routed in ladder.RouteAll(
+            changed.UnmappablePaths.OrderBy(path => path.Path, StringComparer.Ordinal)))
         {
-            var project = ProjectFor(scope, path.Path);
-
             changes.Add(new Change(
-                Entry(
-                    changes.Count,
-                    path.Path,
-                    ChangeTier.WholeAssembly,
-                    "the path could not be attributed to any member"),
-                project is null ? [] : InAssembly(project.AssemblyName)));
+                Entry(changes.Count, routed.Path.Path, ChangeTier.WholeAssembly, routed.Rule.Description),
+                [.. routed.Projects.SelectMany(project => InAssembly(project.AssemblyName)).Distinct()]));
         }
 
         return changes;

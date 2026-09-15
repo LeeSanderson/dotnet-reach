@@ -184,7 +184,8 @@ internal sealed class ReachPipeline(IProcessRunner processRunner)
                 scope.Scope!,
                 changes,
                 roots,
-                request.Paths));
+                request.Paths,
+                new TierLadder(scope.Scope!, root.Value)));
 
         notices.AddRange(selection.Notices);
 

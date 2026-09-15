@@ -1,6 +1,6 @@
 # The tier ladder and the unmappable-change rule table
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 06, 08, 10
 Spec: [§10](../../walking-skeleton/spec.md#10-routing-an-unmappable-change-the-tier-ladder-and-the-rule-table)
 
@@ -107,3 +107,40 @@ unattributed path would fire on a docs-only PR, which is the exact change Reach 
 ## Out of scope
 
 Recompilation widening — ticket 17. A configurable pattern list for row 6 — no evidence yet.
+
+## Comments
+
+**Implemented** as `Reach.Core/Changes/TierLadder.cs`, consumed by `RootSets.ChangesFrom`. Each
+routed change carries its `RoutingRule` — row number, description and the `ErrsUnder` flag — so
+the report's forward change list can surface which rule fired and which way it errs.
+
+**Routing is per change and the results union**, which falls out of where the ladder sits:
+`ChangedSetBuilder` already produces members and unmappable paths separately, and both lists are
+turned into changes side by side. A commit deleting one method and editing another in the same
+file therefore produces the edit's member root *and* the deletion's whole-type widening — the
+ordinary refactoring commit that per-file gating loses.
+
+**Directory containment has its named negative test**, and it is the one that proves the table
+has not degenerated: a `Directory.Build.props` under `services/billing/` selects Billing and
+nothing else. There is also a property-level assertion that *only* row 3 is solution-wide, which
+is the invariant a future row would break silently.
+
+**Row 6's notice fires only when no ancestor project contained the file.** A `notes.md` inside a
+project selects that project with no notice; a `README.md` at the repository root selects
+nothing and names itself in `unmapped-file-no-project`. That precision is what makes it a usable
+signal rather than a blanket disclaimer.
+
+**Generator detection reads the consumer's reference, not the generator's project file.** The
+conventional marker that actually appears in practice is `OutputItemType="Analyzer"` on the
+*`ProjectReference`*, which `ProjectFileReader` already parses — so row 4 asks "does anything
+reference this project as an analyser?" and, when something does, widens the consumers rather
+than the generator. A generator arriving as a `PackageReference` matches nothing and widens
+nothing, which is the registered under-selection rather than a whole-suite fallback that would
+fire hardest on the solutions with no generator at all.
+
+**No generator relation enters the call graph.** It is a compilation-input relation consulted by
+this table at routing time, and the seven edge kinds are untouched.
+
+**Tier 2 is a static helper over the instances the correspondence check already enumerated**
+(`TierLadder.AssembliesListing`), so nothing re-enumerates documents. Its test covers the linked
+file compiled into two projects, which is the case a per-project lookup would get wrong.

@@ -20,11 +20,17 @@ internal static class Selector
         AnalysisScope scope,
         ChangedSet changed,
         IReadOnlyList<JoinResult> joined,
-        bool includePaths)
+        bool includePaths,
+        TierLadder ladder)
     {
         var notices = new List<Notice>();
         var roots = new RootSets(assemblies);
-        var changes = roots.ChangesFrom(changed, joined, scope);
+        var changes = roots.ChangesFrom(changed, joined, scope, ladder);
+
+        if (TierLadder.UnattributedNotice(ladder.RouteAll(changed.UnmappablePaths)) is { } unattributed)
+        {
+            notices.Add(unattributed);
+        }
 
         // Every test in every in-scope test project, not only the selected ones: the totals,
         // the rendered-match computation and the over-selection measurement all read the list.
