@@ -380,41 +380,61 @@ public class CommandLineTests
     }
 
     [Fact]
-    public async Task A_run_whose_phases_do_not_exist_yet_is_exit_70_and_says_so()
+    public async Task Nothing_built_under_no_build_is_exit_3()
     {
-        using var repository = TempRepository.Create();
+        using var repository = SolutionRepository();
 
-        var tree = SolutionWithTests();
+        var exitCode = await Run(repository.Path, "select", "--base", "main", "--no-build");
 
-        try
-        {
-            // A real repository, so target discovery, analysis scope and baseline resolution
-            // all succeed and the run stops at the first phase that is not built.
-            CopyInto(tree.Root, repository.Path);
-            repository.Commit("baseline");
+        // Absence is unambiguous when the tree was searched rather than a path predicted.
+        Assert.Equal((int)ExitCode.AssemblyDiscoveryFailed, exitCode);
 
-            var exitCode = await Run(repository.Path, "select", "--base", "main");
-
-            Assert.Equal((int)ExitCode.InternalError, exitCode);
-            Assert.Contains("not implemented yet", Out + Error);
-
-            // And the phases that do exist reported what they found.
-            Assert.Contains("baseline-resolved", Error);
-        }
-        finally
-        {
-            tree.Dispose();
-        }
+        // And the phases that did run reported what they found.
+        Assert.Contains("baseline-resolved", Error);
     }
 
-    private static void CopyInto(string source, string destination)
+    [Fact]
+    public async Task A_run_whose_phases_do_not_exist_yet_is_exit_70_and_says_so()
     {
-        foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        using var repository = SolutionRepository();
+
+        foreach (var (project, source) in new[]
         {
-            var target = Path.Combine(destination, Path.GetRelativePath(source, file));
-            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            File.Copy(file, target, overwrite: true);
+            ("Core", "namespace N; public class Widget { public int Spin() => 1; }"),
+            ("Tests", "namespace N.Tests; public class WidgetTests { public void Spins() { } }"),
+        })
+        {
+            Compiled
+                .Assembly(project, source, Path.Combine(repository.Path, "src", project, project + ".cs"))
+                .WriteTo(Path.Combine(repository.Path, "src", project, "bin", "Debug", "net10.0"));
         }
+
+        var exitCode = await Run(repository.Path, "select", "--base", "main", "--no-build");
+
+        Assert.Equal((int)ExitCode.InternalError, exitCode);
+        Assert.Contains("not implemented yet", Out + Error);
+        Assert.Contains("2 assembly instance(s)", Out + Error);
+    }
+
+    /// <summary>The fixture solution inside a real repository, committed as the baseline.</summary>
+    private static TempRepository SolutionRepository()
+    {
+        var repository = TempRepository.Create();
+
+        using (var tree = SolutionWithTests())
+        {
+            foreach (var file in Directory.EnumerateFiles(tree.Root, "*", SearchOption.AllDirectories))
+            {
+                var target = Path.Combine(repository.Path, Path.GetRelativePath(tree.Root, file));
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                File.Copy(file, target, overwrite: true);
+            }
+        }
+
+        repository.WriteFile(".gitignore", "bin/\nobj/\n");
+        repository.Commit("baseline");
+
+        return repository;
     }
 
     private static ProjectTree SolutionWithTests()

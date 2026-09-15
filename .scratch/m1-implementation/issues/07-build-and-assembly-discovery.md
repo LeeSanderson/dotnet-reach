@@ -1,6 +1,6 @@
 # Build invocation and assembly discovery
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 02, 04, 05
 Spec: [§5](../../walking-skeleton/spec.md#5-build-handling), [§6.2](../../walking-skeleton/spec.md#62-assembly-discovery-scan-and-verify)–[§6.4](../../walking-skeleton/spec.md#64-stale-output)
 
@@ -104,3 +104,48 @@ do.
 ## Out of scope
 
 The checksum comparison itself — ticket 08, which consumes this ticket's document enumeration.
+
+## Comments
+
+**Implemented** in `Reach.Core/Assemblies` (`AssemblyFacts`, `PdbDocuments`/`SourceDocument`,
+`TargetFrameworkMoniker`, `AssemblyScanner`, `LayoutHints`, `AssemblyDiscovery`) and
+`Reach.Core/Build/BuildAdapter.cs`.
+
+**One rule the ticket does not have, and without it the ambiguity error fires on every run:
+candidates are grouped by module version id.** A project reference copies its output into every
+consuming project's bin directory, so `Core.dll` is genuinely present two or three times in any
+ordinary solution. Two files carrying one MVID are one build of one assembly; two MVIDs are two
+builds, and *that* is the case discovery refuses to choose between. Debug-versus-Release still
+exits 3, and the copy under the project's own directory is the one reported — deterministically,
+because the report has to be byte-identical between runs. Both halves have a named test.
+
+**`TargetFrameworkMoniker` is a third form.** Neither spelling can be derived from the other —
+the project file says `net10.0-windows`, the assembly stamps `.NETCoreApp,Version=v10.0` plus
+`Windows7.0` — so both are parsed into identifier, version and platform-without-version, and
+compared there. The declared platform version is deliberately dropped, because
+`net10.0-windows` and `net10.0-windows7.0` stamp byte-identical attributes and comparing it
+would make one of them never match.
+
+**`Compiled`** (`tests/Reach.Tests/Fixtures/Compiled.cs`) is the fixture that makes §16.2's
+"anything testable in memory is tested in memory" real: a source string becomes a real assembly
+with a real portable PDB, with the target-framework and target-platform attributes stamped and
+the document paths chosen by the test. That is what lets the four-relocation assertion be four
+`WriteTo` calls rather than four projects, and what lets a "third-party assembly with a
+first-party-looking name" be one line. Tickets 08 onwards should build on it.
+
+One thing it needs and the compiler insists on: `SourceText.From(source, Encoding.UTF8)`.
+Without an explicit encoding Roslyn refuses to emit debug information at all (`CS8055`),
+because it cannot compute a document checksum. UTF-8 is what the real compiler reads a `.cs`
+file as, so the checksums match a file on disk — which ticket 08 depends on.
+
+**Layout hints filter, they never compute.** `-c` matches a whole path segment
+case-insensitively on every platform, because artifacts output lower-cases the configuration
+name and the default layout does not. `-o` and `--artifacts-path` are containment tests. The
+ambiguity message names whichever option has not been tried yet.
+
+**An assembly with no readable symbols is not first-party**, and therefore reads as missing —
+exit 3 — rather than as analysed. That is the loud direction, and it is the same code path that
+classifies a genuine third-party assembly whose PDB happens to sit beside it.
+
+Not implemented here, as the ticket says: the checksum comparison (ticket 08) consumes
+`ScannedAssembly.Documents`, which already carries each document's algorithm and digest.
