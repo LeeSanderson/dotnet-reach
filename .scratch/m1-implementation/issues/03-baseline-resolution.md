@@ -1,6 +1,6 @@
 # Baseline resolution
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 02
 Spec: [§7](../../walking-skeleton/spec.md#7-the-baseline) · [ADR-0010](../../../docs/adr/0010-the-baseline-is-auto-detected-with-no-default-branch-fallback.md)
 
@@ -79,3 +79,42 @@ cannot say what it audited will not catch it.
 
 Everything downstream of the SHA. This ticket produces a baseline and a detection record; the
 change set is ticket 06.
+
+## Comments
+
+**Implemented** in `Reach.Core/Baselines`: `BaselineResolver` (the ladder), `Baseline`,
+`BaselineOrigin`, `BaselineResolution` and `CheckoutGuidance` (the exit-4 message).
+
+**The shallow check runs first**, before `--base` is even looked at. A shallow clone makes
+every later answer a truncated one, and it is what the likeliest first pipeline run actually
+hits, so the best message wins over the shortest code path. A *failed* shallow probe is also
+treated as shallow: exit 4 with a message beats a baseline resolved against history Reach
+could not confirm is there.
+
+**`refs/heads/` stripping is applied to every rung, not just Azure's.** A bare name is
+unaffected, and a prefixed one would otherwise never resolve — so the narrower rule buys
+nothing and costs a bug the first time another provider changes format.
+
+**Rung 6 needs `git rev-parse <ref>` to fail for an absent ref**, which it does (exit 128).
+Both refs present means neither is chosen: two is ambiguous, and picking either could be wrong.
+
+**Three notice codes land here**, all `environment`, in `Reach.Core/Reporting/NoticeCodes.cs`:
+`baseline-resolved` (data: `sha`, `reference`, `origin`, `variable`), `baseline-is-head`
+(data: `sha`) and `baseline-unresolvable` (data: `problem`). The catalogue and the register
+parity test are ticket 18's; this ticket only adds the codes it emits. `Notice`, `NoticeKind`
+and the `ExitCode` enum were created here because the ladder needs all three — ticket 12 wires
+`ExitCode` to the process and ticket 18 grows the catalogue.
+
+**The source-branch traps have six named tests**, each asserting both that resolution fails
+and that the trap's *value* never reaches a git argument vector. The second half is what
+catches a future refactor that reads the variable and then discards it by accident.
+
+**The scripted fake now answers with the most recently scripted match**, so a test can
+override a fixture default (a shallow `true` over the constructor's `false`) without
+rebuilding the runner. Its own test changed to pin that.
+
+One assumption worth naming: `CheckoutGuidance` detects GitLab, Bitbucket and Jenkins from
+marker variables (`GITLAB_CI`, `BITBUCKET_BUILD_NUMBER`, `JENKINS_URL`) as well as from their
+target-branch variables, so the message is still right when detection failed *because* the
+target-branch variable was absent. Their fix lines are from each provider's documentation and
+are not verified against a live runner — GitHub's and Azure's are, by the acceptance criteria.

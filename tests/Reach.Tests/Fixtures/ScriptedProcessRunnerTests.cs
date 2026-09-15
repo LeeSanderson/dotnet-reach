@@ -60,13 +60,13 @@ public class ScriptedProcessRunnerTests
     }
 
     [Fact]
-    public async Task Matches_scripts_in_the_order_they_were_added()
+    public async Task The_most_recently_scripted_answer_wins()
     {
-        runner.Succeeds("first\n", "rev-parse");
-        runner.Succeeds("second\n", "rev-parse", "--is-shallow-repository");
+        runner.Succeeds("default\n", "rev-parse");
+        runner.Succeeds("overridden\n", "rev-parse");
 
-        Assert.Equal("first", (await Run("rev-parse", "HEAD")).Value);
-        Assert.Equal("first", (await Run("rev-parse", "--is-shallow-repository")).Value);
+        // So a test can override a fixture's default without rebuilding it.
+        Assert.Equal("overridden", (await Run("rev-parse", "HEAD")).Value);
     }
 
     [Fact]

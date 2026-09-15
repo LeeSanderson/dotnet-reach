@@ -12,6 +12,10 @@ namespace Reach.Tests.Fixtures;
 /// its arguments appear in the request's vector in order, so a test says what it cares about
 /// — <c>merge-base HEAD</c> — without restating the global options every git call carries.
 /// Assertions then read <see cref="Requests"/>, which holds the vector exactly as issued.
+/// <para>
+/// The most recently scripted answer wins, so a test can override a fixture's default
+/// without rebuilding it.
+/// </para>
 /// </remarks>
 internal sealed class ScriptedProcessRunner : IProcessRunner
 {
@@ -40,7 +44,7 @@ internal sealed class ScriptedProcessRunner : IProcessRunner
         cancellationToken.ThrowIfCancellationRequested();
         requests.Add(request);
 
-        foreach (var (arguments, result) in scripts)
+        foreach (var (arguments, result) in Enumerable.Reverse(scripts))
         {
             if (Matches(request.Arguments, arguments))
             {
