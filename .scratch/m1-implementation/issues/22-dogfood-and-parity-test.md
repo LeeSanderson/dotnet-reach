@@ -1,6 +1,6 @@
 # dogfood.yml and the docs↔workflow parity test
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 21
 Spec: [§16.4](../../walking-skeleton/spec.md#164-documentation-ci-and-publishing)
 
@@ -76,3 +76,89 @@ is a number nobody has.
 Gating on Reach's selection. Shadow mode — M2, and it is what would justify gating. Acting on the
 first datapoint beyond recording it: if it lands in the stop table's bottom two rows, that is a
 finding for the owner, not a change to make here.
+
+## Answer: the first datapoint
+
+**Measured locally, not from a CI run**, because `dogfood.yml` installs a package that is not
+published yet — ticket 21's human steps are the gate. The numbers come from the same binary the
+workflow would install, run against this repository with `select -c Release --no-build`, so only
+the provenance differs. Re-take them from the first real run and replace this section.
+
+### A one-member change — `SpanJoin.Resolve`
+
+| | |
+|---|---|
+| ratio | **81 / 430 = 19%** |
+| widened pairs | **0** |
+| path class | 81 `compiled`, 0 `widened` |
+| changes | 1, at `member` tier, reaching 81 |
+| Reach's own wall clock | 1.4 s total — `changes` 423 ms, `graph` 338 ms, `baseline` 153 ms, everything else under 50 ms |
+
+**Against the stop table: the top row, comfortably.** One mid-graph method in `Reach.Core`, joined
+at member tier, reached a fifth of the suite over compiled paths only. This is the shape the tool
+was built for, and it is the first evidence that the join and the reverse walk do on a real
+codebase what the fixtures say they do.
+
+### A five-commit range — this session's work
+
+| | |
+|---|---|
+| ratio | **430 / 430 = 100%** |
+| widened pairs | **0** |
+| changes | 88 — 50 `member`, 1 `whole-type`, 37 `whole-assembly`; 41 of them reached nothing |
+| delivery | `response-file` — 430 tests exceeded the command-line ceiling, as designed |
+
+**The cause is legible and correct**: the range contains a change to `src/Reach.Cli/Reach.Cli.csproj`,
+which routes at whole-assembly tier, and `Reach.Tests` references `Reach.Cli`. Everything is
+reachable, so everything is selected. Widening working exactly as specified — a five-commit range
+spanning a packaging change is also not a pull request, which is why the stop condition says
+*median*.
+
+### The finding: `widenedPairs` cannot see tier widening
+
+That 100% row reads, on `summary` alone, as *"over 70%, mostly `compiled`"* — the stop table's
+bottom row, **"not Reach's failure, the codebase is too connected"**. That reading is wrong, and it
+is the exact misreading the table calls the expensive one.
+
+Path class describes the edges walked. A whole-assembly widening walks none: every method is
+already a root, so its tests are reached at distance zero and class `compiled`. **A run that
+widened an entire assembly reports `widenedPairs: 0`.**
+
+Registered as an extension of *"the widening delta understates widening's contribution"*, with the
+reading that recovers the truth — `changes[].tier` — added to the stop condition's guidance. Not
+acted on further: this ticket records the datapoint, and the instrument's upgrade is M2's.
+
+### The bug the first run found
+
+`testsReached: 0` on a change whose tier said `whole-assembly` is arithmetically impossible, and it
+was: **widening a test assembly selected none of the tests in it**. Two `const` fields in a test
+class cannot join, fell through to whole-assembly widening, and selected nothing. Under-selection
+out of an over-selection mechanism — fixed in its own commit with a test at the `Selector` seam,
+before these numbers were taken.
+
+This is the whole case for dogfooding. Five hundred tests, a fixture solution and an acceptance
+suite did not find it; one real run did, and it found it in the report rather than in a stack
+trace — which is also the case for `testsReached` existing at all.
+
+## Implementation notes
+
+**The recipe in the documentation had a bug the parity test would not have caught**, and writing
+the workflow for real is what surfaced it. The original fenced block piped `jq` into
+`while read … do eval "$command"; done`, so a failing selected test left the step **green** —
+`eval`'s status inside a loop goes nowhere. Both sides now track a status and exit with it, and
+skip the blank line an empty selection produces. Verified in three directions: a failing command
+exits 1 even when a later one succeeds, an empty `invocations` array runs nothing and exits 0, and
+the shell parses under `bash -n`.
+
+**The parity test asserts more than equality**, because equality alone is satisfied by two
+identically wrong files: the block must carry `fetch-depth: 0` and a pinned `dnx dotnet-reach@`,
+and must not carry the bare form. The perturbation test changes `fetch-depth: 0` to `1` — the one
+character this test exists for — and was also checked by hand against the real files, where it
+fails two assertions and passes again on revert.
+
+**Line endings are normalised and nothing else.** Git hands a Windows checkout CRLF and a Linux one
+LF, and a parity test that failed on the platform rather than on the content would be reporting the
+wrong thing on the one line it protects.
+
+**`dogfood.yml` will fail on every pull request until the package is published.** That is the
+sequencing this ticket names, not a defect.

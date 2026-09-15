@@ -251,8 +251,19 @@ Limitations of the numbers Reach reports about itself. They do not affect select
 - **Shape**: the delta is counted over (test, change) pairs whose path class is `widened`. A test
   reachable by *both* a compiled and a widened path reads `compiled`, so widening's true cost is
   higher than the number says.
+- **Shape, and the larger half**: path class describes the *edges walked*, and a whole-assembly or
+  whole-type widening walks none — every method of the assembly is already a root, so its tests are
+  reached at distance zero and read `compiled`. **A run that widened an entire assembly can report
+  `widenedPairs: 0`.** Measured on Reach's own repository: one changed `.csproj` selected 100% of
+  the suite with not one widened pair.
+- **Why it matters more than the first**: `widenedPairs` is what the stop condition's bottom two
+  rows are told apart by. Read alone it calls that run *"the codebase is too connected"* when the
+  truth is *"one project file widened everything"* — the misreading the table says is the expensive
+  one. Read `changes[].tier` alongside it; a run whose `changes` carry `whole-assembly` is a
+  widened run whatever `widenedPairs` says.
 - **Upgrade path**: run the walk twice, with widened edges and without — the rigorous version
-  ADR-0004 exists to enable. Needs no new data, only a second traversal.
+  ADR-0004 exists to enable. Needs no new data, only a second traversal. The tier half wants
+  something else: count a pair as widened when its change was routed above the member tier.
 
 ### The stop condition
 
@@ -269,7 +280,13 @@ harness is needed to reach a verdict.
 
 The last row is the one worth keeping. It is the case most likely to be misread as a Reach
 failure, and the one most likely to cost a quarter spent on framework models that cannot help.
-Read `summary.widenedPairs` against `summary.willRun` to tell the two apart.
+Read `summary.widenedPairs` against `summary.willRun` to tell the two apart — **and read
+`changes[].tier` too**, because `widenedPairs` alone reports zero for a run that widened a whole
+assembly, which is the entry directly above.
+
+**Median**, and per pull request, not per run. A change to a project file or a solution-wide build
+file widens its assembly and can select everything; that is the design working, and one such run
+is not a verdict.
 
 ---
 
