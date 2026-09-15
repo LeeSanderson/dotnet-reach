@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Contoso.Core/Contoso.Core.csproj" />
+  <Project Path="src/Contoso.Generator/Contoso.Generator.csproj" />
+  <Project Path="tests/Contoso.Tests.Xunit/Contoso.Tests.Xunit.csproj" />
+  <Project Path="tests/Contoso.Tests.NUnit/Contoso.Tests.NUnit.csproj" />
+  <Project Path="tests/Contoso.Tests.Unrecognised/Contoso.Tests.Unrecognised.csproj" />
+</Solution>

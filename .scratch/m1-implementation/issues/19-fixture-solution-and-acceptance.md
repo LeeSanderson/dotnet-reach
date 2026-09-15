@@ -1,6 +1,6 @@
 # The fixture solution and the acceptance assertions
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 13, 14, 15, 16, 17, 18
 Spec: [§16.2](../../walking-skeleton/spec.md#162-testing-and-m1s-acceptance-criteria)
 
@@ -123,3 +123,51 @@ Do not promote these; each has a stated reason:
 
 Measuring over-selection on a real solution — smoke only here (the fixture solution and Reach's
 own repository); real numbers come at adoption. A replay harness.
+
+## Comments
+
+**The fixture solution is `tests/fixtures/Contoso/`**, copied into a fresh temporary git
+repository and built by `FixtureSolution.Build`. It carries only project-file facts: a
+multi-targeted `Contoso.Core` (`net8.0;net10.0`), a generator referenced with
+`ReferenceOutputAssembly="false" OutputItemType="Analyzer"`, an xUnit project, an NUnit project
+and one on a framework the recognition table does not cover. No IL shapes — those are all
+in-memory, compiled from source strings.
+
+**The acceptance assertions are `Reach.Tests.Acceptance`**, filterable as a group, eleven tests,
+about a minute of the suite's total. Everything else still runs in under ten seconds.
+
+**Most of this ticket's list was already covered**, and deliberately so — the comment-only
+change, the `Directory.Build.props` containment, the zero-count forward change entry, the
+changed `const`, the removed overload, `[Fact]` on an existing method, the four layout
+relocations plus the ambiguity error, the chunker, the framework selector and the parity test
+are all in-memory or temp-repository tests from earlier tickets. This ticket added the four
+mandatory integration assertions over a real build, the `Handler<Foo>`/`Handler<Bar>` decision,
+and the exact-expected-selection assertions the determinism pin makes affordable.
+
+**Two things the fixture found that no in-memory test could.**
+
+- **Editing a fixture source without rebuilding is a correspondence failure**, so every
+  acceptance edit rebuilds. The first version did not, and every assertion came back
+  `outcome: failed` with `correspondence: failed`. That is Reach being right, and it is a
+  pleasant way to be told that the helper was wrong.
+- **A "test project" with no test-framework package is not a test project at all.** The first
+  `Contoso.Tests.Unrecognised` declared a bespoke attribute and referenced nothing, so it never
+  entered the analysis scope and whole-project fallback had nothing to fall back on. It now
+  references `Microsoft.NET.Test.Sdk`, which is what makes it a test project by every
+  project-level signal while its *framework* stays unrecognised — the shape the assertion is
+  actually about.
+
+**One assertion is scoped more narrowly than the ticket's wording**, and the reason belongs
+here. "A loop over `invocations` starts no process at all" is asserted over the projects Reach
+could analyse. The unrecognised-framework project runs in full whatever the change was, because
+Reach cannot show it is unaffected — the safe direction, and a different fact. The unqualified
+version of the assertion is still covered end to end by `ConsumerLoopTests` over a report with
+no unanalysable project in it.
+
+**The NUnit fixture had to be built so that `MyTest2` does not reach the change.** With both
+tests calling the same method the rendered `~` filter matches exactly what was selected and the
+over-match is invisible — which is precisely how a fixture "lets the second number silently
+return zero". `MyTest` reaches `Tax`; `MyTest2` reaches `Untouched`; a change to `Tax` selects
+one and runs two.
+
+**The whole suite is green**: 509 tests, and this ticket is M1's acceptance gate.
