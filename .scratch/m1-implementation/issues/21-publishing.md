@@ -1,6 +1,8 @@
 # Publishing
 
 Status: ready-for-human
+On hold: since 2026-11-14, by the owner's decision — no tag is pushed until the acceptance test
+layer (`.scratch/acceptance-layer/`) has been planned.
 Depends on: 19, 20
 Spec: [§16.4](../../walking-skeleton/spec.md#164-documentation-ci-and-publishing)
 
