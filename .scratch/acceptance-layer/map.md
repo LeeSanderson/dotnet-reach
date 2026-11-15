@@ -27,6 +27,9 @@ to start building, that is the edge of the map: hand off instead.
     something that checks Reach.
   - **Patch**: a change applied to a sample solution's code.
   - **Acceptance test**: one patch plus its expected result, run as a test in Reach's own suite.
+  - **Known-gap test**: an acceptance test that pins a documented imprecision (over- or
+    under-selection) rather than a claim. Named as a gap; never in the release gate.
+  - **Release gate**: every claim the alpha's docs make, each proven by some suite.
 - **Reach's output is not changed to suit the acceptance layer.** Acceptance tests read
   `report.json` as Reach already writes it.
 - **Facts gathered while charting** (from a survey of the suite on 2026-11-14): ~440 tests in
@@ -46,24 +49,38 @@ Taken while charting, before any ticket existed. Terse by design.
 - **The oracle is an exact expected selection**, written by hand per acceptance test. The
   sample tests are never run to check Reach. An exact match catches over-selection too, so
   unselected tests are implied, not listed.
-- **The expected result covers** the selected sample tests, the outcome (`ok` / `skip` /
-  `failed`) and the projects run in full by whole-project fallback. Not notices, not tiers —
-  the in-memory tests pin those.
+- **The expected result covers** the selected sample tests, the outcome (in `report.json`'s
+  words: `selected` · `nothing-selected` · `no-changes` · `failed`) and the projects run in
+  full by whole-project fallback. ~~Not notices, not tiers~~ — *widened by the capabilities
+  ticket below: optional will-run, notices, changes and tier sections, each exact when given.*
 - **Two kinds of sample solution**: small ones built for one area of capability, and
   multi-project ones shaped like a real codebase, where most test projects must *not* be
   selected.
-- **It replaces today's 13 Contoso acceptance tests**; Contoso becomes the first small sample
+- **It replaces today's Contoso acceptance tests** (11, not the 13 first counted); Contoso becomes the first small sample
   solution. The in-memory tests stay where they are.
+
+From tickets:
+
+- [How a patch and its expected result read](issues/01-patch-format-and-readability.md): a
+  plain unified diff (`---`/`+++` and labelled `@@` hunks only, no `index` lines), applied
+  with `git apply`, never `--3way`.
+- [What does a built, patched sample solution cost?](issues/02-building-a-patched-sample-cheaply.md):
+  no baseline build is needed. One build of the patched tree is 4–6 s per test. Copying built
+  trees buys nothing. Parallel runs with one directory per test are 2.3–2.7× faster.
+- [Which capabilities the layer demonstrates, and which gate the release](issues/03-capabilities-and-the-release-gate.md):
+  27 rows — 16 gate capabilities on small samples, 7 on the multi-project one (each about what
+  is *not* selected), 4 known-gap tests outside the gate. The gate is every claim in the docs,
+  proven by *some* suite; acceptance tests stay in-process. The expected result widens to
+  will-run, notices, changes and tier; every test checks determinism.
 
 ## Not yet specified
 
-- **Sample solutions beyond the first multi-project one** — how many, and what each is for,
-  once the capability list and the first one exist.
-- **Keeping patches applying as sample solutions evolve** — the authoring workflow for
-  regenerating a patch or an expected result, and how drift is noticed. Shaped by the patch
-  format.
+- **A second multi-project sample solution?** — whether rows 17–23 and 26–27 fit one, once the
+  first is designed. The small ones graduated into [The small sample solutions](issues/10-the-small-sample-solutions.md).
 - **Writing the spec and cutting the implementation tickets** — the last ticket, once the
-  frontier above has cleared.
+  frontier above has cleared. The spec carries the claim-to-suite table.
+- **What happens to each claim no suite proves** — test it or cut it from the docs, once
+  [Which suite proves each claim](issues/11-which-suite-proves-each-claim.md) lists them.
 
 ## Out of scope
 

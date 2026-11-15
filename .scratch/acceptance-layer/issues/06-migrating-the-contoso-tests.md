@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 04
+Blocked by: 04, 10
 
 ## Question
 
@@ -14,3 +14,11 @@ example report (`ExampleReportTests`) assert other things.
 For each of the 13 plus `ExampleReportTests`: does it become an acceptance test, stay as C#
 over the new harness, or move elsewhere? And does the Contoso fixture itself need to change
 to fit the declaration format?
+
+## Comments
+
+- **From [Which capabilities the layer demonstrates, and which gate the release](03-capabilities-and-the-release-gate.md):** there are **11** Contoso acceptance tests, not 13. The four that assert more
+  than selection (NUnit `~`, determinism, zero-count change, runner-setting notice) now fit the
+  layer: the expected result gains will-run, notices and changes, and **every** acceptance test
+  checks determinism. Whether Contoso becomes the "frameworks" sample is decided in
+  [The small sample solutions](10-the-small-sample-solutions.md).
