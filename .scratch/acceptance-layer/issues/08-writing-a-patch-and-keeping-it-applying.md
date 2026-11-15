@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 04
+Blocked by: (none — 04 resolved)
 
 ## Question
 
@@ -24,3 +24,13 @@ always writes `diff --git` and `index` lines, and git has no flag to leave them 
 
 Depends on where acceptance tests live and how they are declared, from
 [How an acceptance test is declared](04-how-an-acceptance-test-is-declared.md).
+
+## Comments
+
+- **From [How an acceptance test is declared](04-how-an-acceptance-test-is-declared.md):**
+  patches sit flat beside their sample's test class in `tests/Reach.Tests/Acceptance/<Name>/`,
+  and a test names them explicitly, so one patch may be **shared** by several tests or
+  **combined** with others (applied in order). Two things land here:
+  - **A guard against a patch no test uses**, since nothing ties a file to a method by name.
+  - **Combined patches must apply in sequence**, so drift checking must apply each test's list
+    in its order, not each patch alone.

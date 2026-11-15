@@ -1,7 +1,7 @@
 # How an acceptance test is declared
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: (none — 01 resolved)
 
 ## Question
@@ -35,3 +35,86 @@ test names its sample solution, and the exact shape of the expected result's fil
   - **Known-gap tests** must be declarable and visibly named as gaps (e.g.
     `Known_gap_interpolated_ToString_is_not_selected`), and kept out of the release gate — the
     declaration needs some way to say which batch a test is in.
+
+## Answer
+
+Settled with the owner over four rounds of grilling.
+
+### Code, not data
+
+**An acceptance test is one C# test method.** Chosen for reuse: a test may share patches,
+pieces of expected results and harness steps, as it needs. A folder of data run by one theory
+was the alternative.
+
+### Where things live
+
+- **Sample solutions move to `tests/samples/<Name>/`**, one folder each with its own `.slnx`
+  and README. `tests/fixtures/` goes when Contoso has moved (how is
+  [Migrating the Contoso tests](06-migrating-the-contoso-tests.md)'s question). A sample is
+  still never built in place.
+- **No acceptance test lives inside a sample solution's folder.** That folder becomes the
+  baseline repository Reach reads, so it holds the sample solution and nothing else.
+- **One folder per sample solution at `tests/Reach.Tests/Acceptance/<Name>/`**, holding one
+  test class and that sample's `.patch` files, flat — no `patches/` subfolder. The class names
+  its sample solution once, never per test. Today's `Acceptance/AcceptanceTests.cs` is replaced;
+  `ExampleReportTests.cs` stays. The namespace filter `Reach.Tests.Acceptance` still selects the
+  group.
+
+### How a test reads
+
+```csharp
+[Fact]
+public async Task A_late_fee_change_selects_dunning_but_not_billing() =>
+    await Apply("late-fee-counts-part-months.patch").Expect(new()
+    {
+        Because = "Only Invoice.LateFee changed; Dunning reaches it, Billing and the API don't.",
+        Outcome = Outcome.Selected,
+        Selected = new()
+        {
+            ["Ledger.Domain.Tests"] = ["Ledger.Domain.Tests.LateFeeTests.Two_months_late_charges_three_percent"],
+            ["Ledger.Services.Tests"] = ["Ledger.Services.Tests.DunningTests.A_reminder_quotes_the_late_fee"],
+        },
+        RunInFull = [],
+        Tiers = new() { ["Ledger.Domain.Invoice.LateFee(DateOnly)"] = Tier.Member },
+    });
+```
+
+- **`Apply(...)` names its patches explicitly**: one or more, applied in order, relative to the
+  sample's acceptance folder, read from the source tree (not copied to the build output). A
+  missing patch, or one `git apply` rejects, fails the test naming the file. Naming the patch
+  after the method was rejected: it cannot express a shared or combined patch.
+- **`Expect(...)` takes one `Expected` record.**
+  - **Required**: `Because`, `Outcome`, `Selected`, `RunInFull`.
+  - **Optional, exact when given**: `WillRun` (count per project key, as the schema has it),
+    `Notices` (the set of codes), `Changes` (member display → test count), `Tiers` (member
+    display → tier). Left out means not checked.
+  - One assertion compares every given section and reports **all** the differences, section by
+    section, with `Because` printed at the top.
+  - **Determinism is checked inside `Expect`** (two byte-identical `report.json` files), never
+    written in a test.
+  - Chained calls (`.Selects(...).RunsInFull(...)`) were rejected: "required" would become a
+    convention rather than something the compiler checks.
+- **`Because` is required.** One sentence: why exactly these tests. It answers the prototype's
+  rename-and-delete test, where nothing in the patch says why `Net_is_the_sum_of_the_lines` is
+  selected.
+- **Keys.** `Selected` and `RunInFull` are keyed by **test-project name** (the `.csproj` file
+  name without extension). A multi-targeted project's entries are written **`Name@tfm`**. A bare
+  name matching more than one `report.json` entry is an ambiguity error, so a framework cannot
+  be skipped by accident. A project not listed has nothing selected. Tests are listed by full
+  `display` name.
+- **Shared expected-result pieces** are ordinary C# static members.
+
+### Known gaps
+
+**Both a `[KnownGap]` attribute** (an xUnit v3 trait, `Batch=known-gap`) **and a method name
+starting `Known_gap_`.** The name is what a human reads; the trait is what the release gate
+excludes. A guard test fails where the two disagree.
+
+### Not changed
+
+No `CONTEXT.md` change and no ADR: these are test-infrastructure decisions, and the vocabulary
+lives in the map's Notes.
+
+### Passed on
+
+- A guard against a patch no test uses → [Writing a patch and keeping it applying](08-writing-a-patch-and-keeping-it-applying.md).

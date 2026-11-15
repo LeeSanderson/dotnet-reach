@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 04, 10
+Blocked by: 10 (04 resolved)
 
 ## Question
 
@@ -22,3 +22,7 @@ to fit the declaration format?
   layer: the expected result gains will-run, notices and changes, and **every** acceptance test
   checks determinism. Whether Contoso becomes the "frameworks" sample is decided in
   [The small sample solutions](10-the-small-sample-solutions.md).
+- **From [How an acceptance test is declared](04-how-an-acceptance-test-is-declared.md):**
+  Contoso moves from `tests/fixtures/Contoso/` to `tests/samples/Contoso/`, and its tests become
+  one class in `tests/Reach.Tests/Acceptance/Contoso/` with `.patch` files beside it; today's
+  `Touch` calls become patches. `tests/fixtures/` goes once it is empty.

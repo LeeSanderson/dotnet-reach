@@ -72,6 +72,11 @@ From tickets:
   is *not* selected), 4 known-gap tests outside the gate. The gate is every claim in the docs,
   proven by *some* suite; acceptance tests stay in-process. The expected result widens to
   will-run, notices, changes and tier; every test checks determinism.
+- [How an acceptance test is declared](issues/04-how-an-acceptance-test-is-declared.md): code,
+  not data — one C# method per test, `Apply("a.patch", ...).Expect(new Expected { ... })` with
+  a required `Because`. Samples in `tests/samples/<Name>/`; one class per sample in
+  `Acceptance/<Name>/` with its patches flat beside it. Known gaps: `[KnownGap]` trait plus
+  `Known_gap_` name.
 
 ## Not yet specified
 

@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 04
+Blocked by: (none — 04 resolved)
 
 ## Question
 
@@ -30,3 +30,9 @@ Depends on whether an acceptance test is data or code, from
   `report.json` files byte for byte. Measure what the second run costs next to the build; if it
   is not small, bring it back to the owner. Acceptance tests run Reach **in-process**
   (`ReachPipeline.SelectAsync`), as `FixtureSolution` does today.
+- **From [How an acceptance test is declared](04-how-an-acceptance-test-is-declared.md):** the
+  harness surface is `Apply("a.patch", ...)` then `.Expect(new Expected { ... })`, one class per
+  sample solution under `tests/Reach.Tests/Acceptance/<Name>/`, samples copied from
+  `tests/samples/<Name>/`. Patches are read from the source tree. **Determinism is checked
+  inside `Expect`** (two runs of Reach, byte-identical `report.json`), so its cost is this
+  ticket's. `Expect` reports every differing section at once, `Because` first.
