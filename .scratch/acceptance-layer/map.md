@@ -77,11 +77,13 @@ From tickets:
   a required `Because`. Samples in `tests/samples/<Name>/`; one class per sample in
   `Acceptance/<Name>/` with its patches flat beside it. Known gaps: `[KnownGap]` trait plus
   `Known_gap_` name.
+- [The first multi-project sample solution](issues/05-the-first-multi-project-sample-solution.md):
+  **Ledger**, a diamond of Domain → Billing / Dunning (siblings) → Api, one xunit v3 test project
+  each, single `net10.0`, 12 sample tests. One patch per row 17–23 and 26–27, each with its
+  not-selected set. One sample is enough. Row 23's outcome to be confirmed against Reach.
 
 ## Not yet specified
 
-- **A second multi-project sample solution?** — whether rows 17–23 and 26–27 fit one, once the
-  first is designed. The small ones graduated into [The small sample solutions](issues/10-the-small-sample-solutions.md).
 - **Writing the spec and cutting the implementation tickets** — the last ticket, once the
   frontier above has cleared. The spec carries the claim-to-suite table.
 - **What happens to each claim no suite proves** — test it or cut it from the docs, once
