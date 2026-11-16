@@ -36,3 +36,6 @@ Depends on whether an acceptance test is data or code, from
   `tests/samples/<Name>/`. Patches are read from the source tree. **Determinism is checked
   inside `Expect`** (two runs of Reach, byte-identical `report.json`), so its cost is this
   ticket's. `Expect` reports every differing section at once, `Because` first.
+- **From [Where the acceptance tests run](07-where-acceptance-tests-run.md):** there is **no time
+  budget**, so parallelism is about the developer's wait, not a limit to stay under. Acceptance
+  tests run by default in a plain `dotnet test`, so their wall-clock is every developer's.

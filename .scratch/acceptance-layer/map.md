@@ -81,6 +81,10 @@ From tickets:
   **Ledger**, a diamond of Domain → Billing / Dunning (siblings) → Api, one xunit v3 test project
   each, single `net10.0`, 12 sample tests. One patch per row 17–23 and 26–27, each with its
   not-selected set. One sample is enough. Row 23's outcome to be confirmed against Reach.
+- [Where the acceptance tests run](issues/07-where-acceptance-tests-run.md): in `Reach.Tests`;
+  plain `dotnet test` runs everything, and narrowing is an ordinary filter at the developer's
+  discretion. CI runs them every push and PR on both OSes as a second step after the fast one,
+  split by namespace filter. No time budget, just a ~20 min hang guard.
 
 ## Not yet specified
 
