@@ -25,7 +25,8 @@ to start building, that is the edge of the map: hand off instead.
     project" — a *project* is one `.csproj`, and a sample needs several.
   - **Sample test**: a test method inside a sample solution. Something Reach *selects*, never
     something that checks Reach.
-  - **Patch**: a change applied to a sample solution's code.
+  - **Patch**: a change applied to a sample solution's code. Patches are **independent**: each
+    applies to the untouched sample by itself, so combining them only stacks changes.
   - **Acceptance test**: one patch plus its expected result, run as a test in Reach's own suite.
   - **Known-gap test**: an acceptance test that pins a documented imprecision (over- or
     under-selection) rather than a claim. Named as a gap; never in the release gate.
@@ -85,6 +86,10 @@ From tickets:
   plain `dotnet test` runs everything, and narrowing is an ordinary filter at the developer's
   discretion. CI runs them every push and PR on both OSes as a second step after the fast one,
   split by namespace filter. No time budget, just a ~20 min hang guard.
+- [Writing a patch and keeping it applying](issues/08-writing-a-patch-and-keeping-it-applying.md):
+  `tests/tools/patch.cs` with `save` (edits → stripped patch, sample reverted) and `apply`
+  (`--3way`, for fixing drift). A fast guard rejects unstripped patches. Patches are independent.
+  Drift shows only when the layer runs, with a fix line. Expected results are never generated.
 
 ## Not yet specified
 

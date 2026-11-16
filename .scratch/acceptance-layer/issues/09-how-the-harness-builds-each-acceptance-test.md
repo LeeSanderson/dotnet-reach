@@ -39,3 +39,9 @@ Depends on whether an acceptance test is data or code, from
 - **From [Where the acceptance tests run](07-where-acceptance-tests-run.md):** there is **no time
   budget**, so parallelism is about the developer's wait, not a limit to stay under. Acceptance
   tests run by default in a plain `dotnet test`, so their wall-clock is every developer's.
+- **From [Writing a patch and keeping it applying](08-writing-a-patch-and-keeping-it-applying.md):**
+  the harness applies with `git apply --verbose` (never `--3way`). A failed apply reports the
+  patch name and its position in the list (`2 of 3: x.patch`), git's full output, and the fix
+  line `dotnet run tests/tools/patch.cs -- apply <Sample> <name>, resolve, then save --force`.
+  Patches are **independent**: each applies to the clean sample alone, so order never matters
+  for applying.
