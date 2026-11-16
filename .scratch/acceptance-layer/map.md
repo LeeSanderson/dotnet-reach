@@ -90,6 +90,11 @@ From tickets:
   `tests/tools/patch.cs` with `save` (edits → stripped patch, sample reverted) and `apply`
   (`--3way`, for fixing drift). A fast guard rejects unstripped patches. Patches are independent.
   Drift shows only when the layer runs, with a fix line. Expected results are never generated.
+- [How the harness builds each acceptance test](issues/09-how-the-harness-builds-each-acceptance-test.md):
+  a fresh temp root per test (`repo/` + `out/`), baseline committed, patches left uncommitted,
+  one build. `ParallelMode.All` (xUnit 4.0 runs a class's tests in parallel, correcting 02).
+  `FixtureSolution` reworked into the per-test copy. Determinism: two runs (~1 s extra), timings
+  scrubbed, string compare, no Verify. Persistent slots are the upgrade past 5 min in CI.
 
 ## Not yet specified
 

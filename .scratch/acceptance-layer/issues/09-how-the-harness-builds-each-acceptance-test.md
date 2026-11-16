@@ -1,7 +1,7 @@
 # How the harness builds each acceptance test
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: (none — 04 resolved)
 
 ## Question
@@ -45,3 +45,84 @@ Depends on whether an acceptance test is data or code, from
   line `dotnet run tests/tools/patch.cs -- apply <Sample> <name>, resolve, then save --force`.
   Patches are **independent**: each applies to the clean sample alone, so order never matters
   for applying.
+
+## Answer
+
+Settled with the owner over three rounds of grilling (2026-11-16).
+
+### Build shape: a fresh temp root per test
+
+Each acceptance test gets its own temp root, deleted when the test ends: copy the sample, one
+`dotnet build` of the patched tree (4–6 s), run Reach. Nothing is shared, so no test's result
+depends on which test ran before it.
+
+- **Disk was the worry, and it does not separate the options.** Each root is deleted on
+  dispose, so peak disk is *(tests running at once) × one built sample*. A pool of slots needs
+  exactly the same.
+- **A pool inside one run was rejected.** Each slot pays one full build on first use, and only
+  reuses are incremental (~1.5 s). With one slot per concurrent test (Ledger's ~9 tests on a
+  20-core machine), no slot is ever reused. The pool trades parallelism for incremental builds,
+  which only pays at dozens of tests per sample.
+- **The named upgrade is persistent slots between runs** (e.g. `%TEMP%/reach-acceptance/<Sample>/<n>`,
+  reset with `git reset --hard` + `git clean -fd`, keeping the ignored `bin/`/`obj/`), which
+  makes a developer's second run incremental throughout. It costs staleness detection (sample
+  sources, Reach build) and hermeticity. **Trigger: the CI acceptance step's wall-clock goes over
+  5 minutes on either OS.** `Apply(...)` hides the build shape, so the switch changes no test.
+
+### Baseline
+
+The sample is copied into `repo/`, `.gitignore` (`bin/`, `obj/`) is written, and everything is
+committed as `baseline`. The patches are `git apply`'d to the working tree and **left
+uncommitted**; Reach runs with `--base <baseline sha>`. Reach's change set covers committed,
+staged and unstaged changes alike, so the result is the same as a PR commit, and `HEAD` stays the
+baseline. Accepted difference from a real PR: a patch that adds a file leaves it untracked, which
+Reach always includes.
+
+### Parallelism: `ParallelMode.All`
+
+**Corrects [ticket 02](02-building-a-patched-sample-cheaply.md)'s "xUnit v3 runs one class's
+tests one at a time".** `xunit.v3` 4.0.0 (this repo's version) adds `ParallelMode.All`, full test
+parallelism within the assembly, including methods of one class, with `DisableParallelization`
+on a class or method to opt out. The mode is per assembly.
+
+- `Reach.Tests` sets `ParallelMode.All`; `maxParallelThreads` stays at its default (core count).
+- **The implementation ticket's first step**: run the full suite (~440 in-memory tests included)
+  under `All` and mark whatever breaks with `DisableParallelization`. If more than a handful
+  break, fall back to `Collections` and record the per-sample floor (Ledger ≈ 1 minute serial).
+- Rejected: `Collections` mode as the plan (a sample's tests serialise), and harness-started
+  concurrent builds in a class fixture (patches are named only inside method bodies, so it fights
+  [code, not data](04-how-an-acceptance-test-is-declared.md)).
+
+### `FixtureSolution` is reworked, not deleted
+
+It becomes the per-test sample copy (named e.g. `SampleCopy`): it already does copy → temp git
+repo → commit → build → in-process `SelectAsync`. It gains a sample-name parameter and patch
+application. Its stale class-fixture comment goes. Its old API (`WriteFile`/`Touch`/`Rebuild`)
+goes when [Migrating the Contoso tests](06-migrating-the-contoso-tests.md) moves its callers.
+
+### Determinism: two runs, a small scrubber, a string comparison
+
+Measured on Contoso (20-core Windows, Release): a Reach run is **~1.05 s wall-clock, ~790 ms
+in-process** (`totalMs`), against a warm build of 3.5–5.5 s. The second run adds ~20–25% and
+stays; nothing to bring back to the owner.
+
+- **Two runs are never byte-identical as written**: `timings` (`startedUtc`, `totalMs`, phases)
+  differs every run, as `docs/report-schema.md` already says. The check is the schema's promise,
+  not raw bytes.
+- An **in-house scrubber** removes `timings` and replaces the temp root with a token; the two
+  results are compared as plain strings, and a mismatch prints a diff.
+- **No Verify (VerifyTests) dependency.** Its snapshot mode (`.verified` files, approval) would
+  reverse [ticket 08](08-writing-a-patch-and-keeping-it-applying.md)'s "never generated, no
+  snapshot mode", and for one in-memory comparison it is a dependency plus a file workflow the
+  layer has ruled out.
+
+### Keeping the copy clean
+
+Reach treats untracked files under the root as changes (the measuring run's own log files showed
+up as `unmapped-file-no-project` notices). So each test's temp root holds **`repo/`** (the sample
+and the patch result, nothing else) and **`out/`** (reports, logs) side by side. Before the first
+Reach run, the harness asserts `git status --porcelain` lists only the paths the patches touched.
+
+### Not changed
+
+No `CONTEXT.md` change and no ADR: test-infrastructure decisions, each reversible behind `Apply`.

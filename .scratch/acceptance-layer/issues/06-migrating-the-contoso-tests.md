@@ -26,3 +26,8 @@ to fit the declaration format?
   Contoso moves from `tests/fixtures/Contoso/` to `tests/samples/Contoso/`, and its tests become
   one class in `tests/Reach.Tests/Acceptance/Contoso/` with `.patch` files beside it; today's
   `Touch` calls become patches. `tests/fixtures/` goes once it is empty.
+- **From [How the harness builds each acceptance test](09-how-the-harness-builds-each-acceptance-test.md):**
+  `FixtureSolution` is **reworked**, not deleted, into the per-test sample copy. This migration
+  removes its old API (`WriteFile`/`Touch`/`Rebuild`) once no caller is left. Determinism is
+  checked inside `Expect` with `timings` scrubbed, so today's standalone determinism test has
+  nothing left to assert.
