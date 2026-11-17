@@ -59,7 +59,8 @@ Taken while charting, before any ticket existed. Terse by design.
   words: `selected` · `nothing-selected` · `no-changes` · `failed`) and the projects run in
   full by whole-project fallback. ~~Not notices, not tiers~~ — *widened by the capabilities
   ticket below: optional will-run, notices, changes and tier sections, each exact when given.*
-- **Two kinds of sample solution**: small ones built for one area of capability, and
+- **Two kinds of sample solution**: small ones (*revised by the small-samples ticket: split by
+  standing notice, not by area of capability*), and
   multi-project ones shaped like a real codebase, where most test projects must *not* be
   selected.
 - **It replaces today's Contoso acceptance tests** (11, not the 13 first counted); Contoso becomes the first small sample
@@ -100,11 +101,12 @@ From tickets:
   one build. `ParallelMode.All` (xUnit 4.0 runs a class's tests in parallel, correcting 02).
   `FixtureSolution` reworked into the per-test copy. Determinism: two runs (~1 s extra), timings
   scrubbed, string compare, no Verify. Persistent slots are the upgrade past 5 min in CI.
-- [The small sample solutions](issues/10-the-small-sample-solutions.md): six small samples —
-  Basics, Frameworks (Contoso renamed), Dispatch, MultiTarget, and one per small known gap. No
-  sample carries a standing notice its tests don't mean; every sample has `global.json`. New
-  **baseline patches** (applied before the baseline commit) give rows 10 and 11 their starting
-  state, amending tickets 04, 08 and 09.
+- [The small sample solutions](issues/10-the-small-sample-solutions.md): two small samples.
+  **Basics** carries every small row and known gap; **Frameworks** (Contoso renamed) carries rows 7
+  and 8. Samples are split by **standing notice**, not by area of capability. Every sample has
+  `global.json`. New **baseline patches** (applied before the baseline commit) give rows 9, 10 and
+  11 their starting state, which amends tickets 04, 08 and 09. Each row's patch touches types no
+  other row's tests reach.
 
 ## Not yet specified
 

@@ -57,37 +57,55 @@ change patch widens the whole solution. Both would turn a one-claim test into tw
 
 | Sample | Rows | Shape |
 |---|---|---|
-| **Basics** | 1, 2, 3, 5, 6, 11†, 12, 13, 14, 15, 16 | one production project, one `xunit.v3` 4.0.0 test project, the generator project, `global.json` with the runner setting |
+**Two small samples.** Together with Ledger, the layer has three sample solutions in all.
+
+| Sample | Rows | Shape |
+|---|---|---|
+| **Basics** | 1–6, 9†, 10†, 11†, 12–16, 24 and 25 (known gaps) | one production project (`net10.0`), one `xunit.v3` 4.0.0 test project, the generator project, `global.json` with the runner setting |
 | **Frameworks** (was Contoso) | 7, 8 | one production project; test projects for `xunit-v2`, `xunit-v3` (3.x), `xunit-v3-4`, `nunit`, `mstest`, unrecognised; `global.json` |
-| **Dispatch** | 4 | interfaces and virtual methods |
-| **MultiTarget** | 9, 10† | one test project on `net8.0;net10.0` |
-| **GenericCollapse** | 24 (known gap) | `Handler<Foo>` / `Handler<Bar>` |
-| **InterpolatedToString** | 25 (known gap) | an interpolated `ToString` |
+
+**Frameworks is separate only because of its standing notices** (`nunit-filter-overmatch`,
+`whole-project-fallback`), which are its point. Nothing else earns a sample of its own: the
+dispatch shapes (row 4) and the known-gap shapes (24 `Handler<Foo>`/`Handler<Bar>`, 25 an
+interpolated `ToString`) are ordinary classes in Basics' production project, with their tests in
+Basics' test project.
+
+**One rule replaces the separation: each row's patch touches types that no other row's tests
+reach.** `Selected` lists only what is selected, so unrelated code in Basics appears in no other
+test's expected result. This matters most for row 4: its interface and virtual hierarchy is its
+own types, or dispatch widening would pull other rows' tests into its selection.
 
 † via a baseline patch:
-- **Row 11**: a baseline patch on Basics deletes `global.json`; any one-line body change is the
-  change patch. Basics' `global.json` therefore holds the runner setting and nothing that changes
-  how the sample builds (no SDK pin), so deleting it alters only the notice.
-- **Row 10**: a baseline patch on MultiTarget changes the test project to
-  `net10.0;net10.0-windows`. It must also set `<EnableWindowsTargeting>true</EnableWindowsTargeting>`,
-  or the Linux CI leg fails with `NETSDK1100`. Row 9's test runs on the unpatched sample and lists
-  no notice.
+- **Row 9**: a baseline patch retargets Basics' production **and** test projects to
+  `net8.0;net10.0`. Both are needed, since a `net8.0` test project cannot reference a
+  `net10.0`-only library. The change patch is a body change, and the expected result keys the
+  test project as `Name@net8.0` and `Name@net10.0`.
+- **Row 10**: a baseline patch retargets the same two projects to `net10.0;net10.0-windows`, with
+  `<EnableWindowsTargeting>true</EnableWindowsTargeting>`. Without that setting the Linux CI leg
+  fails with `NETSDK1100`.
+- **Row 11**: a baseline patch deletes `global.json`, and any one-line body change is the change
+  patch. Basics' `global.json` therefore holds the runner setting and nothing that changes how the
+  sample builds (no SDK pin), so deleting it alters only the notice.
+
+Only the tests that name these baseline patches pay for the extra framework builds.
 
 Further rules:
 - **Every sample has `global.json` with the runner setting**, so no test expects
-  `test-runner-not-configured` except row 11's. Owner's call over the leaner "only where an
-  `xunit-v3-4` project exists".
-- **Each small known gap gets its own sample**, so closing a gap touches one sample and one test.
-  The multi-project known gaps (26, 27) stay on **Ledger**, which they need to exist at all.
-- **Sample names say what the sample shows.** Ledger is the one domain-named sample.
-- **Rows 5 and 6** (whole-type tier from a deleted method, and from a same-namespace directory
-  move) are change-detection rows and sit on Basics, not Dispatch.
+  `test-runner-not-configured` except row 11's. This was the owner's call, over the leaner "only
+  where an `xunit-v3-4` project exists".
+- **Known gaps share Basics.** Closing a gap means changing one test and a class in Basics. The
+  multi-project known gaps (26, 27) stay on **Ledger**, which they need to exist at all.
+- **Revised after resolution, at the owner's prompting.** The first answer had six small samples
+  (Basics, Frameworks, Dispatch, MultiTarget, and one per small known gap), following the
+  charting rule "small ones built for one area of capability". The other four brought no standing
+  notice, and baseline patches cover the multi-targeting variants, so the separation bought
+  nothing. Small samples are now split **by standing notice, not by area of capability**.
 
 ### Contoso becomes Frameworks
 
 Renamed to **Frameworks** and moved to `tests/samples/Frameworks/`. It **gains** `xunit-v2`,
 `xunit-v3` 3.x and MSTest test projects and a `global.json`. It **loses** `Contoso.Core`'s
-multi-targeting (row 9 is about a multi-targeted *test* project, and lives on MultiTarget) and its
+multi-targeting (rows 9 and 10 are Basics baseline patches) and its
 generator project (row 12 moves to Basics, so a generator change shows a readable selection rather
 than a six-project fan-out). Its NUnit project keeps the parameterised test and the
 `MyTest`/`MyTest2` pair that row 7's will-run count depends on.
