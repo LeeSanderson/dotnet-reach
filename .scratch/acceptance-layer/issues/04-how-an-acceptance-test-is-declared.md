@@ -125,3 +125,7 @@ lives in the map's Notes.
   commit, ahead of its change patches — by sketch
   `Baseline("no-global-json.patch").Apply("x.patch").Expect(...)`. Baseline patches sit flat
   beside the change patches in `Acceptance/<Name>/`. The exact spelling is the spec's.
+- **Amended by [Migrating the Contoso tests](06-migrating-the-contoso-tests.md):** besides
+  determinism, `Expect` checks two invariants on every test. A project with nothing selected that
+  does not run in full has mode `skip` and zero invocations. A project run in full serialises
+  `"total": "unknown"`, never `0`.

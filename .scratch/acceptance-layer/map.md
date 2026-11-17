@@ -107,6 +107,14 @@ From tickets:
   `global.json`. New **baseline patches** (applied before the baseline commit) give rows 9, 10 and
   11 their starting state, which amends tickets 04, 08 and 09. Each row's patch touches types no
   other row's tests reach.
+- [Migrating the Contoso acceptance tests](issues/06-migrating-the-contoso-tests.md): each of the
+  11 becomes a row on Basics or Frameworks. Two exceptions: determinism is already inside `Expect`,
+  and the `const` test retires into Ledger's row 18. Two new `Expect` invariants on every test:
+  `skip` means zero invocations, and run-in-full means `"total": "unknown"`. The misnamed
+  `[Fact]`-added test becomes row 3's attribute-only case. `ExampleReportTests` runs over
+  Frameworks with row 7's patch, and the example and its walk are regenerated. Everything is renamed
+  `Frameworks.*`, with test projects named by dialect. No old test is deleted before its
+  replacement lands.
 
 ## Not yet specified
 

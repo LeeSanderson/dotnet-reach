@@ -129,3 +129,11 @@ delivery, and `.reach/.gitignore`.
 - **No fixture has these shapes**: an interface or virtual dispatch (needed for `widened`), a
   multi-targeted *test* project, a platform-suffixed framework, or a `.csproj` or
   `Directory.Build.props` change. **No test anywhere asserts `changes[].tier`.**
+
+## Comments
+
+- **Amended by [Migrating the Contoso tests](06-migrating-the-contoso-tests.md):** row 3's patch
+  is an existing non-test method, body unchanged, gaining `[Fact]`. That is the case
+  walking-skeleton ticket 07 escalated, and no test covered it. Today's test with that name only
+  added a `[Trait]` to a method that already had `[Fact]`, which is row 2. A brand-new test method
+  is not tested separately. Contoso's `const` test retires into row 18.
