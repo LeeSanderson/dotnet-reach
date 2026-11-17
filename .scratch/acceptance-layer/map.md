@@ -115,13 +115,16 @@ From tickets:
   Frameworks with row 7's patch, and the example and its walk are regenerated. Everything is renamed
   `Frameworks.*`, with test projects named by dialect. No old test is deleted before its
   replacement lands.
+- [Which suite proves each claim](issues/11-which-suite-proves-each-claim.md): the
+  claim-to-suite table for the three docs, plus 28 claims no test proves. Three documented
+  notice codes are never emitted (`calli-unresolved`, `recompilation-widening`,
+  `langversion-above-ceiling`), and README's `--filter "$(…)"` has no command behind it. The
+  rest are untested behaviour, prose that drifts, and claims about other tools.
 
 ## Not yet specified
 
-- **Writing the spec and cutting the implementation tickets** — the last ticket, once the
-  frontier above has cleared. The spec carries the claim-to-suite table.
-- **What happens to each claim no suite proves** — test it or cut it from the docs, once
-  [Which suite proves each claim](issues/11-which-suite-proves-each-claim.md) lists them.
+Nothing. The way to the destination is two tickets: [Test it or cut it](issues/12-test-it-or-cut-it.md),
+then [Write the spec and cut the implementation tickets](issues/13-write-the-spec-and-cut-the-tickets.md).
 
 ## Out of scope
 
