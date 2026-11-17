@@ -126,3 +126,9 @@ Reach run, the harness asserts `git status --porcelain` lists only the paths the
 ### Not changed
 
 No `CONTEXT.md` change and no ADR: test-infrastructure decisions, each reversible behind `Apply`.
+
+## Comments
+
+- **Amended by [The small sample solutions](10-the-small-sample-solutions.md):** if the test names a baseline patch, the harness applies it to `repo/`
+  **before** the `baseline` commit, so it is part of the baseline; change patches are applied
+  after, as before. The `git status --porcelain` check is unchanged (it runs after the commit).

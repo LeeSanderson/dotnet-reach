@@ -27,6 +27,11 @@ to start building, that is the edge of the map: hand off instead.
     something that checks Reach.
   - **Patch**: a change applied to a sample solution's code. Patches are **independent**: each
     applies to the untouched sample by itself, so combining them only stacks changes.
+  - **Baseline patch**: a patch applied *before* the baseline commit, so it is part of the
+    baseline and Reach never sees it as a change. Gives a sample a variant starting state. At most
+    one per test.
+  - **Change patch**: a patch applied after the baseline commit — the change under test. Each
+    *(baseline patch, change patch)* pair applies to the untouched sample by itself.
   - **Acceptance test**: one patch plus its expected result, run as a test in Reach's own suite.
   - **Known-gap test**: an acceptance test that pins a documented imprecision (over- or
     under-selection) rather than a claim. Named as a gap; never in the release gate.
@@ -95,6 +100,11 @@ From tickets:
   one build. `ParallelMode.All` (xUnit 4.0 runs a class's tests in parallel, correcting 02).
   `FixtureSolution` reworked into the per-test copy. Determinism: two runs (~1 s extra), timings
   scrubbed, string compare, no Verify. Persistent slots are the upgrade past 5 min in CI.
+- [The small sample solutions](issues/10-the-small-sample-solutions.md): six small samples —
+  Basics, Frameworks (Contoso renamed), Dispatch, MultiTarget, and one per small known gap. No
+  sample carries a standing notice its tests don't mean; every sample has `global.json`. New
+  **baseline patches** (applied before the baseline commit) give rows 10 and 11 their starting
+  state, amending tickets 04, 08 and 09.
 
 ## Not yet specified
 

@@ -118,3 +118,10 @@ lives in the map's Notes.
 ### Passed on
 
 - A guard against a patch no test uses → [Writing a patch and keeping it applying](08-writing-a-patch-and-keeping-it-applying.md).
+
+## Comments
+
+- **Amended by [The small sample solutions](10-the-small-sample-solutions.md):** a test may name **one baseline patch**, applied before the baseline
+  commit, ahead of its change patches — by sketch
+  `Baseline("no-global-json.patch").Apply("x.patch").Expect(...)`. Baseline patches sit flat
+  beside the change patches in `Acceptance/<Name>/`. The exact spelling is the spec's.

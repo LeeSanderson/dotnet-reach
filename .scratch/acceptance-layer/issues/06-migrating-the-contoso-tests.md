@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 10 (04 resolved)
+Blocked by: (none — 04, 10 resolved)
 
 ## Question
 
@@ -31,3 +31,9 @@ to fit the declaration format?
   removes its old API (`WriteFile`/`Touch`/`Rebuild`) once no caller is left. Determinism is
   checked inside `Expect` with `timings` scrubbed, so today's standalone determinism test has
   nothing left to assert.
+- **From [The small sample solutions](10-the-small-sample-solutions.md):** Contoso becomes **Frameworks** (`tests/samples/Frameworks/`). It gains
+  `xunit-v2`, `xunit-v3` 3.x and MSTest test projects and a `global.json` with the runner
+  setting; `Contoso.Core` drops its multi-targeting (to **MultiTarget**) and the generator project
+  moves to **Basics**. Today's runner-setting test becomes row 11 on Basics, via a baseline patch
+  that deletes `global.json`. Any Contoso test leaning on multi-targeting or the generator moves
+  with them.

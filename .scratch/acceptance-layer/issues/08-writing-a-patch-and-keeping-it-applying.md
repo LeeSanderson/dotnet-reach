@@ -104,3 +104,11 @@ so CI goes red; no PR review rule is added.
 No `CONTEXT.md` change and no ADR: test infrastructure. **Independent patch** joins the map's
 vocabulary. Nothing new to ticket; all of it feeds the spec. The harness-side reporting is passed
 to [How the harness builds each acceptance test](09-how-the-harness-builds-each-acceptance-test.md).
+
+## Comments
+
+- **Amended by [The small sample solutions](10-the-small-sample-solutions.md):** "every patch applies to the untouched sample by itself" now holds per
+  **(baseline patch, change patch) pair**: a change patch is written against the untouched sample
+  or against exactly one baseline patch, and at most one baseline patch per test. `save` and
+  `apply` must therefore take an optional baseline patch to work on top of (e.g.
+  `--on <baseline>`); a drift report names which of the pair failed.
