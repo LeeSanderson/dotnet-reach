@@ -64,7 +64,9 @@ internal sealed class GitAdapter(IProcessRunner runner, string workingDirectory)
     /// A file's contents at the baseline. Exits non-zero when the path did not exist there,
     /// which is how an added file is told from a modified one without a second command.
     /// </summary>
+    /// <param name="baseline">The revision to read the file at.</param>
     /// <param name="path">Repository-relative, forward-slashed — the spelling git itself returns.</param>
+    /// <param name="cancellationToken">Stops the git process.</param>
     internal Task<ProcessResult> FileAtBaselineAsync(
         string baseline,
         string path,

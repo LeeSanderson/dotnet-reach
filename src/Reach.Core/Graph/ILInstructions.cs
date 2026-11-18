@@ -7,6 +7,8 @@ namespace Reach.Graph;
 /// One instruction that names something in metadata.
 /// </summary>
 /// <param name="Offset">Where it starts, so a prefix can be told from the instruction it modifies.</param>
+/// <param name="OpCode">The instruction.</param>
+/// <param name="Token">The metadata token it carries.</param>
 internal readonly record struct TokenInstruction(int Offset, ILOpCode OpCode, int Token);
 
 /// <summary>

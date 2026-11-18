@@ -230,12 +230,20 @@ internal static class Selector
             .SelectMany(result => result.Methods)
     ];
 
+    /// <summary>
+    /// Records, for every test one change reached, the hop-by-hop path from the test to the change.
+    /// </summary>
+    /// <param name="graph">The call graph the walk ran over.</param>
+    /// <param name="change">The change whose roots the paths lead back to.</param>
+    /// <param name="tests">Every test method, by identity.</param>
+    /// <param name="reached">Every method the change reached.</param>
     /// <param name="ownRoots">
     /// The same exclusion the counting loop applies, and for the same reason: a test excluded
     /// there carries no change index, so recording a path for it here would put a path in the
     /// report next to an empty <c>changes</c> — a hop-by-hop answer to a question the report
     /// says was never asked.
     /// </param>
+    /// <param name="into">Where the paths go, keyed by test.</param>
     private static void RecordPaths(
         CallGraph graph,
         Change change,

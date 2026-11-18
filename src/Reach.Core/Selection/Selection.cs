@@ -90,6 +90,11 @@ internal sealed record ChangeEntry(int Index, string Display, ChangeTier Tier, s
     internal int TestsReached { get; set; }
 }
 
+/// <summary>
+/// One selected test, and why.
+/// </summary>
+/// <param name="Test">The test method.</param>
+/// <param name="Rules">Every rule that selected it.</param>
 /// <param name="Changes">Indices into the forward change list. Empty exactly when the test is not reverse-reachable.</param>
 /// <param name="Class">Null exactly when the test is not reverse-reachable.</param>
 /// <param name="Paths">Hop-by-hop, only under <c>--paths</c>.</param>
@@ -103,11 +108,16 @@ internal sealed record SelectedTest(
 /// <summary>
 /// One entry of the report, keyed on (test project, target framework).
 /// </summary>
+/// <param name="Project">The test project.</param>
+/// <param name="TargetFramework">The target framework this entry's assembly was built for.</param>
+/// <param name="Mode">Whether the project runs some, all or none of its tests.</param>
+/// <param name="Selected">The tests selected, each with its reasons.</param>
 /// <param name="Total">
 /// Null means <em>unknown</em>, never zero. Reporting zero for a project Reach could not
 /// analyse would silently corrupt the over-selection ratio in exactly the case where Reach is
 /// running an entire project.
 /// </param>
+/// <param name="Dialect">The filter dialect its test framework speaks; null when Reach could not analyse the project.</param>
 /// <param name="AllTests">
 /// Every test method in the project, not only the selected ones. The rendered-match
 /// computation reads it, and so does the over-selection measurement.

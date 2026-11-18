@@ -46,11 +46,18 @@ internal sealed class Selections : IDisposable
     internal IReadOnlyList<string> SelectedNames =>
         [.. TestProject.Selected.Select(test => test.Test.Name).Order(StringComparer.Ordinal)];
 
+    /// <summary>
+    /// Compiles a production assembly and a test assembly, marks declarations as changed, and
+    /// runs the selector over them.
+    /// </summary>
+    /// <param name="coreSource">The production assembly's C#.</param>
+    /// <param name="testsSource">The test assembly's C#, which references the production one.</param>
     /// <param name="changed">
     /// Declarations to mark as changed, as "Type.member" — matched against the source's own
     /// declarations, so a typo fails loudly rather than selecting nothing.
     /// </param>
     /// <param name="added">Declarations to mark as added rather than modified.</param>
+    /// <param name="includePaths">Record hop-by-hop paths, as <c>--paths</c> does.</param>
     internal static Selections Of(
         string coreSource,
         string testsSource,

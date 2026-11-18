@@ -17,11 +17,16 @@ internal enum MemberChange
 /// One member a change added, altered or removed. The declaring type is keyed on
 /// fully-qualified name plus arity, never on file path, so a moved type is the same type.
 /// </summary>
+/// <param name="DeclaringType">The declaring type's fully-qualified name, with its arity.</param>
+/// <param name="Member">The member's key within its type.</param>
+/// <param name="Change">Whether the member was added, altered or removed.</param>
+/// <param name="Path">The file that declares it, on the side the change appeared.</param>
 /// <param name="ChangesCompileTimeConstant">
 /// A <c>const</c> value, an enum member value, or a declaration carrying a parameter default.
 /// The compiler bakes these into consumers, so the declaring side alone cannot cover them —
 /// recompilation widening reads this.
 /// </param>
+/// <param name="Span">Where the declaration sits in its file; empty when it was not recorded.</param>
 internal sealed record ChangedMember(
     string DeclaringType,
     MemberKey Member,
@@ -88,6 +93,12 @@ internal sealed record TypeWidening(string DeclaringType, WideningReason Reason,
 /// Every method of an assembly goes into the changed set. The response to a change Reach can
 /// attribute to an assembly but not to a method.
 /// </summary>
+/// <param name="DeclaringType">
+/// The type that could not be attributed, or the file path itself when the cause is a file Reach
+/// could not parse.
+/// </param>
+/// <param name="Reason">Why the assembly widened.</param>
+/// <param name="Path">The file the widening came from.</param>
 /// <param name="Project">
 /// The nearest ancestor project directory, which reproduces the SDK's default <c>**/*.cs</c>
 /// globbing without running MSBuild. Null when no project contains the path at all, which is
@@ -103,10 +114,15 @@ internal sealed record AssemblyWidening(
 /// The members a change added, altered or removed, plus everything that had to widen because
 /// it could not be attributed to a member.
 /// </summary>
+/// <param name="Members">The members a change added, altered or removed.</param>
+/// <param name="TypeWidenings">Types whose every member goes into the changed set.</param>
+/// <param name="AssemblyWidenings">Assemblies whose every method goes into the changed set.</param>
+/// <param name="Paths">Every path the change touched.</param>
 /// <param name="UnmappablePaths">
 /// Paths no member could be attributed to — a project file, a resource, a deleted source file
 /// that declared no type. Routed by the tier ladder, which always widens.
 /// </param>
+/// <param name="Notices">What the run should tell the user about how the set was built.</param>
 internal sealed record ChangedSet(
     IReadOnlyList<ChangedMember> Members,
     IReadOnlyList<TypeWidening> TypeWidenings,

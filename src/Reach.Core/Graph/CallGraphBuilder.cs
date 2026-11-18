@@ -8,6 +8,11 @@ namespace Reach.Graph;
 /// <summary>
 /// The graph, plus everything the pass had to disclose while building it.
 /// </summary>
+/// <param name="Graph">The nodes and edges.</param>
+/// <param name="Assemblies">The assemblies the pass read.</param>
+/// <param name="Externals">Members of assemblies outside the scope that edges point at.</param>
+/// <param name="Notices">What the pass had to disclose.</param>
+/// <param name="Elapsed">How long the pass took.</param>
 /// <param name="HierarchyConstructions">
 /// How many type hierarchy indexes this run built. One of M1's two committed algorithmic
 /// constraints is that it is exactly one, and this is what makes that a test rather than a

@@ -8,7 +8,9 @@ namespace Reach.Selection;
 /// The unit of selection. Individual cases of a parameterised test are never selected
 /// independently of the method that declares them.
 /// </summary>
+/// <param name="Id">The method's node in the call graph.</param>
 /// <param name="DeclaringType">Fully qualified, as a filter expression will need it.</param>
+/// <param name="Name">The method's name.</param>
 internal sealed record TestMethod(MethodId Id, string DeclaringType, string Name)
 {
     internal string FullyQualifiedName => DeclaringType + "." + Name;

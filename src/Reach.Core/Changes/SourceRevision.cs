@@ -8,16 +8,26 @@ namespace Reach.Changes;
 /// One type as one revision of one file declares it: a hash of its header, and a hash per
 /// member.
 /// </summary>
+/// <param name="Name">The type's fully-qualified name, with its arity.</param>
 /// <param name="Header">
 /// Modifiers, attributes, base list and type parameters. Its own unit, because a change there
 /// is whole-type widening — a test class gaining an attribute that makes its methods
 /// discoverable is invisible to any member-level comparison.
 /// </param>
+/// <param name="Members">Each member the type declares, by key.</param>
 internal sealed record DeclaredType(
     string Name,
     string Header,
     IReadOnlyDictionary<MemberKey, DeclaredMember> Members);
 
+/// <summary>
+/// One member as one revision of one file declares it.
+/// </summary>
+/// <param name="Key">The member's key within its type.</param>
+/// <param name="Declaration">The declaration's canonical text, which is what two revisions compare.</param>
+/// <param name="IsCompileTimeConstant">
+/// True for a <c>const</c>, an enum member, or a declaration carrying a parameter default.
+/// </param>
 /// <param name="Span">
 /// Where the declaration sits in its file, one-based, as debug symbols spell it. The join
 /// matches a source declaration to the IL methods whose sequence points fall inside it.

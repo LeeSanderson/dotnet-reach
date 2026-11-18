@@ -99,6 +99,7 @@ internal static class Correspondence
     /// </summary>
     private static readonly string[] BuildDirectories = ["obj", "bin"];
 
+    /// <param name="instances">The assemblies whose debug-symbol documents are checked against the working tree.</param>
     /// <param name="visibility">
     /// Which paths git can see. A document that is neither tracked nor listed as an ordinary
     /// untracked file is untracked <em>and</em> ignored.

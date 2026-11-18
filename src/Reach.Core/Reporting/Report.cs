@@ -129,7 +129,13 @@ internal sealed record ReportScope
 
 internal sealed record ReportAssembly(string Name, string TargetFramework);
 
+/// <summary>
+/// One change in the forward change list.
+/// </summary>
+/// <param name="Index">The change's number, which each selected test's reasons refer to.</param>
+/// <param name="Display">The change as a reader sees it, and the key the list is sorted by.</param>
 /// <param name="Tier">Which granularity the change was routed at.</param>
+/// <param name="Reason">Why the change was routed the way it was.</param>
 /// <param name="TestsReached">
 /// The field that makes an under-selection visible: a count of zero here is either a genuine
 /// coverage gap or an under-selection bug, and today both are invisible.
@@ -180,6 +186,11 @@ internal sealed record ReportEntry
     public required IReadOnlyList<IReadOnlyList<string>> Invocations { get; init; }
 }
 
+/// <summary>
+/// How many tests one project's entry selected, will run, and has.
+/// </summary>
+/// <param name="Selected">The tests the reverse walk reached.</param>
+/// <param name="WillRun">The tests the rendered command actually runs.</param>
 /// <param name="Total">
 /// Null serialises as <c>unknown</c>. Reporting zero for a project Reach could not enumerate
 /// would silently corrupt the over-selection ratio in exactly the case where Reach is running

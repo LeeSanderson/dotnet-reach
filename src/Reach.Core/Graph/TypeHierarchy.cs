@@ -300,7 +300,17 @@ internal sealed class TypeHierarchy
         return bucket;
     }
 
+    /// <summary>
+    /// One type definition, as much of it as the hierarchy needs.
+    /// </summary>
     /// <param name="Parents">The base type and every directly implemented interface.</param>
+    /// <param name="Methods">The methods the type defines, by member key.</param>
+    /// <param name="MethodImpls">
+    /// Explicit implementations, keyed by the declaration they implement
+    /// (<c>DeclaringType::MemberKey</c>).
+    /// </param>
+    /// <param name="Virtual">The member keys of its virtual or abstract methods.</param>
+    /// <param name="IsInterface">True when the type is an interface.</param>
     private sealed record TypeInfo(
         IReadOnlyList<string> Parents,
         Dictionary<string, MethodId> Methods,
