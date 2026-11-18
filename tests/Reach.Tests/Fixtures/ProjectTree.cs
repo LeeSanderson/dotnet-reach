@@ -6,11 +6,11 @@ namespace Reach.Tests.Fixtures;
 /// </summary>
 internal sealed class ProjectTree : IDisposable
 {
-    private readonly TempDirectory directory;
+    private readonly TempDirectory _directory;
 
-    private ProjectTree(TempDirectory directory) => this.directory = directory;
+    private ProjectTree(TempDirectory directory) => _directory = directory;
 
-    internal string Root => directory.Path;
+    internal string Root => _directory.Path;
 
     internal static ProjectTree Create() => new(TempDirectory.Create("reach-tree"));
 
@@ -26,7 +26,7 @@ internal sealed class ProjectTree : IDisposable
         IEnumerable<(string Reference, string Attributes)>? decoratedReferences = null)
     {
         var relative = Path.Combine("src", name, name + ".csproj");
-        var projectDirectory = Path.GetDirectoryName(directory.Combine(relative))!;
+        var projectDirectory = Path.GetDirectoryName(_directory.Combine(relative))!;
 
         var properties = new List<string>();
 
@@ -60,7 +60,7 @@ internal sealed class ProjectTree : IDisposable
             items.Add($"""<PackageReference Include="{package}" Version="1.0.0" />""");
         }
 
-        directory.WriteFile(
+        _directory.WriteFile(
             relative,
             $"""
             <Project Sdk="Microsoft.NET.Sdk">
@@ -73,13 +73,13 @@ internal sealed class ProjectTree : IDisposable
             </Project>
             """);
 
-        return directory.Combine(relative);
+        return _directory.Combine(relative);
     }
 
     internal string WriteFile(string relativePath, string contents) =>
-        directory.WriteFile(relativePath, contents);
+        _directory.WriteFile(relativePath, contents);
 
-    internal string Combine(params string[] parts) => directory.Combine(parts);
+    internal string Combine(params string[] parts) => _directory.Combine(parts);
 
     /// <summary>
     /// Writes a <c>.slnx</c>, the default for <c>dotnet new sln</c> on .NET 10.
@@ -89,7 +89,7 @@ internal sealed class ProjectTree : IDisposable
         var entries = projects.Select(project =>
             $"""  <Project Path="{Relative(Root, project)}" />""");
 
-        return directory.WriteFile(
+        return _directory.WriteFile(
             name + ".slnx",
             $"""
             <Solution>
@@ -113,7 +113,7 @@ internal sealed class ProjectTree : IDisposable
 
         // The C# project type GUID. .sln and .slnx use different GUIDs for the same project,
         // which is why production code switches on Extension rather than on Type.
-        const string CSharpProjectType = "{9A19103F-16F7-4668-BE54-9A1E7A4F7556}";
+        const string csharpProjectType = "{9A19103F-16F7-4668-BE54-9A1E7A4F7556}";
 
         foreach (var project in projects)
         {
@@ -122,7 +122,7 @@ internal sealed class ProjectTree : IDisposable
             ids.Add(id);
 
             body.AppendLine(
-                $"""Project("{CSharpProjectType}") = "{Path.GetFileNameWithoutExtension(project)}", "{path}", "{id}" """.TrimEnd());
+                $"""Project("{csharpProjectType}") = "{Path.GetFileNameWithoutExtension(project)}", "{path}", "{id}" """.TrimEnd());
             body.AppendLine("EndProject");
         }
 
@@ -144,7 +144,7 @@ internal sealed class ProjectTree : IDisposable
         body.AppendLine("\tEndGlobalSection");
         body.AppendLine("EndGlobal");
 
-        return directory.WriteFile(name + ".sln", body.ToString());
+        return _directory.WriteFile(name + ".sln", body.ToString());
     }
 
     /// <summary>
@@ -156,7 +156,7 @@ internal sealed class ProjectTree : IDisposable
             ",\n        ",
             projects.Select(project => $"\"{JsonPath(project)}\""));
 
-        return directory.WriteFile(
+        return _directory.WriteFile(
             name + ".slnf",
             $$"""
             {
@@ -179,5 +179,5 @@ internal sealed class ProjectTree : IDisposable
     private static string Relative(string from, string to) =>
         Path.GetRelativePath(from, to).Replace('\\', '/');
 
-    public void Dispose() => directory.Dispose();
+    public void Dispose() => _directory.Dispose();
 }

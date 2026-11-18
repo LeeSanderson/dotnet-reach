@@ -44,13 +44,13 @@ internal sealed record JoinResult(ChangedMember Member, IReadOnlyList<MethodId> 
 /// </remarks>
 internal sealed class SpanJoin
 {
-    private readonly Dictionary<string, List<MethodExtent>> byDocument;
-    private readonly string repositoryRoot;
+    private readonly Dictionary<string, List<MethodExtent>> _byDocument;
+    private readonly string _repositoryRoot;
 
     internal SpanJoin(IEnumerable<GraphAssembly> assemblies, string repositoryRoot)
     {
-        this.repositoryRoot = Paths.Normalise(repositoryRoot);
-        byDocument = Index(assemblies);
+        _repositoryRoot = Paths.Normalise(repositoryRoot);
+        _byDocument = Index(assemblies);
     }
 
     /// <summary>
@@ -64,9 +64,9 @@ internal sealed class SpanJoin
             return new JoinResult(member, []);
         }
 
-        var path = Paths.Normalise(Path.Combine(repositoryRoot, member.Path));
+        var path = Paths.Normalise(Path.Combine(_repositoryRoot, member.Path));
 
-        if (!byDocument.TryGetValue(path, out var candidates))
+        if (!_byDocument.TryGetValue(path, out var candidates))
         {
             return new JoinResult(member, []);
         }

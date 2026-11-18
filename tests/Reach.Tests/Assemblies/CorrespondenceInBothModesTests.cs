@@ -18,7 +18,7 @@ public class CorrespondenceInBothModesTests
     private const string Before = "namespace N; public class Widget { public int Spin() => 1; }";
     private const string After = "namespace N; public class Widget { public int Spin() => 42; }";
 
-    private readonly ScriptedProcessRunner runner = new();
+    private readonly ScriptedProcessRunner _runner = new();
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -49,12 +49,12 @@ public class CorrespondenceInBothModesTests
         File.WriteAllText(sourcePath, After);
 
         // What a real `dotnet build` would do with an edited file.
-        runner.Performs(() => Compile(repository, sourcePath, After), "build");
+        _runner.Performs(() => Compile(repository, sourcePath, After), "build");
 
         var run = await Select(repository, noBuild: false);
 
         Assert.NotEqual(ExitCode.CorrespondenceFailed, run.ExitCode);
-        Assert.Contains(runner.Requests, request => request.Arguments.Contains("build"));
+        Assert.Contains(_runner.Requests, request => request.Arguments.Contains("build"));
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class CorrespondenceInBothModesTests
 
         await Select(repository, noBuild: true);
 
-        Assert.DoesNotContain(runner.Requests, request => request.Executable == "dotnet");
+        Assert.DoesNotContain(_runner.Requests, request => request.Executable == "dotnet");
     }
 
     private async Task<SelectRun> Select(TempRepository repository, bool noBuild)
@@ -74,7 +74,7 @@ public class CorrespondenceInBothModesTests
         // git is real; only the build is scripted.
         var real = new Reach.Processes.ProcessRunner();
 
-        return await new ReachPipeline(new SplitRunner(runner, real))
+        return await new ReachPipeline(new SplitRunner(_runner, real))
             .SelectAsync(
                 new SelectRequest
                 {

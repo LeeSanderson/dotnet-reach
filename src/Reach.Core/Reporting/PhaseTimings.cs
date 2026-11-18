@@ -12,8 +12,8 @@ namespace Reach.Reporting;
 /// </remarks>
 internal sealed class PhaseTimings
 {
-    private readonly Dictionary<string, long> phases = new(StringComparer.Ordinal);
-    private readonly Stopwatch total = Stopwatch.StartNew();
+    private readonly Dictionary<string, long> _phases = new(StringComparer.Ordinal);
+    private readonly Stopwatch _total = Stopwatch.StartNew();
 
     internal DateTimeOffset StartedUtc { get; } = DateTimeOffset.UtcNow;
 
@@ -49,13 +49,13 @@ internal sealed class PhaseTimings
     }
 
     internal void Record(string phase, TimeSpan elapsed) =>
-        phases[phase] = phases.GetValueOrDefault(phase) + (long)elapsed.TotalMilliseconds;
+        _phases[phase] = _phases.GetValueOrDefault(phase) + (long)elapsed.TotalMilliseconds;
 
     internal ReportTimings ToReport() =>
         new()
         {
             StartedUtc = StartedUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
-            TotalMs = (long)total.Elapsed.TotalMilliseconds,
-            Phases = new SortedDictionary<string, long>(phases, StringComparer.Ordinal),
+            TotalMs = (long)_total.Elapsed.TotalMilliseconds,
+            Phases = new SortedDictionary<string, long>(_phases, StringComparer.Ordinal),
         };
 }

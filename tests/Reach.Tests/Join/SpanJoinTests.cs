@@ -334,11 +334,11 @@ public class SpanJoinTests
     [Fact]
     public void A_declaration_in_a_file_the_symbols_never_saw_does_not_join()
     {
-        const string Source = "namespace N; public class Subject { public int M() => 1; }";
+        const string source = "namespace N; public class Subject { public int M() => 1; }";
 
-        using var subject = Subject.Compile(Source);
+        using var subject = Subject.Compile(source);
 
-        var declaration = Declaration(Source, "N.Subject", "M") with { Path = "src/Never.cs" };
+        var declaration = Declaration(source, "N.Subject", "M") with { Path = "src/Never.cs" };
         var result = new SpanJoin(subject.Assemblies, "/repo").Resolve(declaration);
 
         Assert.False(result.Joined);
@@ -347,11 +347,11 @@ public class SpanJoinTests
     [Fact]
     public void A_declaration_with_no_span_does_not_join()
     {
-        const string Source = "namespace N; public class Subject { public int M() => 1; }";
+        const string source = "namespace N; public class Subject { public int M() => 1; }";
 
-        using var subject = Subject.Compile(Source);
+        using var subject = Subject.Compile(source);
 
-        var declaration = Declaration(Source, "N.Subject", "M") with { Span = default };
+        var declaration = Declaration(source, "N.Subject", "M") with { Span = default };
 
         Assert.False(new SpanJoin(subject.Assemblies, "/repo").Resolve(declaration).Joined);
     }
@@ -361,11 +361,11 @@ public class SpanJoinTests
     [Fact]
     public void One_declaration_joins_into_every_assembly_instance_compiled_from_it()
     {
-        const string Source = "namespace N; public class Subject { public int M() => 1; }";
+        const string source = "namespace N; public class Subject { public int M() => 1; }";
 
-        using var subject = Subject.Compile(Source, instances: 2);
+        using var subject = Subject.Compile(source, instances: 2);
 
-        var result = new SpanJoin(subject.Assemblies, "/repo").Resolve(Declaration(Source, "N.Subject", "M"));
+        var result = new SpanJoin(subject.Assemblies, "/repo").Resolve(Declaration(source, "N.Subject", "M"));
 
         // A multi-targeted project contributes several assembly instances, and a change to the
         // source changes all of them.
@@ -378,7 +378,7 @@ public class SpanJoinTests
     /// </summary>
     private sealed class Subject : IDisposable
     {
-        private readonly List<IDisposable> open = [];
+        private readonly List<IDisposable> _open = [];
 
         private Subject(IReadOnlyList<GraphAssembly> assemblies) => Assemblies = assemblies;
 
@@ -396,8 +396,8 @@ public class SpanJoinTests
                 var reader = new PEReader(ImmutableArray.Create(compiled.Image));
                 var symbols = MetadataReaderProvider.FromPortablePdbImage(ImmutableArray.Create(compiled.Symbols));
 
-                subject.open.Add(reader);
-                subject.open.Add(symbols);
+                subject._open.Add(reader);
+                subject._open.Add(symbols);
 
                 assemblies.Add(new GraphAssembly(
                     index,
@@ -437,7 +437,7 @@ public class SpanJoinTests
 
         public void Dispose()
         {
-            foreach (var item in open)
+            foreach (var item in _open)
             {
                 item.Dispose();
             }

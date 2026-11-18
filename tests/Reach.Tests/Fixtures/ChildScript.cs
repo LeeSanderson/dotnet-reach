@@ -12,13 +12,13 @@ internal sealed class ChildScript : IDisposable
 {
     private static readonly bool OnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
-    private readonly TempDirectory directory;
-    private readonly string scriptPath;
+    private readonly TempDirectory _directory;
+    private readonly string _scriptPath;
 
     private ChildScript(TempDirectory directory, string scriptPath)
     {
-        this.directory = directory;
-        this.scriptPath = scriptPath;
+        _directory = directory;
+        _scriptPath = scriptPath;
     }
 
     /// <summary>
@@ -38,8 +38,8 @@ internal sealed class ChildScript : IDisposable
     internal ProcessRequest Invoke(params string[] arguments) =>
         new(
             OnWindows ? "cmd.exe" : "/bin/sh",
-            OnWindows ? ["/c", scriptPath, .. arguments] : [scriptPath, .. arguments],
-            directory.Path);
+            OnWindows ? ["/c", _scriptPath, .. arguments] : [_scriptPath, .. arguments],
+            _directory.Path);
 
     private static ChildScript Write(string name, string body)
     {
@@ -105,5 +105,5 @@ internal sealed class ChildScript : IDisposable
           done
           """;
 
-    public void Dispose() => directory.Dispose();
+    public void Dispose() => _directory.Dispose();
 }

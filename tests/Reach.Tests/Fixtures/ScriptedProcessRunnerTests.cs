@@ -8,17 +8,17 @@ namespace Reach.Tests.Fixtures;
 /// </summary>
 public class ScriptedProcessRunnerTests
 {
-    private readonly ScriptedProcessRunner runner = new();
+    private readonly ScriptedProcessRunner _runner = new();
 
     private Task<ProcessResult> Run(params string[] arguments) =>
-        runner.RunAsync(
+        _runner.RunAsync(
             new ProcessRequest("git", arguments, "/work"),
             TestContext.Current.CancellationToken);
 
     [Fact]
     public async Task Scripts_a_failure()
     {
-        runner.Fails(128, "fatal: bad revision\n", "rev-parse");
+        _runner.Fails(128, "fatal: bad revision\n", "rev-parse");
 
         var result = await Run("rev-parse", "nope");
 
@@ -30,7 +30,7 @@ public class ScriptedProcessRunnerTests
     [Fact]
     public async Task Scripts_an_empty_output()
     {
-        runner.Succeeds("", "diff");
+        _runner.Succeeds("", "diff");
 
         var result = await Run("diff", "--name-status", "abc123");
 
@@ -41,7 +41,7 @@ public class ScriptedProcessRunnerTests
     [Fact]
     public async Task Scripts_a_multi_line_output()
     {
-        runner.Succeeds("one\ntwo\nthree\n", "ls-files");
+        _runner.Succeeds("one\ntwo\nthree\n", "ls-files");
 
         var result = await Run("ls-files", "--others");
 
@@ -51,19 +51,19 @@ public class ScriptedProcessRunnerTests
     [Fact]
     public async Task Records_the_argument_vector_it_was_asked_for()
     {
-        runner.Succeeds("", "diff");
+        _runner.Succeeds("", "diff");
 
         await Run("-c", "core.quotePath=false", "diff", "--no-renames");
 
-        var request = Assert.Single(runner.Requests);
+        var request = Assert.Single(_runner.Requests);
         Assert.Equal(["-c", "core.quotePath=false", "diff", "--no-renames"], request.Arguments);
     }
 
     [Fact]
     public async Task The_most_recently_scripted_answer_wins()
     {
-        runner.Succeeds("default\n", "rev-parse");
-        runner.Succeeds("overridden\n", "rev-parse");
+        _runner.Succeeds("default\n", "rev-parse");
+        _runner.Succeeds("overridden\n", "rev-parse");
 
         // So a test can override a fixture's default without rebuilding it.
         Assert.Equal("overridden", (await Run("rev-parse", "HEAD")).Value);
@@ -72,7 +72,7 @@ public class ScriptedProcessRunnerTests
     [Fact]
     public async Task Refuses_an_argument_vector_it_was_not_scripted_for()
     {
-        runner.Succeeds("", "diff");
+        _runner.Succeeds("", "diff");
 
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => Run("merge-base", "HEAD"));
 
@@ -82,7 +82,7 @@ public class ScriptedProcessRunnerTests
     [Fact]
     public async Task A_script_matches_a_vector_that_carries_extra_arguments_around_it()
     {
-        runner.Succeeds("abc123\n", "merge-base", "HEAD");
+        _runner.Succeeds("abc123\n", "merge-base", "HEAD");
 
         var result = await Run("-c", "core.quotePath=false", "merge-base", "HEAD", "origin/main");
 

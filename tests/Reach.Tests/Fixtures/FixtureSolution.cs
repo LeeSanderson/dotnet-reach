@@ -20,13 +20,13 @@ namespace Reach.Tests.Fixtures;
 /// </remarks>
 internal sealed class FixtureSolution : IDisposable
 {
-    private readonly TempRepository repository;
+    private readonly TempRepository _repository;
 
-    private FixtureSolution(TempRepository repository) => this.repository = repository;
+    private FixtureSolution(TempRepository repository) => _repository = repository;
 
-    internal string Path => repository.Path;
+    internal string Path => _repository.Path;
 
-    internal string Solution => repository.Combine("Contoso.slnx");
+    internal string Solution => _repository.Combine("Contoso.slnx");
 
     /// <summary>
     /// Copies, commits the baseline, and builds. The returned SHA is the baseline.
@@ -49,7 +49,7 @@ internal sealed class FixtureSolution : IDisposable
     }
 
     internal string WriteFile(string relativePath, string contents) =>
-        repository.WriteFile(relativePath, contents);
+        _repository.WriteFile(relativePath, contents);
 
     internal string ReadFile(string relativePath) =>
         File.ReadAllText(System.IO.Path.Combine(Path, relativePath));
@@ -152,5 +152,5 @@ internal sealed class FixtureSolution : IDisposable
         return (result.ExitCode, result.StandardOutput + result.StandardError);
     }
 
-    public void Dispose() => repository.Dispose();
+    public void Dispose() => _repository.Dispose();
 }

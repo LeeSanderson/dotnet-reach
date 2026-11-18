@@ -9,11 +9,11 @@ namespace Reach.Tests.Fixtures;
 /// </summary>
 internal sealed class TempRepository : IDisposable
 {
-    private readonly TempDirectory directory;
+    private readonly TempDirectory _directory;
 
-    private TempRepository(TempDirectory directory) => this.directory = directory;
+    private TempRepository(TempDirectory directory) => _directory = directory;
 
-    internal string Path => directory.Path;
+    internal string Path => _directory.Path;
 
     /// <summary>
     /// Creates an initialised repository with no commits yet.
@@ -35,9 +35,9 @@ internal sealed class TempRepository : IDisposable
     }
 
     internal string WriteFile(string relativePath, string contents) =>
-        directory.WriteFile(relativePath, contents);
+        _directory.WriteFile(relativePath, contents);
 
-    internal string Combine(params string[] parts) => directory.Combine(parts);
+    internal string Combine(params string[] parts) => _directory.Combine(parts);
 
     /// <summary>
     /// Stages everything and commits, returning the new commit's SHA.
@@ -90,5 +90,5 @@ internal sealed class TempRepository : IDisposable
         return standardOutput.Result;
     }
 
-    public void Dispose() => directory.Dispose();
+    public void Dispose() => _directory.Dispose();
 }

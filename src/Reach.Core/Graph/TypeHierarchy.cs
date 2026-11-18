@@ -18,8 +18,8 @@ namespace Reach.Graph;
 /// </remarks>
 internal sealed class TypeHierarchy
 {
-    private readonly Dictionary<string, TypeInfo> types = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, List<string>> subtypes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TypeInfo> _types = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _subtypes = new(StringComparer.Ordinal);
 
     internal TypeHierarchy(IEnumerable<GraphAssembly> assemblies)
     {
@@ -28,11 +28,11 @@ internal sealed class TypeHierarchy
             Read(assembly);
         }
 
-        foreach (var (name, type) in types)
+        foreach (var (name, type) in _types)
         {
             foreach (var parent in type.Parents)
             {
-                Bucket(subtypes, parent).Add(name);
+                Bucket(_subtypes, parent).Add(name);
             }
         }
     }
@@ -55,7 +55,7 @@ internal sealed class TypeHierarchy
 
         while (pending.TryDequeue(out var name))
         {
-            if (!seen.Add(name) || !types.TryGetValue(name, out var type))
+            if (!seen.Add(name) || !_types.TryGetValue(name, out var type))
             {
                 continue;
             }
@@ -75,7 +75,7 @@ internal sealed class TypeHierarchy
     }
 
     internal MethodId? MethodOf(string typeName, string memberKey) =>
-        types.TryGetValue(typeName, out var type) && type.Methods.TryGetValue(memberKey, out var method)
+        _types.TryGetValue(typeName, out var type) && type.Methods.TryGetValue(memberKey, out var method)
             ? method
             : null;
 
@@ -91,7 +91,7 @@ internal sealed class TypeHierarchy
     /// </remarks>
     internal bool IsDispatchable(string typeName, string memberKey)
     {
-        if (!types.TryGetValue(typeName, out var type))
+        if (!_types.TryGetValue(typeName, out var type))
         {
             return false;
         }
@@ -99,7 +99,7 @@ internal sealed class TypeHierarchy
         return type.IsInterface || type.Virtual.Contains(memberKey);
     }
 
-    internal bool Declares(string typeName) => types.ContainsKey(typeName);
+    internal bool Declares(string typeName) => _types.ContainsKey(typeName);
 
     /// <summary>
     /// Every implementation or override of <paramref name="declaringType"/>'s
@@ -116,11 +116,11 @@ internal sealed class TypeHierarchy
     {
         var found = new List<MethodId>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        var pending = new Queue<string>(subtypes.GetValueOrDefault(declaringType) ?? []);
+        var pending = new Queue<string>(_subtypes.GetValueOrDefault(declaringType) ?? []);
 
         while (pending.TryDequeue(out var name))
         {
-            if (!seen.Add(name) || !types.TryGetValue(name, out var type))
+            if (!seen.Add(name) || !_types.TryGetValue(name, out var type))
             {
                 continue;
             }
@@ -134,7 +134,7 @@ internal sealed class TypeHierarchy
                 found.Add(implicitly);
             }
 
-            foreach (var child in subtypes.GetValueOrDefault(name) ?? [])
+            foreach (var child in _subtypes.GetValueOrDefault(name) ?? [])
             {
                 pending.Enqueue(child);
             }
@@ -204,7 +204,7 @@ internal sealed class TypeHierarchy
                 }
             }
 
-            types[name] = new TypeInfo(
+            _types[name] = new TypeInfo(
                 parents,
                 methods,
                 implementations,

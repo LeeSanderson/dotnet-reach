@@ -12,13 +12,13 @@ namespace Reach.Graph;
 /// </remarks>
 internal sealed class ExternalAnchors
 {
-    private readonly Dictionary<string, int> ordinalOf = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<(int Ordinal, string Key), int> idOf = [];
-    private readonly Dictionary<MethodId, string> nameOf = [];
+    private readonly Dictionary<string, int> _ordinalOf = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<(int Ordinal, string Key), int> _idOf = [];
+    private readonly Dictionary<MethodId, string> _nameOf = [];
 
-    internal int AssemblyCount => ordinalOf.Count;
+    internal int AssemblyCount => _ordinalOf.Count;
 
-    internal int Count => idOf.Count;
+    internal int Count => _idOf.Count;
 
     /// <param name="nextOrdinal">
     /// Where to number a newly-seen assembly. External assemblies sit above the first-party
@@ -26,18 +26,18 @@ internal sealed class ExternalAnchors
     /// </param>
     internal MethodId Intern(string assemblyName, string key, int nextOrdinal)
     {
-        if (!ordinalOf.TryGetValue(assemblyName, out var ordinal))
+        if (!_ordinalOf.TryGetValue(assemblyName, out var ordinal))
         {
-            ordinalOf[assemblyName] = ordinal = nextOrdinal;
+            _ordinalOf[assemblyName] = ordinal = nextOrdinal;
         }
 
-        if (!idOf.TryGetValue((ordinal, key), out var id))
+        if (!_idOf.TryGetValue((ordinal, key), out var id))
         {
-            idOf[(ordinal, key)] = id = idOf.Count + 1;
+            _idOf[(ordinal, key)] = id = _idOf.Count + 1;
         }
 
         var methodId = MethodId.External(ordinal, id);
-        nameOf[methodId] = assemblyName + "!" + key;
+        _nameOf[methodId] = assemblyName + "!" + key;
 
         return methodId;
     }
@@ -45,5 +45,5 @@ internal sealed class ExternalAnchors
     /// <summary>
     /// For messages and the report only. Never part of identity.
     /// </summary>
-    internal string? NameOf(MethodId id) => nameOf.GetValueOrDefault(id);
+    internal string? NameOf(MethodId id) => _nameOf.GetValueOrDefault(id);
 }

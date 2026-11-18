@@ -27,15 +27,15 @@ internal sealed record Change(ChangeEntry Entry, IReadOnlyList<MethodId> Roots);
 /// </remarks>
 internal sealed class RootSets
 {
-    private readonly Dictionary<string, List<MethodId>> byAssembly = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, List<MethodId>> byType = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<MethodId>> _byAssembly = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<MethodId>> _byType = new(StringComparer.Ordinal);
 
     internal RootSets(IEnumerable<GraphAssembly> assemblies)
     {
         foreach (var assembly in assemblies)
         {
             var reader = assembly.Reader;
-            var methods = Bucket(byAssembly, assembly.Name);
+            var methods = Bucket(_byAssembly, assembly.Name);
 
             foreach (var handle in reader.MethodDefinitions)
             {
@@ -45,7 +45,7 @@ internal sealed class RootSets
                     reader.GetMethodDefinition(handle).GetDeclaringType());
 
                 methods.Add(id);
-                Bucket(byType, declaringType).Add(id);
+                Bucket(_byType, declaringType).Add(id);
             }
         }
     }
@@ -54,7 +54,7 @@ internal sealed class RootSets
     /// Every method of an assembly, by its simple name. Several instances contribute together.
     /// </summary>
     internal IReadOnlyList<MethodId> InAssembly(string name) =>
-        byAssembly.GetValueOrDefault(name) ?? [];
+        _byAssembly.GetValueOrDefault(name) ?? [];
 
     /// <summary>
     /// Every method of a type, including the compiler-generated members nested inside it — a
@@ -63,9 +63,9 @@ internal sealed class RootSets
     /// </summary>
     internal IReadOnlyList<MethodId> InType(string name)
     {
-        var found = new List<MethodId>(byType.GetValueOrDefault(name) ?? []);
+        var found = new List<MethodId>(_byType.GetValueOrDefault(name) ?? []);
 
-        foreach (var (candidate, methods) in byType)
+        foreach (var (candidate, methods) in _byType)
         {
             if (candidate.Length > name.Length
                 && candidate.StartsWith(name, StringComparison.Ordinal)

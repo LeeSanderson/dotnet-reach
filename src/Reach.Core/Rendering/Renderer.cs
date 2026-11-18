@@ -63,7 +63,7 @@ internal sealed class Renderer(
     SelectRequest request,
     ReachDirectory directory)
 {
-    private readonly List<Notice> notices = [];
+    private readonly List<Notice> _notices = [];
 
     internal RenderedSelection Render(SelectionResult selection)
     {
@@ -85,7 +85,7 @@ internal sealed class Renderer(
 
         Summarise(entries);
 
-        return new RenderedSelection(entries, notices);
+        return new RenderedSelection(entries, _notices);
     }
 
     private RenderedEntry RenderOne(ProjectSelection project, HashSet<string> projectWideEmitted)
@@ -369,7 +369,7 @@ internal sealed class Renderer(
     }
 
     private void Note(string code, NoticeKind kind, string message, IReadOnlyList<string>? projects = null) =>
-        notices.Add(new Notice(
+        _notices.Add(new Notice(
             code,
             kind,
             message,

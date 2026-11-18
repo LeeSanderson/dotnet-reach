@@ -12,24 +12,24 @@ public class CommandLineTests
 {
     private const string TestPackage = "xunit.v3";
 
-    private readonly Dictionary<string, string?> environment = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string?> _environment = new(StringComparer.Ordinal);
 
-    private readonly StringWriter standardOutput = new();
-    private readonly StringWriter standardError = new();
+    private readonly StringWriter _standardOutput = new();
+    private readonly StringWriter _standardError = new();
 
     private Task<int> Run(string workingDirectory, params string[] arguments) =>
         ReachCli.RunAsync(
             arguments,
             workingDirectory,
-            standardOutput,
-            standardError,
-            name => environment.GetValueOrDefault(name),
+            _standardOutput,
+            _standardError,
+            name => _environment.GetValueOrDefault(name),
             outputIsRedirected: false,
             TestContext.Current.CancellationToken);
 
-    private string Out => standardOutput.ToString();
+    private string Out => _standardOutput.ToString();
 
-    private string Error => standardError.ToString();
+    private string Error => _standardError.ToString();
 
     // ---- The verb -----------------------------------------------------------------------
 
@@ -236,11 +236,11 @@ public class CommandLineTests
         using var tree = ProjectTree.Create();
 
         var destination = ReportDestination.Resolve("-", ReachDirectory.For(tree.Root, null), tree.Root);
-        var streams = Streams.For(destination, standardOutput, standardError, colour: false);
+        var streams = Streams.For(destination, _standardOutput, _standardError, colour: false);
 
         Assert.True(destination.ToStandardOutput);
-        Assert.Same(standardOutput, streams.Report);
-        Assert.Same(standardError, streams.Summary);
+        Assert.Same(_standardOutput, streams.Report);
+        Assert.Same(_standardError, streams.Summary);
     }
 
     [Fact]
@@ -249,10 +249,10 @@ public class CommandLineTests
         using var tree = ProjectTree.Create();
 
         var destination = ReportDestination.Resolve(null, ReachDirectory.For(tree.Root, null), tree.Root);
-        var streams = Streams.For(destination, standardOutput, standardError, colour: false);
+        var streams = Streams.For(destination, _standardOutput, _standardError, colour: false);
 
-        Assert.Same(standardOutput, streams.Summary);
-        Assert.Same(standardError, streams.Notices);
+        Assert.Same(_standardOutput, streams.Summary);
+        Assert.Same(_standardError, streams.Notices);
         Assert.Null(streams.Report);
     }
 
@@ -373,7 +373,7 @@ public class CommandLineTests
     {
         using var tree = SolutionWithTests();
 
-        environment["GITHUB_ACTIONS"] = "true";
+        _environment["GITHUB_ACTIONS"] = "true";
 
         Assert.Equal((int)ExitCode.BaselineUnresolvable, await Run(tree.Root, "select"));
         Assert.Contains("fetch-depth: 0", Out + Error);

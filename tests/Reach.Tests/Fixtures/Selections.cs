@@ -23,7 +23,7 @@ internal sealed class Selections : IDisposable
     private const string CorePath = "/repo/src/Core/Widget.cs";
     private const string TestsPath = "/repo/tests/Tests/WidgetTests.cs";
 
-    private readonly List<IDisposable> open = [];
+    private readonly List<IDisposable> _open = [];
 
     private Selections()
     {
@@ -173,8 +173,8 @@ internal sealed class Selections : IDisposable
         var reader = new PEReader(ImmutableArray.Create(compiled.Image));
         var symbols = MetadataReaderProvider.FromPortablePdbImage(ImmutableArray.Create(compiled.Symbols));
 
-        open.Add(reader);
-        open.Add(symbols);
+        _open.Add(reader);
+        _open.Add(symbols);
 
         return new GraphAssembly(
             ordinal,
@@ -187,7 +187,7 @@ internal sealed class Selections : IDisposable
 
     public void Dispose()
     {
-        foreach (var item in open)
+        foreach (var item in _open)
         {
             item.Dispose();
         }

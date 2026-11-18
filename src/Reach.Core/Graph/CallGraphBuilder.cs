@@ -45,21 +45,21 @@ internal sealed record CallGraphResult(
 /// </remarks>
 internal sealed class CallGraphBuilder
 {
-    private readonly List<GraphAssembly> assemblies = [];
-    private readonly Dictionary<string, List<GraphAssembly>> firstPartyByName = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ExternalAnchors externals = new();
-    private readonly List<Edge> edges = [];
-    private readonly List<MethodId> declared = [];
-    private readonly List<Notice> notices = [];
-    private readonly HashSet<string> unresolvedFirstParty = new(StringComparer.Ordinal);
-    private readonly HashSet<string> ambiguous = new(StringComparer.Ordinal);
+    private readonly List<GraphAssembly> _assemblies = [];
+    private readonly Dictionary<string, List<GraphAssembly>> _firstPartyByName = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ExternalAnchors _externals = new();
+    private readonly List<Edge> _edges = [];
+    private readonly List<MethodId> _declared = [];
+    private readonly List<Notice> _notices = [];
+    private readonly HashSet<string> _unresolvedFirstParty = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _ambiguous = new(StringComparer.Ordinal);
 
     /// <summary>
     /// External types a first-party type inherits from or implements. An external member is
     /// worth an anchor only when a first-party type occupies the slot — which is what bounds
     /// the interned set by the solution's own shape rather than by the BCL's size.
     /// </summary>
-    private readonly HashSet<string> implementedExternalTypes = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _implementedExternalTypes = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Dispatch declarations some call site actually reached, and the member key each one
@@ -67,16 +67,16 @@ internal sealed class CallGraphBuilder
     /// across the graph would leave them neither isolable nor countable, which breaks the
     /// measurement.
     /// </summary>
-    private readonly Dictionary<MethodId, (string Type, string Member)> dispatchTargets = [];
+    private readonly Dictionary<MethodId, (string Type, string Member)> _dispatchTargets = [];
 
     /// <summary>
     /// Type name to its <c>.cctor</c>, for the initialization-trigger edges.
     /// </summary>
-    private readonly Dictionary<string, MethodId> classConstructors = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, MethodId> _classConstructors = new(StringComparer.Ordinal);
 
-    private TypeHierarchy hierarchy = null!;
+    private TypeHierarchy _hierarchy = null!;
 
-    private int hierarchyConstructions;
+    private int _hierarchyConstructions;
 
     /// <summary>
     /// Ordinals are assigned in a deterministic order — assembly simple name, then target
@@ -103,17 +103,17 @@ internal sealed class CallGraphBuilder
 
         foreach (var assembly in firstParty)
         {
-            assemblies.Add(assembly);
+            _assemblies.Add(assembly);
 
-            if (!firstPartyByName.TryGetValue(assembly.Name, out var instances))
+            if (!_firstPartyByName.TryGetValue(assembly.Name, out var instances))
             {
-                firstPartyByName[assembly.Name] = instances = [];
+                _firstPartyByName[assembly.Name] = instances = [];
             }
 
             instances.Add(assembly);
         }
 
-        foreach (var assembly in assemblies)
+        foreach (var assembly in _assemblies)
         {
             CollectExternalSlots(assembly);
         }
@@ -121,32 +121,32 @@ internal sealed class CallGraphBuilder
         // Exactly one, built here and passed down. Resolving implementations per call site is
         // accidentally quadratic and will look fine on a sample repository and fail on a
         // client's.
-        hierarchy = new TypeHierarchy(assemblies);
-        hierarchyConstructions++;
+        _hierarchy = new TypeHierarchy(_assemblies);
+        _hierarchyConstructions++;
 
-        foreach (var assembly in assemblies)
+        foreach (var assembly in _assemblies)
         {
             IndexClassConstructors(assembly);
         }
 
-        foreach (var assembly in assemblies)
+        foreach (var assembly in _assemblies)
         {
             Walk(assembly);
 
             // Without this, every async method body in the solution is unreachable.
-            edges.AddRange(SynthesisedEdges.Containment(assembly));
+            _edges.AddRange(SynthesisedEdges.Containment(assembly));
         }
 
         Widen();
         NoteUnresolved();
 
         return new CallGraphResult(
-            CallGraph.Build(declared, edges),
-            assemblies,
-            externals,
-            notices,
+            CallGraph.Build(_declared, _edges),
+            _assemblies,
+            _externals,
+            _notices,
             started.Elapsed,
-            hierarchyConstructions);
+            _hierarchyConstructions);
     }
 
     /// <summary>
@@ -181,7 +181,7 @@ internal sealed class CallGraphBuilder
         switch (type.Kind)
         {
             case HandleKind.TypeReference:
-                implementedExternalTypes.Add(MetadataNames.FullNameOf(reader, (TypeReferenceHandle)type));
+                _implementedExternalTypes.Add(MetadataNames.FullNameOf(reader, (TypeReferenceHandle)type));
                 break;
 
             case HandleKind.TypeSpecification:
@@ -189,7 +189,7 @@ internal sealed class CallGraphBuilder
                 var decoded = reader.GetTypeSpecification((TypeSpecificationHandle)type)
                     .DecodeSignature(names, genericContext: null);
 
-                implementedExternalTypes.Add(MetadataNames.WithoutInstantiation(decoded));
+                _implementedExternalTypes.Add(MetadataNames.WithoutInstantiation(decoded));
                 break;
         }
     }
@@ -201,7 +201,7 @@ internal sealed class CallGraphBuilder
         foreach (var handle in reader.MethodDefinitions)
         {
             var from = MethodId.Definition(assembly.Ordinal, MetadataTokens.GetToken(handle));
-            declared.Add(from);
+            _declared.Add(from);
 
             var method = reader.GetMethodDefinition(handle);
 
@@ -238,18 +238,18 @@ internal sealed class CallGraphBuilder
 
                 foreach (var to in Resolve(assembly, instruction.Token))
                 {
-                    edges.Add(new Edge(
+                    _edges.Add(new Edge(
                         from,
                         Anchor(assembly, instruction, receivers, to),
                         provenance.Value));
                 }
             }
 
-            edges.AddRange(SynthesisedEdges.TypeInitialization(
+            _edges.AddRange(SynthesisedEdges.TypeInitialization(
                 assembly,
                 from,
                 instructions,
-                type => classConstructors.TryGetValue(type, out var cctor) ? cctor : null));
+                type => _classConstructors.TryGetValue(type, out var cctor) ? cctor : null));
         }
     }
 
@@ -265,7 +265,7 @@ internal sealed class CallGraphBuilder
             {
                 if (reader.GetString(reader.GetMethodDefinition(methodHandle).Name) == ".cctor")
                 {
-                    classConstructors[name] = MethodId.Definition(
+                    _classConstructors[name] = MethodId.Definition(
                         assembly.Ordinal,
                         MetadataTokens.GetToken(methodHandle));
                 }
@@ -307,7 +307,7 @@ internal sealed class CallGraphBuilder
             return token;
         }
 
-        if (!isDispatch && !hierarchy.IsDispatchable(member.Value.Type, member.Value.Member))
+        if (!isDispatch && !_hierarchy.IsDispatchable(member.Value.Type, member.Value.Member))
         {
             return token;
         }
@@ -318,9 +318,9 @@ internal sealed class CallGraphBuilder
             return token;
         }
 
-        var slot = hierarchy.SlotFor(receiver, member.Value.Member);
+        var slot = _hierarchy.SlotFor(receiver, member.Value.Member);
 
-        if (slot is null || hierarchy.MethodOf(slot, member.Value.Member) is not { } anchored)
+        if (slot is null || _hierarchy.MethodOf(slot, member.Value.Member) is not { } anchored)
         {
             Remember(token, member.Value);
             return token;
@@ -332,7 +332,7 @@ internal sealed class CallGraphBuilder
     }
 
     private void Remember(MethodId node, (string Type, string Member) member) =>
-        dispatchTargets[node] = member;
+        _dispatchTargets[node] = member;
 
     /// <summary>
     /// The declaring type and member key a call instruction names, as the hierarchy spells them.
@@ -402,15 +402,15 @@ internal sealed class CallGraphBuilder
     /// </summary>
     private void Widen()
     {
-        foreach (var (node, (type, member)) in dispatchTargets)
+        foreach (var (node, (type, member)) in _dispatchTargets)
         {
-            foreach (var implementation in hierarchy.ImplementationsOf(type, member))
+            foreach (var implementation in _hierarchy.ImplementationsOf(type, member))
             {
                 if (implementation != node)
                 {
                     // The only speculative class, and therefore the only class any future
                     // narrowing may touch.
-                    edges.Add(new Edge(node, implementation, EdgeProvenance.Widened));
+                    _edges.Add(new Edge(node, implementation, EdgeProvenance.Widened));
                 }
             }
         }
@@ -506,8 +506,8 @@ internal sealed class CallGraphBuilder
             // Outside the analysis scope: normal and silent. The accepted blind spot, already
             // registered — with an anchor interned only where a first-party type occupies the
             // slot, because that is where widening will need something to hang off.
-            return implementedExternalTypes.Contains(declaringType)
-                ? [externals.Intern(assemblyName ?? "?", key, NextOrdinal)]
+            return _implementedExternalTypes.Contains(declaringType)
+                ? [_externals.Intern(assemblyName ?? "?", key, NextOrdinal)]
                 : [];
         }
 
@@ -516,13 +516,13 @@ internal sealed class CallGraphBuilder
             // First-party but unresolvable: a build problem rather than an analysis one, and
             // source–binary correspondence is what should have caught it. Disclosed, and the
             // run continues.
-            unresolvedFirstParty.Add($"{target.Name}: {key}");
+            _unresolvedFirstParty.Add($"{target.Name}: {key}");
             return [];
         }
 
         if (candidates.Count > 1)
         {
-            ambiguous.Add($"{target.Name}: {key}");
+            _ambiguous.Add($"{target.Name}: {key}");
         }
 
         return candidates;
@@ -578,7 +578,7 @@ internal sealed class CallGraphBuilder
             return from;
         }
 
-        if (!firstPartyByName.TryGetValue(assemblyName, out var candidates))
+        if (!_firstPartyByName.TryGetValue(assemblyName, out var candidates))
         {
             return null;
         }
@@ -590,36 +590,36 @@ internal sealed class CallGraphBuilder
             ?? candidates[0];
     }
 
-    private int NextOrdinal => assemblies.Count + externals.AssemblyCount;
+    private int NextOrdinal => _assemblies.Count + _externals.AssemblyCount;
 
     private void NoteUnresolved()
     {
-        if (unresolvedFirstParty.Count > 0)
+        if (_unresolvedFirstParty.Count > 0)
         {
-            notices.Add(new Notice(
+            _notices.Add(new Notice(
                 NoticeCodes.UnresolvedFirstPartyMember,
                 NoticeKind.BlindSpot,
-                $"{unresolvedFirstParty.Count} call site(s) name a member of a first-party assembly "
+                $"{_unresolvedFirstParty.Count} call site(s) name a member of a first-party assembly "
                 + "that is not in it, so those calls produced no edge. The assemblies on disk do "
                 + "not agree with each other: "
-                + string.Join("; ", unresolvedFirstParty.Order(StringComparer.Ordinal).Take(20)),
+                + string.Join("; ", _unresolvedFirstParty.Order(StringComparer.Ordinal).Take(20)),
                 new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
-                    ["members"] = unresolvedFirstParty.Order(StringComparer.Ordinal).ToArray(),
+                    ["members"] = _unresolvedFirstParty.Order(StringComparer.Ordinal).ToArray(),
                 }));
         }
 
-        if (ambiguous.Count > 0)
+        if (_ambiguous.Count > 0)
         {
-            notices.Add(new Notice(
+            _notices.Add(new Notice(
                 NoticeCodes.SignatureAmbiguous,
                 NoticeKind.Widening,
-                $"{ambiguous.Count} call site(s) name a signature that matches more than one "
+                $"{_ambiguous.Count} call site(s) name a signature that matches more than one "
                 + "method, so every candidate got an edge: "
-                + string.Join("; ", ambiguous.Order(StringComparer.Ordinal).Take(20)),
+                + string.Join("; ", _ambiguous.Order(StringComparer.Ordinal).Take(20)),
                 new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
-                    ["members"] = ambiguous.Order(StringComparer.Ordinal).ToArray(),
+                    ["members"] = _ambiguous.Order(StringComparer.Ordinal).ToArray(),
                 }));
         }
     }

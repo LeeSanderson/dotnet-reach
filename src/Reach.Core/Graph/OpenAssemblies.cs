@@ -15,8 +15,8 @@ namespace Reach.Graph;
 /// </remarks>
 internal sealed class OpenAssemblies : IDisposable
 {
-    private readonly List<PEReader> readers = [];
-    private readonly List<MetadataReaderProvider> symbols = [];
+    private readonly List<PEReader> _readers = [];
+    private readonly List<MetadataReaderProvider> _symbols = [];
 
     private OpenAssemblies(IReadOnlyList<GraphAssembly> assemblies) => Assemblies = assemblies;
 
@@ -49,7 +49,7 @@ internal sealed class OpenAssemblies : IDisposable
                 continue;
             }
 
-            open.readers.Add(reader);
+            open._readers.Add(reader);
 
             assemblies.Add(new GraphAssembly(
                 assemblies.Count,
@@ -82,7 +82,7 @@ internal sealed class OpenAssemblies : IDisposable
                 return null;
             }
 
-            symbols.Add(provider);
+            _symbols.Add(provider);
 
             return provider.GetMetadataReader();
         }
@@ -98,12 +98,12 @@ internal sealed class OpenAssemblies : IDisposable
 
     public void Dispose()
     {
-        foreach (var provider in symbols)
+        foreach (var provider in _symbols)
         {
             provider.Dispose();
         }
 
-        foreach (var reader in readers)
+        foreach (var reader in _readers)
         {
             reader.Dispose();
         }
