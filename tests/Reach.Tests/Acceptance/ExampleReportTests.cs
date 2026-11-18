@@ -23,6 +23,7 @@ public sealed partial class ExampleReportTests : IDisposable
     private static readonly JsonSerializerOptions Readable = new()
     {
         WriteIndented = true,
+        RespectNullableAnnotations = true,
         RespectRequiredConstructorParameters = true,
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };

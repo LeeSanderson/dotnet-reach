@@ -14,6 +14,9 @@ public static class ReportWriter
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
 
+        // A null in a non-nullable report property is a bug: fail rather than write it.
+        RespectNullableAnnotations = true,
+
         // Only ever used to serialise, which this setting does not affect.
         RespectRequiredConstructorParameters = true,
 

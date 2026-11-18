@@ -36,6 +36,7 @@ public class ReportTests
     private static readonly JsonSerializerOptions Indented = new()
     {
         WriteIndented = true,
+        RespectNullableAnnotations = true,
         RespectRequiredConstructorParameters = true,
     };
 
