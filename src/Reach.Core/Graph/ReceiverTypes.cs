@@ -1,8 +1,6 @@
-using System.Collections.Immutable;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Reflection.Metadata;
-using System.Reflection.PortableExecutable;
 
 namespace Reach.Graph;
 
@@ -177,56 +175,56 @@ internal static class ReceiverTypes
 
             case ILOpCode.Call:
             case ILOpCode.Callvirt:
-                {
-                    var (parameters, isInstance, returns) = CallShape(reader, operand, names);
-                    var receiver = Peek(stack, parameters);
+            {
+                var (parameters, isInstance, returns) = CallShape(reader, operand, names);
+                var receiver = Peek(stack, parameters);
 
-                    if (isInstance && receiver is not null)
+                if (isInstance && receiver is not null)
+                {
+                    inferred[offset] = receiver;
+                }
+
+                Pop(stack, parameters + (isInstance ? 1 : 0));
+
+                if (returns is not null)
+                {
+                    stack.Add(returns);
+                }
+
+                return;
+            }
+
+            case ILOpCode.Ldftn:
+            case ILOpCode.Ldvirtftn:
+            {
+                // ldvirtftn consumes its receiver; ldftn does not.
+                if (opCode == ILOpCode.Ldvirtftn)
+                {
+                    if (Peek(stack, 0) is { } receiver)
                     {
                         inferred[offset] = receiver;
                     }
 
-                    Pop(stack, parameters + (isInstance ? 1 : 0));
-
-                    if (returns is not null)
-                    {
-                        stack.Add(returns);
-                    }
-
-                    return;
+                    Pop(stack, 1);
                 }
 
-            case ILOpCode.Ldftn:
-            case ILOpCode.Ldvirtftn:
-                {
-                    // ldvirtftn consumes its receiver; ldftn does not.
-                    if (opCode == ILOpCode.Ldvirtftn)
-                    {
-                        if (Peek(stack, 0) is { } receiver)
-                        {
-                            inferred[offset] = receiver;
-                        }
-
-                        Pop(stack, 1);
-                    }
-
-                    stack.Add(null);
-                    return;
-                }
+                stack.Add(null);
+                return;
+            }
 
             default:
+            {
+                var index = Index((ushort)opCode);
+
+                Pop(stack, index < Pops.Length ? Pops[index] : 0);
+
+                for (var push = 0; push < (index < Pushes.Length ? Pushes[index] : 0); push++)
                 {
-                    var index = Index((ushort)opCode);
-
-                    Pop(stack, index < Pops.Length ? Pops[index] : 0);
-
-                    for (var push = 0; push < (index < Pushes.Length ? Pushes[index] : 0); push++)
-                    {
-                        stack.Add(null);
-                    }
-
-                    return;
+                    stack.Add(null);
                 }
+
+                return;
+            }
         }
     }
 
@@ -566,26 +564,26 @@ internal static class ReceiverTypes
             switch (handle.Kind)
             {
                 case HandleKind.MethodDefinition:
-                    {
-                        var method = reader.GetMethodDefinition((MethodDefinitionHandle)handle);
-                        var signature = method.DecodeSignature(names, genericContext: null);
+                {
+                    var method = reader.GetMethodDefinition((MethodDefinitionHandle)handle);
+                    var signature = method.DecodeSignature(names, genericContext: null);
 
-                        return (
-                            signature.ParameterTypes.Length,
-                            (method.Attributes & MethodAttributes.Static) == 0,
-                            Returns(signature));
-                    }
+                    return (
+                        signature.ParameterTypes.Length,
+                        (method.Attributes & MethodAttributes.Static) == 0,
+                        Returns(signature));
+                }
 
                 case HandleKind.MemberReference:
-                    {
-                        var reference = reader.GetMemberReference((MemberReferenceHandle)handle);
-                        var signature = reference.DecodeMethodSignature(names, genericContext: null);
+                {
+                    var reference = reader.GetMemberReference((MemberReferenceHandle)handle);
+                    var signature = reference.DecodeMethodSignature(names, genericContext: null);
 
-                        return (
-                            signature.ParameterTypes.Length,
-                            signature.Header.IsInstance,
-                            Returns(signature));
-                    }
+                    return (
+                        signature.ParameterTypes.Length,
+                        signature.Header.IsInstance,
+                        Returns(signature));
+                }
 
                 case HandleKind.MethodSpecification:
                     return CallShape(

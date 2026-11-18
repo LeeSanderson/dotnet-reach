@@ -1,5 +1,4 @@
 using Reach.Git;
-using Reach.Processes;
 using Reach.Tests.Fixtures;
 
 namespace Reach.Tests.Git;

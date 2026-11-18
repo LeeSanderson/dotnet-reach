@@ -342,37 +342,37 @@ internal sealed class CallGraphBuilder
             switch (handle.Kind)
             {
                 case HandleKind.MethodDefinition:
-                    {
-                        var method = reader.GetMethodDefinition((MethodDefinitionHandle)handle);
+                {
+                    var method = reader.GetMethodDefinition((MethodDefinitionHandle)handle);
 
-                        return (
-                            MetadataNames.FullNameOf(reader, method.GetDeclaringType()),
-                            MetadataNames.Key(
-                                reader.GetString(method.Name),
-                                MetadataNames.GenericArityOf(reader, method),
-                                method.DecodeSignature(names, genericContext: null)));
-                    }
+                    return (
+                        MetadataNames.FullNameOf(reader, method.GetDeclaringType()),
+                        MetadataNames.Key(
+                            reader.GetString(method.Name),
+                            MetadataNames.GenericArityOf(reader, method),
+                            method.DecodeSignature(names, genericContext: null)));
+                }
 
                 case HandleKind.MemberReference:
+                {
+                    var reference = reader.GetMemberReference((MemberReferenceHandle)handle);
+
+                    if (reference.GetKind() != MemberReferenceKind.Method)
                     {
-                        var reference = reader.GetMemberReference((MemberReferenceHandle)handle);
-
-                        if (reference.GetKind() != MemberReferenceKind.Method)
-                        {
-                            return null;
-                        }
-
-                        var signature = reference.DecodeMethodSignature(names, genericContext: null);
-                        var (declaringType, _) = ParentOf(reader, reference.Parent, names);
-
-                        return declaringType is null
-                            ? null
-                            : (declaringType,
-                                MetadataNames.Key(
-                                    reader.GetString(reference.Name),
-                                    signature.GenericParameterCount,
-                                    signature));
+                        return null;
                     }
+
+                    var signature = reference.DecodeMethodSignature(names, genericContext: null);
+                    var (declaringType, _) = ParentOf(reader, reference.Parent, names);
+
+                    return declaringType is null
+                        ? null
+                        : (declaringType,
+                            MetadataNames.Key(
+                                reader.GetString(reference.Name),
+                                signature.GenericParameterCount,
+                                signature));
+                }
 
                 case HandleKind.MethodSpecification:
                     return MemberKeyOf(
