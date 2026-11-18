@@ -48,7 +48,8 @@ internal static class TestRunnerConfiguration
             + "Microsoft.Testing.Platform runner, and this repository's global.json does not "
             + "set it — so `dotnet test` is a hard build error and every command Reach emitted "
             + "is unrunnable. Add to global.json:\n\n"
-            + Setting,
+            // A raw literal takes the source file's line endings, which are CRLF on checkout.
+            + Setting.ReplaceLineEndings("\n"),
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["projects"] = projects });
     }
 
