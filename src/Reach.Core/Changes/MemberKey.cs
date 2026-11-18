@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Reach.Changes;
 
 /// <summary>
@@ -34,7 +36,7 @@ internal sealed record MemberKey(
     int TypeParameterCount,
     IReadOnlyList<string> ParameterTypes)
 {
-    public bool Equals(MemberKey? other) =>
+    public bool Equals([NotNullWhen(true)] MemberKey? other) =>
         other is not null
         && Kind == other.Kind
         && Name == other.Name
