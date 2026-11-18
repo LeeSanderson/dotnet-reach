@@ -71,12 +71,22 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
 
     private static readonly string[] SolutionExtensions = [".sln", ".slnx", ".slnf"];
 
+    private static readonly string[] ProjectExtensions = [".csproj", ".fsproj", ".vbproj"];
+
+    private static readonly string[] ContentExtensions =
+        [".json", ".resx", ".xml", ".config", ".txt", ".yaml", ".yml"];
+
+    /// <summary>
+    /// Every name and extension above matches regardless of case.
+    /// </summary>
+    private static readonly StringComparer NameComparer = StringComparer.OrdinalIgnoreCase;
+
     internal RoutedChange Route(ChangedPath path)
     {
-        var name = System.IO.Path.GetFileName(path.Path).ToLowerInvariant();
-        var extension = System.IO.Path.GetExtension(path.Path).ToLowerInvariant();
+        var name = System.IO.Path.GetFileName(path.Path);
+        var extension = System.IO.Path.GetExtension(path.Path);
 
-        if (extension is ".csproj" or ".fsproj" or ".vbproj")
+        if (ProjectExtensions.Contains(extension, NameComparer))
         {
             var project = ProjectAt(path.Path);
 
@@ -91,13 +101,13 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
             return new RoutedChange(path, Project, project is null ? [] : [project]);
         }
 
-        if (SolutionExtensions.Contains(extension, StringComparer.Ordinal)
-            || SolutionWideNames.Contains(name, StringComparer.Ordinal))
+        if (SolutionExtensions.Contains(extension, NameComparer)
+            || SolutionWideNames.Contains(name, NameComparer))
         {
             return new RoutedChange(path, SolutionWide, scope.Projects);
         }
 
-        if (DirectoryScopedNames.Contains(name, StringComparer.Ordinal))
+        if (DirectoryScopedNames.Contains(name, NameComparer))
         {
             return new RoutedChange(path, DirectoryScoped, AtOrBelow(DirectoryOf(path.Path)));
         }
@@ -201,8 +211,7 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
             .FirstOrDefault();
     }
 
-    private static bool IsContent(string extension) =>
-        extension is ".json" or ".resx" or ".xml" or ".config" or ".txt" or ".yaml" or ".yml";
+    private static bool IsContent(string extension) => ContentExtensions.Contains(extension, NameComparer);
 
     private string DirectoryOf(string repositoryRelativePath) =>
         System.IO.Path.GetDirectoryName(Absolute(repositoryRelativePath)) ?? repositoryRoot;

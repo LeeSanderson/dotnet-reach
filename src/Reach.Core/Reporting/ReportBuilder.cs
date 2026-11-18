@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Reach.Assemblies;
 using Reach.Rendering;
 using Reach.Selection;
@@ -95,9 +96,7 @@ internal static class ReportBuilder
             ChangeSources = ["committed", "staged", "unstaged", "untracked"],
             BuildMode = request.NoBuild ? "no-build" : "build",
             ForwardedBuildArguments = request.ForwardedBuildArguments,
-            Correspondence = (run.Correspondence?.Verdict ?? CorrespondenceVerdict.Skipped)
-                .ToString()
-                .ToLowerInvariant(),
+            Correspondence = Kebab((run.Correspondence?.Verdict ?? CorrespondenceVerdict.Skipped).ToString()),
             Timings = timings.ToReport(),
         };
 
@@ -195,7 +194,7 @@ internal static class ReportBuilder
             Id = test.Test.Id.ToString(),
             Rules = [.. test.Rules.Select(rule => Kebab(rule.ToString())).Order(StringComparer.Ordinal)],
             Changes = test.Changes,
-            PathClass = test.Class?.ToString().ToLowerInvariant(),
+            PathClass = test.Class is { } pathClass ? Kebab(pathClass.ToString()) : null,
             Paths = test.Paths is null
                 ? null
                 : [.. test.Paths.Select(path => (IReadOnlyList<string>)[.. path.Select(hop => hop.ToString())])],
@@ -228,20 +227,5 @@ internal static class ReportBuilder
     /// <summary>
     /// <c>NothingSelected</c> becomes <c>nothing-selected</c>. Wire names are kebab-case.
     /// </summary>
-    private static string Kebab(string name)
-    {
-        var builder = new System.Text.StringBuilder(name.Length + 4);
-
-        for (var index = 0; index < name.Length; index++)
-        {
-            if (index > 0 && char.IsUpper(name[index]))
-            {
-                builder.Append('-');
-            }
-
-            builder.Append(char.ToLowerInvariant(name[index]));
-        }
-
-        return builder.ToString();
-    }
+    private static string Kebab(string name) => JsonNamingPolicy.KebabCaseLower.ConvertName(name);
 }

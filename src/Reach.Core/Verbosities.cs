@@ -8,12 +8,21 @@ internal static class Verbosities
     internal static IReadOnlyList<string> Spellings { get; } =
         ["q", "quiet", "m", "minimal", "n", "normal", "d", "detailed", "diag", "diagnostic"];
 
-    internal static Verbosity Parse(string? value) => value?.ToLowerInvariant() switch
+    private static readonly Dictionary<string, Verbosity> BySpelling = new(StringComparer.OrdinalIgnoreCase)
     {
-        "q" or "quiet" => Verbosity.Quiet,
-        "m" or "minimal" => Verbosity.Minimal,
-        "d" or "detailed" => Verbosity.Detailed,
-        "diag" or "diagnostic" => Verbosity.Diagnostic,
-        _ => Verbosity.Normal,
+        ["q"] = Verbosity.Quiet,
+        ["quiet"] = Verbosity.Quiet,
+        ["m"] = Verbosity.Minimal,
+        ["minimal"] = Verbosity.Minimal,
+        ["d"] = Verbosity.Detailed,
+        ["detailed"] = Verbosity.Detailed,
+        ["diag"] = Verbosity.Diagnostic,
+        ["diagnostic"] = Verbosity.Diagnostic,
     };
+
+    /// <summary>
+    /// Any spelling, in any case. Anything unrecognised, <c>n</c> and <c>normal</c> included, is normal.
+    /// </summary>
+    internal static Verbosity Parse(string? value) =>
+        value is not null && BySpelling.TryGetValue(value, out var verbosity) ? verbosity : Verbosity.Normal;
 }
