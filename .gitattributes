@@ -1,9 +1,10 @@
-# Normalise line endings in the repository so that `dotnet format --verify-no-changes`
-# agrees with itself on both CI matrix legs.
-* text=auto eol=lf
+# Text files are stored and checked out with CRLF on every platform (ADR-0017), so git and
+# `dotnet format --verify-no-changes` agree on both CI matrix legs. Must match .editorconfig.
+* text=auto eol=crlf
 
-*.sln text eol=crlf
-*.slnx text eol=lf
+# Shell scripts stay LF: bash cannot run a script with CRLF endings.
+*.sh text eol=lf
+.husky/** text eol=lf
 
 *.png binary
 *.dll binary

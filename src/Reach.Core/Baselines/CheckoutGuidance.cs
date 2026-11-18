@@ -10,6 +10,10 @@ namespace Reach.Baselines;
 internal static class CheckoutGuidance
 {
     /// <summary>The whole exit-4 message: what went wrong, then how to fix it here.</summary>
+    /// <remarks>
+    /// Raw literals take the source file's line endings, which are CRLF on checkout; the
+    /// message is normalised so it reads the same whichever platform built the tool.
+    /// </remarks>
     internal static string Message(string problem, EnvironmentLookup environment) =>
         $"""
         Reach could not resolve a baseline: {problem}.
@@ -19,7 +23,7 @@ internal static class CheckoutGuidance
         Or name the branch this work merges into explicitly:
 
             reach select <SOLUTION|PROJECT> --base <ref>
-        """;
+        """.ReplaceLineEndings("\n");
 
     private static string FixFor(EnvironmentLookup environment)
     {
