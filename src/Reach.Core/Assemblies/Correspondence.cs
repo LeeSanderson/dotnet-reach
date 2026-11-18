@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using Reach.Reporting;
 
@@ -156,6 +157,8 @@ internal static class Correspondence
             : DocumentClass.Verified;
     }
 
+    [SuppressMessage("Security", "CA5350:Do Not Use Weak Cryptographic Algorithms", Justification = "The hash must match the algorithm the compiler recorded in the PDB; it is not used for security.")]
+    [SuppressMessage("Security", "CA5351:Do Not Use Broken Cryptographic Algorithms", Justification = "The hash must match the algorithm the compiler recorded in the PDB; it is not used for security.")]
     private static byte[]? Hash(SourceDocument document)
     {
         try

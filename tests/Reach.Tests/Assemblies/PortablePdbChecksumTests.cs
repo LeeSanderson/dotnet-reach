@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using Reach.Assemblies;
 
@@ -68,6 +69,7 @@ public class PortablePdbChecksumTests
     }
 
     [Fact]
+    [SuppressMessage("Security", "CA5350:Do Not Use Weak Cryptographic Algorithms", Justification = "The hash must match the algorithm the compiler recorded in the PDB; it is not used for security.")]
     public void Recomputing_the_checksum_over_the_file_on_disk_reproduces_it()
     {
         var subject = Subject();
