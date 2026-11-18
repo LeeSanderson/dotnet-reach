@@ -259,8 +259,8 @@ public class CommandLineTests
     [Fact]
     public void No_color_and_NO_COLOR_and_a_redirected_stdout_each_suppress_colour()
     {
-        string? Empty(string name) => null;
-        string? NoColor(string name) => name == "NO_COLOR" ? "1" : null;
+        static string? Empty(string name) => null;
+        static string? NoColor(string name) => name == "NO_COLOR" ? "1" : null;
 
         Assert.True(ColourSupport.Enabled(noColorOption: false, Empty, outputIsRedirected: false));
 
