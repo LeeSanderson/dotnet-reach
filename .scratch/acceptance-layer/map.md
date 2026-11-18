@@ -63,6 +63,12 @@ Taken while charting, before any ticket existed. Terse by design.
   standing notice, not by area of capability*), and
   multi-project ones shaped like a real codebase, where most test projects must *not* be
   selected.
+- **Every sample solution is in the main solution and builds clean under the coding standard.**
+  Its projects are listed in `Reach.slnx` under a `/samples/` solution folder, at wherever the
+  sample lives, so CI's warnings-as-errors build and format check cover it. A sample is designed
+  to meet the standard from the start. Its test projects are compiled by that build but never run
+  by `dotnet test`: CI's test step targets `Reach.Tests` only, and sample tests run only through
+  Reach, inside the acceptance tests. Added by [coding-standards](../coding-standards/spec.md).
 - **It replaces today's Contoso acceptance tests** (11, not the 13 first counted); Contoso becomes the first small sample
   solution. The in-memory tests stay where they are.
 
