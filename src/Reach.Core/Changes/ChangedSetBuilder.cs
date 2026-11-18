@@ -318,7 +318,7 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
     /// </summary>
     private static string Header(List<(string Path, DeclaredType Type)> declarations) =>
         string.Join(
-            '',
+            '\u0001',
             declarations
                 .OrderBy(entry => entry.Path, StringComparer.Ordinal)
                 .Select(entry => entry.Type.Header));

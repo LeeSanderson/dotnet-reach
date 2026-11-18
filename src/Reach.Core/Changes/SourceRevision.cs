@@ -90,7 +90,7 @@ internal static class SourceRevision
             members[key] = member;
         }
 
-        return first with { Header = first.Header + "" + second.Header, Members = members };
+        return first with { Header = first.Header + "\u0001" + second.Header, Members = members };
     }
 
     private static DeclaredType Read(BaseTypeDeclarationSyntax declaration, string name)

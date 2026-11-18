@@ -38,7 +38,7 @@ public class SourceRevisionRobustnessTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    [InlineData("﻿namespace N; public class C { public int M() => 1; }")]
+    [InlineData("\uFEFFnamespace N; public class C { public int M() => 1; }")]
     [InlineData("namespace N; public class C { public int M() => ")]
     [InlineData("<<<<<<< HEAD\nnamespace N;\n=======\nnamespace M;\n>>>>>>> other\n")]
     [InlineData("namespace N; public class C { public int M() => 1; } // no trailing newline")]
