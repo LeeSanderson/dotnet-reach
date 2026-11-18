@@ -1,6 +1,6 @@
 namespace Contoso;
 
-public class Invoice
+public static class Invoice
 {
     /// <summary>
     /// The rate every consumer inlines, which is what makes it a recompilation trigger.
@@ -9,9 +9,9 @@ public class Invoice
 
     private const int Percent = 100;
 
-    public int Total(int net) => net + Tax(net);
+    public static int Total(int net) => net + Tax(net);
 
-    public int Tax(int net) => net * StandardRate / Percent;
+    public static int Tax(int net) => net * StandardRate / Percent;
 
-    public int Untouched() => 0;
+    public static int Untouched(int net) => net;
 }

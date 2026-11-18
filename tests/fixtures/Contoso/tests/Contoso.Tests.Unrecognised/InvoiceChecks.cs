@@ -8,7 +8,7 @@ public class InvoiceChecks
     [ContosoCheck]
     public void Totals_include_tax()
     {
-        if (new Invoice().Total(Net) != TotalWithTax)
+        if (Invoice.Total(Net) != TotalWithTax)
         {
             throw new InvalidOperationException();
         }

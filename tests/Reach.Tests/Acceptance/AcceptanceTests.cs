@@ -35,8 +35,8 @@ public sealed class AcceptanceTests : IDisposable
     [Fact]
     public async Task The_NUnit_filter_renders_with_contains_and_reports_the_extra_it_will_run()
     {
-        Touch("src/Contoso.Core/Invoice.cs", "public int Tax(int net) => net * StandardRate / Percent;",
-            "public int Tax(int net) => (net * StandardRate / Percent) + 0;");
+        Touch("src/Contoso.Core/Invoice.cs", "public static int Tax(int net) => net * StandardRate / Percent;",
+            "public static int Tax(int net) => (net * StandardRate / Percent) + 0;");
 
         var report = await fixture.SelectAsync(baseline, Token);
         var entry = EntryFor(report, "Contoso.Tests.NUnit");
@@ -74,8 +74,8 @@ public sealed class AcceptanceTests : IDisposable
         // A comment-only change: real paths in the diff, no changed member anywhere.
         Touch(
             "src/Contoso.Core/Invoice.cs",
-            "public int Untouched() => 0;",
-            "// nothing here changes what compiles\n    public int Untouched() => 0;");
+            "public static int Untouched(int net) => net;",
+            "// nothing here changes what compiles\n    public static int Untouched(int net) => net;");
 
         var report = await fixture.SelectAsync(baseline, Token);
 
@@ -147,8 +147,8 @@ public sealed class AcceptanceTests : IDisposable
     [Fact]
     public async Task A_change_selects_exactly_the_tests_that_reach_it()
     {
-        Touch("src/Contoso.Core/Invoice.cs", "public int Tax(int net) => net * StandardRate / Percent;",
-            "public int Tax(int net) => (net * StandardRate / Percent) + 0;");
+        Touch("src/Contoso.Core/Invoice.cs", "public static int Tax(int net) => net * StandardRate / Percent;",
+            "public static int Tax(int net) => (net * StandardRate / Percent) + 0;");
 
         var report = await fixture.SelectAsync(baseline, Token);
         var xunit = EntryFor(report, "Contoso.Tests.Xunit");
