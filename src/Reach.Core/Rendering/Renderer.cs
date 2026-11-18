@@ -17,6 +17,8 @@ internal sealed class Renderer(
     SelectRequest request,
     ReachDirectory directory)
 {
+    private const string FilterSwitch = "--filter";
+
     private readonly List<Notice> _notices = [];
 
     internal RenderedSelection Render(SelectionResult selection)
@@ -102,7 +104,7 @@ internal sealed class Renderer(
             return WithRunSettings(project, selector, names, willRun, settings);
         }
 
-        var overhead = Command(project, selector, ["--filter"]).Sum(argument => argument.Length + 3);
+        var overhead = Command(project, selector, [FilterSwitch]).Sum(argument => argument.Length + 3);
         var chunks = Chunker.Split(dialect, names, overhead);
 
         if (chunks.Count == 1)
@@ -112,7 +114,7 @@ internal sealed class Renderer(
                 SelectionMode.Filtered,
                 Delivery.Inline,
                 willRun,
-                [Command(project, selector, ["--filter", FilterDialect.Expression(dialect, names)])]);
+                [Command(project, selector, [FilterSwitch, FilterDialect.Expression(dialect, names)])]);
         }
 
         // Microsoft.Testing.Platform reads a response file Reach writes and passes as an
@@ -132,7 +134,7 @@ internal sealed class Renderer(
     {
         var path = SideCar(project, "rsp", 0);
 
-        File.WriteAllLines(path, ["--filter", FilterDialect.Expression(project.Dialect!, names)]);
+        File.WriteAllLines(path, [FilterSwitch, FilterDialect.Expression(project.Dialect!, names)]);
 
         Note(
             NoticeCodes.SelectionDeliveredOutOfBand,
@@ -167,7 +169,7 @@ internal sealed class Renderer(
             SelectionMode.Filtered,
             Delivery.Chunked,
             willRun,
-            [.. filters.Select(filter => Command(project, selector, ["--filter", filter]))]);
+            [.. filters.Select(filter => Command(project, selector, [FilterSwitch, filter]))]);
     }
 
     private RenderedEntry WithRunSettings(
