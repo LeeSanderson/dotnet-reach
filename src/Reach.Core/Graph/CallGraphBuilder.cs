@@ -167,19 +167,18 @@ internal sealed class CallGraphBuilder
             return;
         }
 
-        switch (type.Kind)
+        var name = type.Kind switch
         {
-            case HandleKind.TypeReference:
-                _implementedExternalTypes.Add(MetadataNames.FullNameOf(reader, (TypeReferenceHandle)type));
-                break;
+            HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)type),
+            HandleKind.TypeSpecification => MetadataNames.WithoutInstantiation(
+                reader.GetTypeSpecification((TypeSpecificationHandle)type)
+                    .DecodeSignature(new SignatureNames(), genericContext: null)),
+            _ => null,
+        };
 
-            case HandleKind.TypeSpecification:
-                var names = new SignatureNames();
-                var decoded = reader.GetTypeSpecification((TypeSpecificationHandle)type)
-                    .DecodeSignature(names, genericContext: null);
-
-                _implementedExternalTypes.Add(MetadataNames.WithoutInstantiation(decoded));
-                break;
+        if (name is not null)
+        {
+            _implementedExternalTypes.Add(name);
         }
     }
 
@@ -572,7 +571,7 @@ internal sealed class CallGraphBuilder
             return null;
         }
 
-        return candidates.FirstOrDefault(candidate =>
+        return candidates.Find(candidate =>
                 candidate.Framework is not null
                 && from.Framework is not null
                 && candidate.Framework.Matches(from.Framework))

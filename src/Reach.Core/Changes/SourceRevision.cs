@@ -257,6 +257,11 @@ internal static class SourceRevision
                 }
 
                 break;
+
+            default:
+                // Nested types are walked as types in their own right, and anything else (an
+                // incomplete member the parser recovered, for one) declares nothing to key on.
+                break;
         }
     }
 
@@ -322,15 +327,16 @@ internal static class SourceRevision
 
         for (SyntaxNode? node = declaration; node is not null; node = node.Parent)
         {
-            switch (node)
+            var segment = node switch
             {
-                case TypeDeclarationSyntax type:
-                    nested.Insert(0, type.Identifier.Text + Arity(type.TypeParameterList));
-                    break;
+                TypeDeclarationSyntax type => type.Identifier.Text + Arity(type.TypeParameterList),
+                EnumDeclarationSyntax @enum => @enum.Identifier.Text,
+                _ => null,
+            };
 
-                case EnumDeclarationSyntax @enum:
-                    nested.Insert(0, @enum.Identifier.Text);
-                    break;
+            if (segment is not null)
+            {
+                nested.Insert(0, segment);
             }
         }
 
