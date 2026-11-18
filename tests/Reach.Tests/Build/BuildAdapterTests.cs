@@ -18,7 +18,7 @@ public class BuildAdapterTests
     private static SelectRequest Request { get; } =
         new() { WorkingDirectory = Path.Combine("C:", "work") };
 
-    private Task<BuildOutcome> Build(SelectRequest request) =>
+    private Task<BuildOutcome> BuildAsync(SelectRequest request) =>
         new BuildAdapter(_runner).BuildAsync(Target, request, TestContext.Current.CancellationToken);
 
     [Fact]
@@ -26,7 +26,7 @@ public class BuildAdapterTests
     {
         _runner.Succeeds("Build succeeded.", "build");
 
-        var outcome = await Build(Request);
+        var outcome = await BuildAsync(Request);
 
         Assert.True(outcome.Succeeded);
         Assert.Equal("dotnet", Assert.Single(_runner.Requests).Executable);
@@ -36,7 +36,7 @@ public class BuildAdapterTests
     [Fact]
     public async Task No_build_never_invokes_the_build_adapter()
     {
-        var outcome = await Build(Request with { NoBuild = true });
+        var outcome = await BuildAsync(Request with { NoBuild = true });
 
         Assert.True(outcome.Succeeded);
         Assert.Null(outcome.Request);
@@ -48,7 +48,7 @@ public class BuildAdapterTests
     {
         _runner.Succeeds("", "build");
 
-        await Build(Request with
+        await BuildAsync(Request with
         {
             Configuration = "Release",
             Output = "out",
@@ -67,7 +67,7 @@ public class BuildAdapterTests
     {
         _runner.Succeeds("", "build");
 
-        await Build(Request with
+        await BuildAsync(Request with
         {
             Configuration = "Release",
             ForwardedBuildArguments = ["-p:ContinuousIntegrationBuild=true", "--no-restore"],
@@ -83,7 +83,7 @@ public class BuildAdapterTests
     {
         _runner.Fails(1, "error CS1002: ; expected", "build");
 
-        var outcome = await Build(Request);
+        var outcome = await BuildAsync(Request);
 
         // There is no degraded mode: a failed build already fails the pipeline, so a clever
         // selection over a broken tree has no consumer.
@@ -97,7 +97,7 @@ public class BuildAdapterTests
     {
         _runner.Succeeds("", "build");
 
-        var outcome = await Build(Request);
+        var outcome = await BuildAsync(Request);
 
         // So a surprising run stays reproducible from the report envelope alone.
         Assert.Equal(_runner.Requests[0], outcome.Request);

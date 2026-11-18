@@ -28,7 +28,7 @@ public class BaselineResolverTests
         _runner.Succeeds($"{Head}\n", "rev-parse", "HEAD");
     }
 
-    private Task<BaselineResolution> Resolve(string? baseReference = null) =>
+    private Task<BaselineResolution> ResolveAsync(string? baseReference = null) =>
         new BaselineResolver(new GitAdapter(_runner, "/work"))
             .ResolveAsync(baseReference, Lookup, TestContext.Current.CancellationToken);
 
@@ -42,7 +42,7 @@ public class BaselineResolverTests
     {
         _environment["GITHUB_BASE_REF"] = "main";
 
-        var resolution = await Resolve("release/1.0");
+        var resolution = await ResolveAsync("release/1.0");
 
         AssertResolved(resolution, BaselineOrigin.Option, "release/1.0");
     }
@@ -52,7 +52,7 @@ public class BaselineResolverTests
     {
         _environment["GITHUB_BASE_REF"] = "main";
 
-        AssertResolved(await Resolve(), BaselineOrigin.GitHubActions, "main");
+        AssertResolved(await ResolveAsync(), BaselineOrigin.GitHubActions, "main");
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class BaselineResolverTests
     {
         _environment["SYSTEM_PULLREQUEST_TARGETBRANCH"] = "refs/heads/develop";
 
-        AssertResolved(await Resolve(), BaselineOrigin.AzureDevOps, "develop");
+        AssertResolved(await ResolveAsync(), BaselineOrigin.AzureDevOps, "develop");
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class BaselineResolverTests
     {
         _environment["CI_MERGE_REQUEST_TARGET_BRANCH_NAME"] = "main";
 
-        AssertResolved(await Resolve(), BaselineOrigin.GitLabCi, "main");
+        AssertResolved(await ResolveAsync(), BaselineOrigin.GitLabCi, "main");
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class BaselineResolverTests
     {
         _environment["BITBUCKET_PR_DESTINATION_BRANCH"] = "main";
 
-        AssertResolved(await Resolve(), BaselineOrigin.BitbucketPipelines, "main");
+        AssertResolved(await ResolveAsync(), BaselineOrigin.BitbucketPipelines, "main");
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class BaselineResolverTests
     {
         _environment["CHANGE_TARGET"] = "main";
 
-        AssertResolved(await Resolve(), BaselineOrigin.Jenkins, "main");
+        AssertResolved(await ResolveAsync(), BaselineOrigin.Jenkins, "main");
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public class BaselineResolverTests
         _runner.Succeeds("abc\n", "rev-parse", "origin/main");
         _runner.Fails(128, "fatal: unknown revision\n", "rev-parse", "origin/master");
 
-        AssertResolved(await Resolve(), BaselineOrigin.LocalRemoteBranch, "origin/main");
+        AssertResolved(await ResolveAsync(), BaselineOrigin.LocalRemoteBranch, "origin/main");
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class BaselineResolverTests
         _runner.Succeeds("abc\n", "rev-parse", "origin/main");
         _runner.Succeeds("def\n", "rev-parse", "origin/master");
 
-        AssertUnresolvable(await Resolve());
+        AssertUnresolvable(await ResolveAsync());
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public class BaselineResolverTests
         _runner.Fails(128, "fatal: unknown revision\n", "rev-parse", "origin/main");
         _runner.Fails(128, "fatal: unknown revision\n", "rev-parse", "origin/master");
 
-        var resolution = await Resolve();
+        var resolution = await ResolveAsync();
 
         AssertUnresolvable(resolution);
         Assert.Equal(ExitCode.BaselineUnresolvable, resolution.ExitCode);
@@ -130,7 +130,7 @@ public class BaselineResolverTests
 
         _environment["GITHUB_BASE_REF"] = "main";
 
-        AssertResolved(await Resolve(), BaselineOrigin.GitHubActions, "origin/main");
+        AssertResolved(await ResolveAsync(), BaselineOrigin.GitHubActions, "origin/main");
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class BaselineResolverTests
         _runner.Succeeds("abc\n", "rev-parse", "main");
         _runner.Succeeds("def\n", "rev-parse", "origin/main");
 
-        AssertResolved(await Resolve("main"), BaselineOrigin.Option, "main");
+        AssertResolved(await ResolveAsync("main"), BaselineOrigin.Option, "main");
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class BaselineResolverTests
 
         _environment["SYSTEM_PULLREQUEST_TARGETBRANCH"] = "refs/heads/release/1.0";
 
-        AssertResolved(await Resolve(), BaselineOrigin.AzureDevOps, "origin/release/1.0");
+        AssertResolved(await ResolveAsync(), BaselineOrigin.AzureDevOps, "origin/release/1.0");
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public class BaselineResolverTests
         _runner.Fails(128, "fatal: ambiguous argument\n", "rev-parse", "upstream/main");
         _runner.Fails(128, "fatal: ambiguous argument\n", "rev-parse", "origin/upstream/main");
 
-        var resolution = await Resolve("upstream/main");
+        var resolution = await ResolveAsync("upstream/main");
 
         AssertUnresolvable(resolution);
         Assert.Contains("'upstream/main'", resolution.Message, StringComparison.Ordinal);
@@ -178,7 +178,7 @@ public class BaselineResolverTests
         _environment["CI_MERGE_REQUEST_TARGET_BRANCH_NAME"] = "from-gitlab";
         _environment["CHANGE_TARGET"] = "from-jenkins";
 
-        AssertResolved(await Resolve(), BaselineOrigin.GitHubActions, "from-github");
+        AssertResolved(await ResolveAsync(), BaselineOrigin.GitHubActions, "from-github");
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class BaselineResolverTests
         _environment["GITHUB_BASE_REF"] = "";
         _environment["CHANGE_TARGET"] = "main";
 
-        AssertResolved(await Resolve(), BaselineOrigin.Jenkins, "main");
+        AssertResolved(await ResolveAsync(), BaselineOrigin.Jenkins, "main");
     }
 
     [Theory]
@@ -200,7 +200,7 @@ public class BaselineResolverTests
         // a GitHub-hosted repository behind an Azure pipeline.
         _environment["SYSTEM_PULLREQUEST_TARGETBRANCH"] = variable;
 
-        AssertResolved(await Resolve(), BaselineOrigin.AzureDevOps, expected);
+        AssertResolved(await ResolveAsync(), BaselineOrigin.AzureDevOps, expected);
     }
 
     // ---- The source-branch traps ------------------------------------------------------
@@ -210,24 +210,24 @@ public class BaselineResolverTests
     // pipeline. Each gets its own named test so the failure names the variable.
 
     [Fact]
-    public async Task GITHUB_HEAD_REF_is_never_read() => await AssertTrap("GITHUB_HEAD_REF");
+    public async Task GITHUB_HEAD_REF_is_never_read() => await AssertTrapAsync("GITHUB_HEAD_REF");
 
     [Fact]
     public async Task SYSTEM_PULLREQUEST_SOURCEBRANCH_is_never_read() =>
-        await AssertTrap("SYSTEM_PULLREQUEST_SOURCEBRANCH");
+        await AssertTrapAsync("SYSTEM_PULLREQUEST_SOURCEBRANCH");
 
     [Fact]
-    public async Task BUILD_SOURCEBRANCH_is_never_read() => await AssertTrap("BUILD_SOURCEBRANCH");
+    public async Task BUILD_SOURCEBRANCH_is_never_read() => await AssertTrapAsync("BUILD_SOURCEBRANCH");
 
     [Fact]
     public async Task CI_MERGE_REQUEST_SOURCE_BRANCH_NAME_is_never_read() =>
-        await AssertTrap("CI_MERGE_REQUEST_SOURCE_BRANCH_NAME");
+        await AssertTrapAsync("CI_MERGE_REQUEST_SOURCE_BRANCH_NAME");
 
     [Fact]
-    public async Task BITBUCKET_BRANCH_is_never_read() => await AssertTrap("BITBUCKET_BRANCH");
+    public async Task BITBUCKET_BRANCH_is_never_read() => await AssertTrapAsync("BITBUCKET_BRANCH");
 
     [Fact]
-    public async Task CHANGE_BRANCH_is_never_read() => await AssertTrap("CHANGE_BRANCH");
+    public async Task CHANGE_BRANCH_is_never_read() => await AssertTrapAsync("CHANGE_BRANCH");
 
     // ---- Shallow clones and the exit-4 message ----------------------------------------
 
@@ -237,7 +237,7 @@ public class BaselineResolverTests
         _runner.Returns(new(0, "true\n", ""), "--is-shallow-repository");
         _environment["GITHUB_BASE_REF"] = "main";
 
-        var resolution = await Resolve();
+        var resolution = await ResolveAsync();
 
         AssertUnresolvable(resolution);
         Assert.Contains("shallow", resolution.Message, StringComparison.OrdinalIgnoreCase);
@@ -249,7 +249,7 @@ public class BaselineResolverTests
         _runner.Returns(new(0, "true\n", ""), "--is-shallow-repository");
         _environment["GITHUB_ACTIONS"] = "true";
 
-        var resolution = await Resolve();
+        var resolution = await ResolveAsync();
 
         Assert.Contains("fetch-depth: 0", resolution.Message);
     }
@@ -260,7 +260,7 @@ public class BaselineResolverTests
         _runner.Returns(new(0, "true\n", ""), "--is-shallow-repository");
         _environment["TF_BUILD"] = "True";
 
-        var resolution = await Resolve();
+        var resolution = await ResolveAsync();
 
         Assert.Contains("fetchDepth: 0", resolution.Message);
 
@@ -274,7 +274,7 @@ public class BaselineResolverTests
         _runner.Fails(128, "fatal: unknown revision\n", "rev-parse", "origin/main");
         _runner.Fails(128, "fatal: unknown revision\n", "rev-parse", "origin/master");
 
-        var resolution = await Resolve();
+        var resolution = await ResolveAsync();
 
         Assert.Contains("--base", resolution.Message);
     }
@@ -285,7 +285,7 @@ public class BaselineResolverTests
         _environment["GITHUB_BASE_REF"] = "main";
         _runner.Returns(new(1, "", ""), "merge-base");
 
-        AssertUnresolvable(await Resolve());
+        AssertUnresolvable(await ResolveAsync());
     }
 
     // ---- Notices ----------------------------------------------------------------------
@@ -295,7 +295,7 @@ public class BaselineResolverTests
     {
         _environment["GITHUB_BASE_REF"] = "main";
 
-        var resolution = await Resolve();
+        var resolution = await ResolveAsync();
 
         var notice = Assert.Single(resolution.Notices, n => n.Code == NoticeCodes.BaselineResolved);
         Assert.Equal(NoticeKind.Environment, notice.Kind);
@@ -310,7 +310,7 @@ public class BaselineResolverTests
         _environment["GITHUB_BASE_REF"] = "main";
         _runner.Returns(new(0, $"{Head}\n", ""), "merge-base");
 
-        var resolution = await Resolve();
+        var resolution = await ResolveAsync();
 
         // The empty-change-set trap *is* a baseline that quietly resolved to HEAD, and an
         // audit trail that cannot say what it audited will not catch it.
@@ -323,7 +323,7 @@ public class BaselineResolverTests
     {
         _environment["GITHUB_BASE_REF"] = "main";
 
-        var resolution = await Resolve();
+        var resolution = await ResolveAsync();
 
         Assert.False(resolution.Baseline!.IsHead);
         Assert.DoesNotContain(resolution.Notices, n => n.Code == NoticeCodes.BaselineIsHead);
@@ -334,20 +334,20 @@ public class BaselineResolverTests
     {
         _runner.Returns(new(0, "true\n", ""), "--is-shallow-repository");
 
-        var resolution = await Resolve();
+        var resolution = await ResolveAsync();
 
         Assert.Contains(resolution.Notices, n => n.Code == NoticeCodes.BaselineUnresolvable);
     }
 
     // ---- Helpers ----------------------------------------------------------------------
 
-    private async Task AssertTrap(string variable)
+    private async Task AssertTrapAsync(string variable)
     {
         _environment[variable] = "the-branch-being-merged";
         _runner.Fails(128, "fatal: unknown revision\n", "rev-parse", "origin/main");
         _runner.Fails(128, "fatal: unknown revision\n", "rev-parse", "origin/master");
 
-        var resolution = await Resolve();
+        var resolution = await ResolveAsync();
 
         Assert.False(
             resolution.Resolved,

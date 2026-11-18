@@ -34,7 +34,7 @@ public class CorrespondenceInBothModesTests
         // can leave source *older* than the binaries beside it.
         File.WriteAllText(sourcePath, After);
 
-        var run = await Select(repository, noBuild: true);
+        var run = await SelectAsync(repository, noBuild: true);
 
         Assert.Equal(ExitCode.CorrespondenceFailed, run.ExitCode);
         Assert.Contains("Widget.cs", run.Message);
@@ -51,7 +51,7 @@ public class CorrespondenceInBothModesTests
         // What a real `dotnet build` would do with an edited file.
         _runner.Performs(() => Compile(repository, sourcePath, After), "build");
 
-        var run = await Select(repository, noBuild: false);
+        var run = await SelectAsync(repository, noBuild: false);
 
         Assert.NotEqual(ExitCode.CorrespondenceFailed, run.ExitCode);
         Assert.Contains(_runner.Requests, request => request.Arguments.Contains("build"));
@@ -64,12 +64,12 @@ public class CorrespondenceInBothModesTests
 
         Compile(repository, sourcePath, Before);
 
-        await Select(repository, noBuild: true);
+        await SelectAsync(repository, noBuild: true);
 
         Assert.DoesNotContain(_runner.Requests, request => request.Executable == "dotnet");
     }
 
-    private async Task<SelectRun> Select(TempRepository repository, bool noBuild)
+    private async Task<SelectRun> SelectAsync(TempRepository repository, bool noBuild)
     {
         // git is real; only the build is scripted.
         var real = new Reach.Processes.ProcessRunner();

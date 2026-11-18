@@ -73,7 +73,7 @@ public class ProcessRunnerTests
         using var cancellation = new CancellationTokenSource();
         var run = _runner.RunAsync(script.Invoke(childBeat, grandchildBeat), cancellation.Token);
 
-        await WaitUntil(() => Beats(childBeat) >= 2 && Beats(grandchildBeat) >= 2);
+        await WaitUntilAsync(() => Beats(childBeat) >= 2 && Beats(grandchildBeat) >= 2);
 
         await cancellation.CancelAsync();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
@@ -125,7 +125,7 @@ public class ProcessRunnerTests
         }
     }
 
-    private static async Task WaitUntil(Func<bool> condition)
+    private static async Task WaitUntilAsync(Func<bool> condition)
     {
         var deadline = Stopwatch.StartNew();
 

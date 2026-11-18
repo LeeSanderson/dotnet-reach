@@ -10,7 +10,7 @@ public class ScriptedProcessRunnerTests
 {
     private readonly ScriptedProcessRunner _runner = new();
 
-    private Task<ProcessResult> Run(params string[] arguments) =>
+    private Task<ProcessResult> RunAsync(params string[] arguments) =>
         _runner.RunAsync(
             new ProcessRequest("git", arguments, "/work"),
             TestContext.Current.CancellationToken);
@@ -20,7 +20,7 @@ public class ScriptedProcessRunnerTests
     {
         _runner.Fails(128, "fatal: bad revision\n", "rev-parse");
 
-        var result = await Run("rev-parse", "nope");
+        var result = await RunAsync("rev-parse", "nope");
 
         Assert.Equal(128, result.ExitCode);
         Assert.Equal("fatal: bad revision\n", result.StandardError);
@@ -32,7 +32,7 @@ public class ScriptedProcessRunnerTests
     {
         _runner.Succeeds("", "diff");
 
-        var result = await Run("diff", "--name-status", "abc123");
+        var result = await RunAsync("diff", "--name-status", "abc123");
 
         Assert.True(result.Succeeded);
         Assert.Empty(result.Lines);
@@ -43,7 +43,7 @@ public class ScriptedProcessRunnerTests
     {
         _runner.Succeeds("one\ntwo\nthree\n", "ls-files");
 
-        var result = await Run("ls-files", "--others");
+        var result = await RunAsync("ls-files", "--others");
 
         Assert.Equal(["one", "two", "three"], result.Lines);
     }
@@ -53,7 +53,7 @@ public class ScriptedProcessRunnerTests
     {
         _runner.Succeeds("", "diff");
 
-        await Run("-c", "core.quotePath=false", "diff", "--no-renames");
+        await RunAsync("-c", "core.quotePath=false", "diff", "--no-renames");
 
         var request = Assert.Single(_runner.Requests);
         Assert.Equal(["-c", "core.quotePath=false", "diff", "--no-renames"], request.Arguments);
@@ -66,7 +66,7 @@ public class ScriptedProcessRunnerTests
         _runner.Succeeds("overridden\n", "rev-parse");
 
         // So a test can override a fixture's default without rebuilding it.
-        Assert.Equal("overridden", (await Run("rev-parse", "HEAD")).Value);
+        Assert.Equal("overridden", (await RunAsync("rev-parse", "HEAD")).Value);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class ScriptedProcessRunnerTests
     {
         _runner.Succeeds("", "diff");
 
-        var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => Run("merge-base", "HEAD"));
+        var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => RunAsync("merge-base", "HEAD"));
 
         Assert.Contains("merge-base HEAD", thrown.Message);
     }
@@ -84,7 +84,7 @@ public class ScriptedProcessRunnerTests
     {
         _runner.Succeeds("abc123\n", "merge-base", "HEAD");
 
-        var result = await Run("-c", "core.quotePath=false", "merge-base", "HEAD", "origin/main");
+        var result = await RunAsync("-c", "core.quotePath=false", "merge-base", "HEAD", "origin/main");
 
         Assert.Equal("abc123", result.Value);
     }

@@ -36,7 +36,7 @@ internal sealed class ProcessRunner : IProcessRunner
 
             // The child is gone, so both reads complete; awaiting them releases the pipes
             // instead of leaving two orphaned tasks holding handles for the run's lifetime.
-            await Drain(standardOutput, standardError).ConfigureAwait(false);
+            await DrainAsync(standardOutput, standardError).ConfigureAwait(false);
             throw;
         }
 
@@ -115,7 +115,7 @@ internal sealed class ProcessRunner : IProcessRunner
         }
     }
 
-    private static async Task Drain(params Task<string>[] reads)
+    private static async Task DrainAsync(params Task<string>[] reads)
     {
         try
         {
