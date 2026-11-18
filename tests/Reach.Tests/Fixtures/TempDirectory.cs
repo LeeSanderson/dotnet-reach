@@ -11,7 +11,9 @@ internal sealed class TempDirectory : IDisposable
 
     internal string Path { get; }
 
-    /// <summary>Creates a directory whose leaf name starts with <paramref name="name"/>.</summary>
+    /// <summary>
+    /// Creates a directory whose leaf name starts with <paramref name="name"/>.
+    /// </summary>
     internal static TempDirectory Create(string name = "reach")
     {
         var path = System.IO.Path.Combine(
@@ -25,7 +27,9 @@ internal sealed class TempDirectory : IDisposable
     internal string Combine(params string[] parts) =>
         System.IO.Path.Combine([Path, .. parts]);
 
-    /// <summary>Writes a file, creating any intermediate directories.</summary>
+    /// <summary>
+    /// Writes a file, creating any intermediate directories.
+    /// </summary>
     internal string WriteFile(string relativePath, string contents)
     {
         var full = Combine(relativePath);

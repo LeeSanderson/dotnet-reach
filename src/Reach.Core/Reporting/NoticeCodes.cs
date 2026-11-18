@@ -11,13 +11,19 @@ namespace Reach.Reporting;
 /// </remarks>
 internal static class NoticeCodes
 {
-    /// <summary>How the baseline was arrived at, and what SHA it resolved to.</summary>
+    /// <summary>
+    /// How the baseline was arrived at, and what SHA it resolved to.
+    /// </summary>
     internal const string BaselineResolved = "baseline-resolved";
 
-    /// <summary>The baseline resolved to <c>HEAD</c>, so the change set can only be the working tree.</summary>
+    /// <summary>
+    /// The baseline resolved to <c>HEAD</c>, so the change set can only be the working tree.
+    /// </summary>
     internal const string BaselineIsHead = "baseline-is-head";
 
-    /// <summary>No baseline could be resolved. The run failed; the message says how to fix it.</summary>
+    /// <summary>
+    /// No baseline could be resolved. The run failed; the message says how to fix it.
+    /// </summary>
     internal const string BaselineUnresolvable = "baseline-unresolvable";
 
     /// <summary>
@@ -60,10 +66,14 @@ internal static class NoticeCodes
     // when the outcome is nothing-selected — so every cause of emptiness is documented and
     // register-linked, and nobody adds one as an ad-hoc string.
 
-    /// <summary>There were changes, they joined, and no test could reach any of them.</summary>
+    /// <summary>
+    /// There were changes, they joined, and no test could reach any of them.
+    /// </summary>
     internal const string NoChangedMemberReachedATest = "no-changed-member-reached-a-test";
 
-    /// <summary>Every change was outside the union of the test projects' closures.</summary>
+    /// <summary>
+    /// Every change was outside the union of the test projects' closures.
+    /// </summary>
     internal const string AllChangesOutsideAnalysisScope = "all-changes-outside-analysis-scope";
 
     /// <summary>

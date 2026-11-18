@@ -62,6 +62,8 @@ internal static class NoticeCatalogue
             .Order(StringComparer.Ordinal)
     ];
 
-    /// <summary>Whether a code is one Reach knows about. Nothing outside the catalogue may be emitted.</summary>
+    /// <summary>
+    /// Whether a code is one Reach knows about. Nothing outside the catalogue may be emitted.
+    /// </summary>
     internal static bool Knows(string code) => All.ContainsKey(code);
 }

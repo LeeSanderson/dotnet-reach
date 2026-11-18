@@ -20,7 +20,9 @@ internal enum PathClass
     /// </summary>
     Compiled,
 
-    /// <summary>Reachable only through a dispatch site whose implementation is not knowable.</summary>
+    /// <summary>
+    /// Reachable only through a dispatch site whose implementation is not knowable.
+    /// </summary>
     Widened,
 }
 

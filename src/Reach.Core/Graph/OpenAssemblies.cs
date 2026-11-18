@@ -65,7 +65,9 @@ internal sealed class OpenAssemblies : IDisposable
         return open;
     }
 
-    /// <summary>Handles both a separate <c>.pdb</c> and symbols embedded in the image.</summary>
+    /// <summary>
+    /// Handles both a separate <c>.pdb</c> and symbols embedded in the image.
+    /// </summary>
     private MetadataReader? OpenSymbols(PEReader reader, string path)
     {
         try

@@ -430,7 +430,9 @@ public class CommandLineTests
         Assert.Contains("\"outcome\": \"no-changes\"", report);
     }
 
-    /// <summary>The fixture solution inside a real repository, committed as the baseline.</summary>
+    /// <summary>
+    /// The fixture solution inside a real repository, committed as the baseline.
+    /// </summary>
     private static TempRepository SolutionRepository()
     {
         var repository = TempRepository.Create();

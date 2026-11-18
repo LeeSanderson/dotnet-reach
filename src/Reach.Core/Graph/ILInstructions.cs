@@ -3,7 +3,9 @@ using System.Reflection.Metadata;
 
 namespace Reach.Graph;
 
-/// <summary>One instruction that names something in metadata.</summary>
+/// <summary>
+/// One instruction that names something in metadata.
+/// </summary>
 /// <param name="Offset">Where it starts, so a prefix can be told from the instruction it modifies.</param>
 internal readonly record struct TokenInstruction(int Offset, ILOpCode OpCode, int Token);
 
@@ -168,10 +170,14 @@ internal static class ILInstructions
         Four = 4,
         Eight = 8,
 
-        /// <summary>Four bytes, and the value is a metadata token worth recording.</summary>
+        /// <summary>
+        /// Four bytes, and the value is a metadata token worth recording.
+        /// </summary>
         Token = -1000,
 
-        /// <summary>A count followed by that many four-byte targets.</summary>
+        /// <summary>
+        /// A count followed by that many four-byte targets.
+        /// </summary>
         Switch = -2000,
 
         Unknown = -3000,

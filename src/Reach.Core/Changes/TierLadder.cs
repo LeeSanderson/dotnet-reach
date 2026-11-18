@@ -4,11 +4,15 @@ using Reach.Reporting;
 
 namespace Reach.Changes;
 
-/// <summary>Which rule routed an unmappable change, and which way it errs.</summary>
+/// <summary>
+/// Which rule routed an unmappable change, and which way it errs.
+/// </summary>
 /// <param name="Row">The rule table's own numbering, so a report line can be looked up.</param>
 internal sealed record RoutingRule(int Row, string Description, bool ErrsUnder = false);
 
-/// <summary>One unmappable change, routed.</summary>
+/// <summary>
+/// One unmappable change, routed.
+/// </summary>
 /// <param name="Projects">The in-scope projects whose assemblies widen. Empty is a valid answer.</param>
 internal sealed record RoutedChange(
     ChangedPath Path,
@@ -50,7 +54,9 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
     private static readonly RoutingRule NearestProject =
         new(6, "no rule matched, so the nearest ancestor project was used");
 
-    /// <summary>The one rule in Reach that errs toward selecting nothing, taken as an owner decision.</summary>
+    /// <summary>
+    /// The one rule in Reach that errs toward selecting nothing, taken as an owner decision.
+    /// </summary>
     private static readonly RoutingRule Unattributed =
         new(6, "no rule matched and no project contains it", ErrsUnder: true);
 

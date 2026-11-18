@@ -3,7 +3,9 @@ using System.Text;
 
 namespace Reach.Processes;
 
-/// <summary>The one implementation of <see cref="IProcessRunner"/>: a real child process.</summary>
+/// <summary>
+/// The one implementation of <see cref="IProcessRunner"/>: a real child process.
+/// </summary>
 internal sealed class ProcessRunner : IProcessRunner
 {
     public async Task<ProcessResult> RunAsync(

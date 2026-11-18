@@ -213,7 +213,9 @@ internal sealed class TypeHierarchy
         }
     }
 
-    /// <summary>The <c>Type::member</c> spelling a <c>MethodImpl</c>'s declaration half resolves to.</summary>
+    /// <summary>
+    /// The <c>Type::member</c> spelling a <c>MethodImpl</c>'s declaration half resolves to.
+    /// </summary>
     private static string? DeclarationOf(MetadataReader reader, EntityHandle handle, SignatureNames names)
     {
         switch (handle.Kind)

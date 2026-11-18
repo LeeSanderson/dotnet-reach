@@ -49,7 +49,9 @@ internal sealed class GraphAssembly
 
     internal MetadataReader Reader { get; }
 
-    /// <summary>Null when the metadata came from somewhere other than a PE file.</summary>
+    /// <summary>
+    /// Null when the metadata came from somewhere other than a PE file.
+    /// </summary>
     internal PEReader? PEReader { get; }
 
     /// <summary>

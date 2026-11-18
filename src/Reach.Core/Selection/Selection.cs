@@ -10,10 +10,14 @@ namespace Reach.Selection;
 /// </summary>
 internal enum SelectionRule
 {
-    /// <summary>Reachable backwards along call edges from a change somewhere else.</summary>
+    /// <summary>
+    /// Reachable backwards along call edges from a change somewhere else.
+    /// </summary>
     ReverseReachable,
 
-    /// <summary>Its own declaration changed.</summary>
+    /// <summary>
+    /// Its own declaration changed.
+    /// </summary>
     OwnSourceChanged,
 
     /// <summary>
@@ -24,29 +28,45 @@ internal enum SelectionRule
     NewSinceBaseline,
 }
 
-/// <summary>What a test project is going to be asked to run.</summary>
+/// <summary>
+/// What a test project is going to be asked to run.
+/// </summary>
 internal enum SelectionMode
 {
-    /// <summary>Some of its tests, named by a filter.</summary>
+    /// <summary>
+    /// Some of its tests, named by a filter.
+    /// </summary>
     Filtered,
 
-    /// <summary>All of them, because Reach could not analyse the project.</summary>
+    /// <summary>
+    /// All of them, because Reach could not analyse the project.
+    /// </summary>
     RunAll,
 
-    /// <summary>None of them. An empty filter would run everything, so nothing is emitted at all.</summary>
+    /// <summary>
+    /// None of them. An empty filter would run everything, so nothing is emitted at all.
+    /// </summary>
     Skip,
 }
 
-/// <summary>How a change was attributed. The tier lives on the change, not on the pair.</summary>
+/// <summary>
+/// How a change was attributed. The tier lives on the change, not on the pair.
+/// </summary>
 internal enum ChangeTier
 {
-    /// <summary>Attributed to one or more methods.</summary>
+    /// <summary>
+    /// Attributed to one or more methods.
+    /// </summary>
     Member,
 
-    /// <summary>Every surviving member of a type.</summary>
+    /// <summary>
+    /// Every surviving member of a type.
+    /// </summary>
     WholeType,
 
-    /// <summary>Every method of an assembly.</summary>
+    /// <summary>
+    /// Every method of an assembly.
+    /// </summary>
     WholeAssembly,
 }
 
@@ -101,7 +121,9 @@ internal sealed record ProjectSelection(
     string? Dialect,
     IReadOnlyList<TestMethod> AllTests);
 
-/// <summary>The whole selection, plus the forward change list and anything it had to disclose.</summary>
+/// <summary>
+/// The whole selection, plus the forward change list and anything it had to disclose.
+/// </summary>
 internal sealed record SelectionResult(
     IReadOnlyList<ProjectSelection> Projects,
     IReadOnlyList<ChangeEntry> Changes,

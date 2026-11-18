@@ -30,7 +30,9 @@ internal readonly record struct MethodId(ulong Value)
 
     internal const int MaxOrdinal = (int)OrdinalMask;
 
-    /// <summary>A method Reach has the metadata for.</summary>
+    /// <summary>
+    /// A method Reach has the metadata for.
+    /// </summary>
     internal static MethodId Definition(int ordinal, int token) =>
         new(((ulong)(uint)ordinal << OrdinalShift) | ((uint)token & LowMask));
 
@@ -52,7 +54,9 @@ internal readonly record struct MethodId(ulong Value)
 
     internal int Ordinal => (int)((Value >> OrdinalShift) & OrdinalMask);
 
-    /// <summary>The metadata token, or the interned reference id when <see cref="IsExternal"/>.</summary>
+    /// <summary>
+    /// The metadata token, or the interned reference id when <see cref="IsExternal"/>.
+    /// </summary>
     internal int Token => (int)(Value & LowMask);
 
     public override string ToString() =>

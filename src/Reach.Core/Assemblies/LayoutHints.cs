@@ -23,7 +23,9 @@ internal sealed record LayoutHints(string? Configuration, string? Output, string
         && (Output is null || Paths.IsUnder(assembly.Path, Output))
         && (ArtifactsPath is null || Paths.IsUnder(assembly.Path, ArtifactsPath));
 
-    /// <summary>What to tell someone whose scan came back ambiguous.</summary>
+    /// <summary>
+    /// What to tell someone whose scan came back ambiguous.
+    /// </summary>
     internal string Suggestion() =>
         Configuration is null
             ? "Name the configuration with `-c <name>`, or the output directory with "

@@ -15,7 +15,9 @@ internal static class AssemblyFacts
 {
     private const string VersioningNamespace = "System.Runtime.Versioning";
 
-    /// <summary>The assembly's simple name, as metadata records it rather than as the file is spelled.</summary>
+    /// <summary>
+    /// The assembly's simple name, as metadata records it rather than as the file is spelled.
+    /// </summary>
     internal static string SimpleName(MetadataReader reader) =>
         reader.GetString(reader.GetAssemblyDefinition().Name);
 

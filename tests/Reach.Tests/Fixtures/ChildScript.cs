@@ -21,7 +21,9 @@ internal sealed class ChildScript : IDisposable
         this.scriptPath = scriptPath;
     }
 
-    /// <summary>Writes <paramref name="lines"/> long lines to standard output and the same to standard error.</summary>
+    /// <summary>
+    /// Writes <paramref name="lines"/> long lines to standard output and the same to standard error.
+    /// </summary>
     internal static ChildScript Chatty() => Write("chatty", ChattyBody);
 
     /// <summary>
@@ -30,7 +32,9 @@ internal sealed class ChildScript : IDisposable
     /// </summary>
     internal static ChildScript Spawner() => Write("spawner", SpawnerBody);
 
-    /// <summary>The argument vector that runs this script, through the platform's shell.</summary>
+    /// <summary>
+    /// The argument vector that runs this script, through the platform's shell.
+    /// </summary>
     internal ProcessRequest Invoke(params string[] arguments) =>
         new(
             OnWindows ? "cmd.exe" : "/bin/sh",

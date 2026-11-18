@@ -18,7 +18,9 @@ public class AssemblyDiscoveryTests
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    /// <summary>A solution with Core and Tests, with no build output anywhere yet.</summary>
+    /// <summary>
+    /// A solution with Core and Tests, with no build output anywhere yet.
+    /// </summary>
     private static async Task<(ProjectTree Tree, AnalysisScope Scope)> SolutionAsync(
         string coreFrameworks = "net10.0")
     {

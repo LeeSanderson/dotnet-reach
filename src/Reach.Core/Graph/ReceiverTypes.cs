@@ -228,7 +228,9 @@ internal static class ReceiverTypes
         }
     }
 
-    /// <summary>Offsets a branch or a handler can arrive at, where the stack stops being knowable.</summary>
+    /// <summary>
+    /// Offsets a branch or a handler can arrive at, where the stack stops being knowable.
+    /// </summary>
     private static HashSet<int> Boundaries(ReadOnlySpan<byte> il, MethodBodyBlock body)
     {
         var boundaries = new HashSet<int>();
@@ -294,7 +296,9 @@ internal static class ReceiverTypes
         _ => false,
     };
 
-    /// <summary>Decodes one instruction: its opcode, its operand as an integer, and where the next one starts.</summary>
+    /// <summary>
+    /// Decodes one instruction: its opcode, its operand as an integer, and where the next one starts.
+    /// </summary>
     private static (ILOpCode OpCode, int Operand, int Next) Read(ReadOnlySpan<byte> il, int offset)
     {
         var first = il[offset++];
@@ -332,7 +336,9 @@ internal static class ReceiverTypes
         return (opCode, operand, offset + size);
     }
 
-    /// <summary>A short branch offset is signed; a short variable index is not.</summary>
+    /// <summary>
+    /// A short branch offset is signed; a short variable index is not.
+    /// </summary>
     private static int ShortOperand(ILOpCode opCode, byte value) =>
         IsBranch(opCode) ? (sbyte)value : value;
 
@@ -407,7 +413,9 @@ internal static class ReceiverTypes
         }
     }
 
-    /// <summary>The slot <paramref name="below"/> places from the top, or null when the stack is short.</summary>
+    /// <summary>
+    /// The slot <paramref name="below"/> places from the top, or null when the stack is short.
+    /// </summary>
     private static string? Peek(List<string?> stack, int below) =>
         stack.Count > below ? stack[^(below + 1)] : null;
 
@@ -463,7 +471,9 @@ internal static class ReceiverTypes
         }
     }
 
-    /// <summary>Drops the by-ref marker and any instantiation, leaving the name the hierarchy is keyed on.</summary>
+    /// <summary>
+    /// Drops the by-ref marker and any instantiation, leaving the name the hierarchy is keyed on.
+    /// </summary>
     private static string? Clean(string type)
     {
         var name = MetadataNames.WithoutInstantiation(type.TrimEnd('&'));

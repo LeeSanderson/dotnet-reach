@@ -40,7 +40,9 @@ internal sealed record Report
 
     public required ReportScope Scope { get; init; }
 
-    /// <summary>The over-selection measurement. Arithmetic over inputs already carried.</summary>
+    /// <summary>
+    /// The over-selection measurement. Arithmetic over inputs already carried.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ReportMeasurement? Summary { get; init; }
 
@@ -50,10 +52,14 @@ internal sealed record Report
     /// </summary>
     public required IReadOnlyList<ReportChange> Changes { get; init; }
 
-    /// <summary>One per (test project, target framework), uniformly, even for a single-targeted project.</summary>
+    /// <summary>
+    /// One per (test project, target framework), uniformly, even for a single-targeted project.
+    /// </summary>
     public required IReadOnlyList<ReportEntry> Entries { get; init; }
 
-    /// <summary>A single global array with locators, never notices on entries as well.</summary>
+    /// <summary>
+    /// A single global array with locators, never notices on entries as well.
+    /// </summary>
     public required IReadOnlyList<ReportNotice> Notices { get; init; }
 }
 
@@ -75,12 +81,16 @@ internal sealed record ReportEnvelope
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Head { get; init; }
 
-    /// <summary>Which of committed, staged, unstaged and untracked were read.</summary>
+    /// <summary>
+    /// Which of committed, staged, unstaged and untracked were read.
+    /// </summary>
     public required IReadOnlyList<string> ChangeSources { get; init; }
 
     public required string BuildMode { get; init; }
 
-    /// <summary>Everything after <c>--</c>, verbatim, so a surprising run stays reproducible.</summary>
+    /// <summary>
+    /// Everything after <c>--</c>, verbatim, so a surprising run stays reproducible.
+    /// </summary>
     public required IReadOnlyList<string> ForwardedBuildArguments { get; init; }
 
     public required string Correspondence { get; init; }
@@ -100,7 +110,9 @@ internal sealed record ReportTimings
 
     public required long TotalMs { get; init; }
 
-    /// <summary>Reach's own phases, plus the build when Reach ran it.</summary>
+    /// <summary>
+    /// Reach's own phases, plus the build when Reach ran it.
+    /// </summary>
     public required IReadOnlyDictionary<string, long> Phases { get; init; }
 }
 
@@ -135,7 +147,9 @@ internal sealed record ReportEntry
 
     public required string TargetFramework { get; init; }
 
-    /// <summary>All four are needed: the package version changed xUnit's filter surface.</summary>
+    /// <summary>
+    /// All four are needed: the package version changed xUnit's filter surface.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Framework { get; init; }
 
@@ -188,14 +202,20 @@ internal sealed record ReportTest
 
     public required IReadOnlyList<string> Rules { get; init; }
 
-    /// <summary>Indices into <see cref="Report.Changes"/>. Empty exactly when not reverse-reachable.</summary>
+    /// <summary>
+    /// Indices into <see cref="Report.Changes"/>. Empty exactly when not reverse-reachable.
+    /// </summary>
     public required IReadOnlyList<int> Changes { get; init; }
 
-    /// <summary>Null exactly when not reverse-reachable.</summary>
+    /// <summary>
+    /// Null exactly when not reverse-reachable.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PathClass { get; init; }
 
-    /// <summary>Hop-by-hop, only under <c>--paths</c>. Every hop names a kernel method.</summary>
+    /// <summary>
+    /// Hop-by-hop, only under <c>--paths</c>. Every hop names a kernel method.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<IReadOnlyList<string>>? Paths { get; init; }
 }

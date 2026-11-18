@@ -15,7 +15,9 @@ internal enum Verbosity
 
 internal static class Verbosities
 {
-    /// <summary>Every spelling <c>dotnet build -v</c> accepts, long and short.</summary>
+    /// <summary>
+    /// Every spelling <c>dotnet build -v</c> accepts, long and short.
+    /// </summary>
     internal static IReadOnlyList<string> Spellings { get; } =
         ["q", "quiet", "m", "minimal", "n", "normal", "d", "detailed", "diag", "diagnostic"];
 

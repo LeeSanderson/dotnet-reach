@@ -3,7 +3,9 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace Reach.Changes;
 
-/// <summary>What reading one revision of one file told Reach about its own parser.</summary>
+/// <summary>
+/// What reading one revision of one file told Reach about its own parser.
+/// </summary>
 /// <param name="HasErrorDiagnostic">Roslyn produced an error. Visible, and widens.</param>
 /// <param name="HasSkippedTokens">
 /// Roslyn dropped tokens from the tree. A <em>structural</em> signal rather than a diagnostic

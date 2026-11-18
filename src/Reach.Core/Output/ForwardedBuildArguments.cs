@@ -43,7 +43,9 @@ internal static class ForwardedBuildArguments
         return (arguments, []);
     }
 
-    /// <summary>The usage-error message, or <c>null</c> when every forwarded token is the build's business.</summary>
+    /// <summary>
+    /// The usage-error message, or <c>null</c> when every forwarded token is the build's business.
+    /// </summary>
     internal static string? Refuse(IReadOnlyList<string> forwarded)
     {
         foreach (var token in forwarded)
@@ -61,7 +63,9 @@ internal static class ForwardedBuildArguments
         return null;
     }
 
-    /// <summary>Matches <c>--output x</c>, <c>--output=x</c> and <c>--output:x</c> alike.</summary>
+    /// <summary>
+    /// Matches <c>--output x</c>, <c>--output=x</c> and <c>--output:x</c> alike.
+    /// </summary>
     private static bool Matches(string token, string owned) =>
         token.Equals(owned, StringComparison.Ordinal)
         || (token.StartsWith(owned, StringComparison.Ordinal)

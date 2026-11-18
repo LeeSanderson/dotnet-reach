@@ -12,7 +12,9 @@ internal sealed record TargetFrameworkMoniker(string Identifier, Version Version
     private const string NetFramework = ".NETFramework";
     private const string NetStandard = ".NETStandard";
 
-    /// <summary>Parses a declared moniker — <c>net10.0</c>, <c>net10.0-windows</c>, <c>netstandard2.0</c>, <c>net472</c>.</summary>
+    /// <summary>
+    /// Parses a declared moniker — <c>net10.0</c>, <c>net10.0-windows</c>, <c>netstandard2.0</c>, <c>net472</c>.
+    /// </summary>
     internal static TargetFrameworkMoniker? Parse(string declared)
     {
         if (string.IsNullOrWhiteSpace(declared))
@@ -53,7 +55,9 @@ internal sealed record TargetFrameworkMoniker(string Identifier, Version Version
             : Build(NetFramework, string.Join('.', rest.ToCharArray()), platform);
     }
 
-    /// <summary>Reads the attributes an assembly carries.</summary>
+    /// <summary>
+    /// Reads the attributes an assembly carries.
+    /// </summary>
     internal static TargetFrameworkMoniker? FromAttributes(string? frameworkName, string? targetPlatform)
     {
         if (string.IsNullOrWhiteSpace(frameworkName))
@@ -105,7 +109,9 @@ internal sealed record TargetFrameworkMoniker(string Identifier, Version Version
             ? new Version(parsed.Major, parsed.Minor, Math.Max(parsed.Build, 0), Math.Max(parsed.Revision, 0))
             : null;
 
-    /// <summary><c>windows7.0</c> and <c>windows</c> are the same platform.</summary>
+    /// <summary>
+    /// <c>windows7.0</c> and <c>windows</c> are the same platform.
+    /// </summary>
     private static string StripVersion(string platform)
     {
         var index = platform.AsSpan().IndexOfAnyInRange('0', '9');

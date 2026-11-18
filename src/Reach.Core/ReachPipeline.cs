@@ -14,7 +14,9 @@ using Reach.Selection;
 
 namespace Reach;
 
-/// <summary>What one <c>reach select</c> run concluded.</summary>
+/// <summary>
+/// What one <c>reach select</c> run concluded.
+/// </summary>
 /// <param name="ExitCode">
 /// Non-zero means <em>do not trust my answer</em>. That is what makes the pipeline rule
 /// operational: if Reach exits non-zero, run the whole suite or stop the build.

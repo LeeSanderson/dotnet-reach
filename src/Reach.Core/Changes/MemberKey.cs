@@ -1,6 +1,8 @@
 namespace Reach.Changes;
 
-/// <summary>What kind of declaration a member is. Distinguishes overload sets that share a name.</summary>
+/// <summary>
+/// What kind of declaration a member is. Distinguishes overload sets that share a name.
+/// </summary>
 internal enum MemberKind
 {
     Method,

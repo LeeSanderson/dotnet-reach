@@ -13,7 +13,9 @@ internal sealed record ProcessRequest(
     IReadOnlyList<string> Arguments,
     string WorkingDirectory)
 {
-    /// <summary>The command as a human would type it. For notices and report entries only.</summary>
+    /// <summary>
+    /// The command as a human would type it. For notices and report entries only.
+    /// </summary>
     public override string ToString() =>
         string.Join(' ', new[] { Executable }.Concat(Arguments).Select(Quote));
 

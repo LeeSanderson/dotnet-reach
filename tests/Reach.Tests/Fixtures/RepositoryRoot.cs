@@ -2,7 +2,9 @@ using System.Runtime.CompilerServices;
 
 namespace Reach.Tests.Fixtures;
 
-/// <summary>The repository this suite lives in.</summary>
+/// <summary>
+/// The repository this suite lives in.
+/// </summary>
 /// <remarks>
 /// Several tests read files the repository ships rather than files they wrote — the limitations
 /// register, the committed example report, the dogfood workflow — and none of them can rely on
@@ -24,7 +26,9 @@ internal static class RepositoryRoot
             ?? throw new InvalidOperationException($"No repository above {callerFile}.");
     }
 
-    /// <summary>A path inside the repository, from its root.</summary>
+    /// <summary>
+    /// A path inside the repository, from its root.
+    /// </summary>
     internal static string Combine(params string[] segments) =>
         Path.Combine([Of(), .. segments]);
 }

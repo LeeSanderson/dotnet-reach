@@ -25,7 +25,9 @@ namespace Reach.Changes;
 /// </remarks>
 internal static class Canonicaliser
 {
-    /// <summary>Separates tokens, so that <c>ab</c> and <c>a b</c> can never canonicalise alike.</summary>
+    /// <summary>
+    /// Separates tokens, so that <c>ab</c> and <c>a b</c> can never canonicalise alike.
+    /// </summary>
     private const char Separator = '';
 
     internal static string Of(IReadOnlyList<SyntaxNodeOrToken> parts)

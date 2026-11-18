@@ -131,7 +131,9 @@ internal static class ReportBuilder
             ],
         };
 
-    /// <summary>Sorted by display form, which is the documented key.</summary>
+    /// <summary>
+    /// Sorted by display form, which is the documented key.
+    /// </summary>
     private static IReadOnlyList<ReportChange> ChangesOf(SelectRun run) =>
     [
         .. (run.Selection?.Changes ?? [])
@@ -199,7 +201,9 @@ internal static class ReportBuilder
                 : [.. test.Paths.Select(path => (IReadOnlyList<string>)[.. path.Select(hop => hop.ToString())])],
         };
 
-    /// <summary>Sorted by code, then by the locator its data carries. The documented key.</summary>
+    /// <summary>
+    /// Sorted by code, then by the locator its data carries. The documented key.
+    /// </summary>
     private static IReadOnlyList<ReportNotice> NoticesOf(SelectRun run) =>
     [
         .. run.Notices
@@ -221,7 +225,9 @@ internal static class ReportBuilder
     private static string Locator(ReportNotice notice) =>
         notice.Data is null ? string.Empty : string.Join(",", notice.Data.Keys);
 
-    /// <summary><c>NothingSelected</c> becomes <c>nothing-selected</c>. Wire names are kebab-case.</summary>
+    /// <summary>
+    /// <c>NothingSelected</c> becomes <c>nothing-selected</c>. Wire names are kebab-case.
+    /// </summary>
     private static string Kebab(string name)
     {
         var builder = new System.Text.StringBuilder(name.Length + 4);

@@ -24,7 +24,9 @@ internal sealed class SourceVisibility
         this.visible = visible;
     }
 
-    /// <summary>Nothing is known about visibility, so nothing is reported as invisible.</summary>
+    /// <summary>
+    /// Nothing is known about visibility, so nothing is reported as invisible.
+    /// </summary>
     internal static SourceVisibility Unknown { get; } = new(string.Empty, []);
 
     internal static async Task<SourceVisibility> ReadAsync(

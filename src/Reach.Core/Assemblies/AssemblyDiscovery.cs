@@ -2,7 +2,9 @@ using Reach.Projects;
 
 namespace Reach.Assemblies;
 
-/// <summary>One project compiled for one target framework, matched to the file that holds it.</summary>
+/// <summary>
+/// One project compiled for one target framework, matched to the file that holds it.
+/// </summary>
 internal sealed record AssemblyInstance(ExpectedAssemblyInstance Expected, ScannedAssembly Assembly)
 {
     internal string Name => Expected.Project.AssemblyName;
@@ -21,7 +23,9 @@ internal sealed record AssemblyDiscoveryResult(
     internal ExitCode ExitCode => Succeeded ? ExitCode.Success : ExitCode.AssemblyDiscoveryFailed;
 }
 
-/// <summary>Matches the scan's results to the expected assembly-instance set.</summary>
+/// <summary>
+/// Matches the scan's results to the expected assembly-instance set.
+/// </summary>
 internal static class AssemblyDiscovery
 {
     internal static AssemblyDiscoveryResult Discover(

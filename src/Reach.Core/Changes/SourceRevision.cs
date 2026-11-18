@@ -54,7 +54,9 @@ internal static class SourceRevision
 
     internal static SyntaxTree Parse(string text) => CSharpSyntaxTree.ParseText(text, Options);
 
-    /// <summary>Every type the revision declares, keyed on fully-qualified name plus arity.</summary>
+    /// <summary>
+    /// Every type the revision declares, keyed on fully-qualified name plus arity.
+    /// </summary>
     internal static IReadOnlyDictionary<string, DeclaredType> DeclaredTypes(string text)
     {
         var root = Parse(text).GetRoot();

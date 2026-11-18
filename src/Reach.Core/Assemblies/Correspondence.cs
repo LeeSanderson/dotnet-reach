@@ -3,19 +3,29 @@ using Reach.Reporting;
 
 namespace Reach.Assemblies;
 
-/// <summary>How one recorded document compared against the working tree.</summary>
+/// <summary>
+/// How one recorded document compared against the working tree.
+/// </summary>
 internal enum DocumentClass
 {
-    /// <summary>On disk, and the file's bytes hash to the checksum the compiler recorded.</summary>
+    /// <summary>
+    /// On disk, and the file's bytes hash to the checksum the compiler recorded.
+    /// </summary>
     Verified,
 
-    /// <summary>On disk, and they do not. The assembly was compiled from different source.</summary>
+    /// <summary>
+    /// On disk, and they do not. The assembly was compiled from different source.
+    /// </summary>
     Mismatched,
 
-    /// <summary>No file on disk: a source generator's output, or the SDK's own generated members.</summary>
+    /// <summary>
+    /// No file on disk: a source generator's output, or the SDK's own generated members.
+    /// </summary>
     Generated,
 
-    /// <summary>On disk, but the symbols recorded no checksum to compare against.</summary>
+    /// <summary>
+    /// On disk, but the symbols recorded no checksum to compare against.
+    /// </summary>
     Unverifiable,
 
     /// <summary>
@@ -27,16 +37,24 @@ internal enum DocumentClass
 
 internal sealed record DocumentVerdict(SourceDocument Document, DocumentClass Class);
 
-/// <summary>What the run concluded about the correspondence between source and binaries.</summary>
+/// <summary>
+/// What the run concluded about the correspondence between source and binaries.
+/// </summary>
 internal enum CorrespondenceVerdict
 {
-    /// <summary>At least one document was checked, and every checked document agreed.</summary>
+    /// <summary>
+    /// At least one document was checked, and every checked document agreed.
+    /// </summary>
     Verified,
 
-    /// <summary>Nothing could be checked — no symbols, or no checksums in them.</summary>
+    /// <summary>
+    /// Nothing could be checked — no symbols, or no checksums in them.
+    /// </summary>
     Skipped,
 
-    /// <summary>At least one document disagreed. Exit 5.</summary>
+    /// <summary>
+    /// At least one document disagreed. Exit 5.
+    /// </summary>
     Failed,
 }
 

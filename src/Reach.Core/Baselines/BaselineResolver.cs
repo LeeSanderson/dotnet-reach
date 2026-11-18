@@ -184,7 +184,9 @@ internal sealed class BaselineResolver(GitAdapter git)
         return await ExistsAsync(remote, cancellationToken).ConfigureAwait(false) ? remote : null;
     }
 
-    /// <summary>Whether git can name it, which <c>rev-parse</c> answers and nothing else does.</summary>
+    /// <summary>
+    /// Whether git can name it, which <c>rev-parse</c> answers and nothing else does.
+    /// </summary>
     private async Task<bool> ExistsAsync(string reference, CancellationToken cancellationToken) =>
         (await git.RevParseAsync(reference, cancellationToken).ConfigureAwait(false)).Succeeded;
 
@@ -198,7 +200,9 @@ internal sealed class BaselineResolver(GitAdapter git)
             ? reference["refs/heads/".Length..]
             : reference;
 
-    /// <summary>Exactly one, because two is ambiguous and picking either could be wrong.</summary>
+    /// <summary>
+    /// Exactly one, because two is ambiguous and picking either could be wrong.
+    /// </summary>
     private async Task<string?> SoleLocalRemoteBranchAsync(CancellationToken cancellationToken)
     {
         string? found = null;

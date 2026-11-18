@@ -133,7 +133,9 @@ internal static class ProjectFileReader
             .Select(id => id!)
     ];
 
-    /// <summary>Reads an attribute or a child element — MSBuild metadata can be written either way.</summary>
+    /// <summary>
+    /// Reads an attribute or a child element — MSBuild metadata can be written either way.
+    /// </summary>
     private static string? Metadata(XElement element, string name) =>
         element.Attribute(name)?.Value
         ?? element.Elements().FirstOrDefault(child => child.Name.LocalName == name)?.Value;
@@ -141,14 +143,18 @@ internal static class ProjectFileReader
     private static bool IsFalse(string? value) =>
         string.Equals(value?.Trim(), "false", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>The last declaration wins, which is what MSBuild does for an unconditioned property.</summary>
+    /// <summary>
+    /// The last declaration wins, which is what MSBuild does for an unconditioned property.
+    /// </summary>
     private static string? Property(XElement? project, string name) =>
         Descendants(project, name).LastOrDefault()?.Value.Trim();
 
     private static IEnumerable<XElement> Elements(XElement? project, string name) =>
         Descendants(project, name);
 
-    /// <summary>Matched on local name, because a project file may or may not carry the MSBuild namespace.</summary>
+    /// <summary>
+    /// Matched on local name, because a project file may or may not carry the MSBuild namespace.
+    /// </summary>
     private static IEnumerable<XElement> Descendants(XElement? project, string name) =>
         project?.Descendants().Where(element => element.Name.LocalName == name) ?? [];
 }

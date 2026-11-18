@@ -50,7 +50,9 @@ internal static class RunSettings
         }
     }
 
-    /// <summary>Writes the caller's settings with Reach's filter merged in, and returns the path.</summary>
+    /// <summary>
+    /// Writes the caller's settings with Reach's filter merged in, and returns the path.
+    /// </summary>
     internal static string Merge(string source, string filter, string destination)
     {
         var document = Load(source);
