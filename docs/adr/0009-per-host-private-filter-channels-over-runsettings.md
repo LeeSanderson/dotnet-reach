@@ -20,6 +20,10 @@ pull request on a large solution clears both. So this is not a guard for a patho
 input; it is the mechanism most real selections travel through, which is what makes the
 choice worth an ADR.
 
+Off Windows the ceiling Reach budgets against is 100,000 characters: Linux caps a single
+argument at `MAX_ARG_STRLEN` (128 KiB) and the whole argv far higher, so 100,000 stays clear
+of the binding limit with headroom for the rest of the command line.
+
 ## Why not .runsettings
 
 Two independent defects, either of which alone would disqualify it as a default.
