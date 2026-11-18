@@ -1,8 +1,11 @@
+using System.Reflection;
+using System.Runtime.CompilerServices;
+
 namespace Reach.Tests;
 
 /// <summary>
 /// The scaffolding's own acceptance criteria: the test project can reach Reach.Core's
-/// internals, and nothing in Reach.Core is public.
+/// internals, and Reach.Cli cannot. Cli uses Core through its public types.
 /// </summary>
 public class ScaffoldingTests
 {
@@ -13,10 +16,12 @@ public class ScaffoldingTests
     }
 
     [Fact]
-    public void Nothing_in_Core_is_public()
+    public void Cli_is_not_a_friend_of_Core()
     {
-        var exported = typeof(Product).Assembly.GetExportedTypes();
+        var friends = typeof(Product).Assembly
+            .GetCustomAttributes<InternalsVisibleToAttribute>()
+            .Select(attribute => attribute.AssemblyName);
 
-        Assert.Empty(exported);
+        Assert.DoesNotContain("Reach.Cli", friends);
     }
 }
