@@ -69,8 +69,8 @@ internal static class Selector
                 Bucket(reachedBy, method).Add(change.Entry.Index);
                 change.Entry.TestsReached++;
 
-                classOf[method] = classOf.TryGetValue(method, out var existing) && existing < pathClass
-                    ? existing
+                classOf[method] = classOf.TryGetValue(method, out var existing)
+                    ? Closer(existing, pathClass)
                     : pathClass;
             }
 
@@ -90,6 +90,11 @@ internal static class Selector
             [.. changes.Select(change => change.Entry)],
             notices);
     }
+
+    /// <summary>
+    /// The stronger of two path classes: a compiled path beats a widened one.
+    /// </summary>
+    private static PathClass Closer(PathClass first, PathClass second) => first < second ? first : second;
 
     private static ProjectSelection Decide(
         EnumeratedProject project,

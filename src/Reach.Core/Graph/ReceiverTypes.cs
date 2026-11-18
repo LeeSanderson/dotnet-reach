@@ -57,7 +57,7 @@ internal static class ReceiverTypes
             .Select(field => field.GetValue(null))
             .OfType<OpCode>()
             .Where(opCode => opCode.OperandType is OperandType.InlineBrTarget or OperandType.ShortInlineBrTarget)
-            .Select(opCode => (ILOpCode)opCode.Value),
+            .Select(opCode => OpCodeValues.ToOpCode(OpCodeValues.ValueOf(opCode))),
     ];
 
     static ReceiverTypes()
