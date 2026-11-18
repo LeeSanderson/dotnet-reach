@@ -43,7 +43,7 @@ public class SourceRevisionRobustnessTests
     [InlineData("<<<<<<< HEAD\nnamespace N;\n=======\nnamespace M;\n>>>>>>> other\n")]
     [InlineData("namespace N; public class C { public int M() => 1; } // no trailing newline")]
     public void Source_that_does_not_compile_is_still_read_without_throwing(string source) =>
-        SourceRevision.DeclaredTypes(source);
+        Assert.Null(Record.Exception(() => SourceRevision.DeclaredTypes(source)));
 
     private static string RepositoryRoot()
     {
