@@ -91,7 +91,8 @@ internal sealed class FixtureSolution : IDisposable
     {
         var directory = System.IO.Path.GetDirectoryName(testFile);
 
-        while (directory is not null && !Directory.Exists(System.IO.Path.Combine(directory, ".git")))
+        // `.git` is a directory in a clone but a file in a linked worktree.
+        while (directory is not null && !System.IO.Path.Exists(System.IO.Path.Combine(directory, ".git")))
         {
             directory = System.IO.Path.GetDirectoryName(directory);
         }
@@ -105,14 +106,33 @@ internal sealed class FixtureSolution : IDisposable
         return fixture;
     }
 
+    /// <summary>
+    /// Copies the files git tracks under <paramref name="source"/>, and nothing else on disk.
+    /// </summary>
+    /// <remarks>
+    /// The fixture may have been built in place (CI does, to hold it to the coding standards),
+    /// and that build output must not reach the temporary repository: Reach running with no
+    /// build would find the extra assemblies.
+    /// </remarks>
     private static void Copy(string source, string destination)
     {
-        foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        var listing = new Reach.Processes.ProcessRunner()
+            .RunAsync(new Reach.Processes.ProcessRequest("git", ["ls-files", "-z"], source))
+            .GetAwaiter()
+            .GetResult();
+
+        Assert.True(listing.ExitCode == 0, "git ls-files failed over the fixture:\n" + listing.StandardError);
+
+        var files = listing.StandardOutput.Split('\0', StringSplitOptions.RemoveEmptyEntries);
+
+        Assert.NotEmpty(files);
+
+        foreach (var file in files)
         {
-            var target = System.IO.Path.Combine(destination, System.IO.Path.GetRelativePath(source, file));
+            var target = System.IO.Path.Combine(destination, file);
 
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(target)!);
-            File.Copy(file, target, overwrite: true);
+            File.Copy(System.IO.Path.Combine(source, file), target, overwrite: true);
         }
     }
 
