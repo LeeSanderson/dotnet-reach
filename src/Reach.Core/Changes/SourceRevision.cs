@@ -376,7 +376,7 @@ internal static class SourceRevision
     {
         var parts = new List<string>();
 
-        for (SyntaxNode? node = declaration; node is not null; node = node.Parent)
+        for (var node = declaration; node is not null; node = node.Parent)
         {
             if (node is BaseNamespaceDeclarationSyntax @namespace)
             {
