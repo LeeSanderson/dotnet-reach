@@ -76,8 +76,9 @@ internal static class ParseHealthCheck
 
         var value = declared.Trim();
 
+
         // `preview`, `latest` and `default` are all at or below the ceiling by construction.
-        if (!decimal.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out var version))
+        if (!decimal.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out _))
         {
             return false;
         }
