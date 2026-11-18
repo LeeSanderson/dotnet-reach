@@ -32,7 +32,7 @@ public class CorrespondenceInBothModesTests
         // The binaries belong to a different revision of this file, and no timestamp would say
         // so: git does not preserve them, so checking out an older commit onto a warm agent
         // can leave source *older* than the binaries beside it.
-        File.WriteAllText(sourcePath, After);
+        await File.WriteAllTextAsync(sourcePath, After, Token);
 
         var run = await Select(repository, noBuild: true);
 
@@ -46,7 +46,7 @@ public class CorrespondenceInBothModesTests
         using var repository = Repository(out var sourcePath);
 
         Compile(repository, sourcePath, Before);
-        File.WriteAllText(sourcePath, After);
+        await File.WriteAllTextAsync(sourcePath, After, Token);
 
         // What a real `dotnet build` would do with an edited file.
         runner.Performs(() => Compile(repository, sourcePath, After), "build");

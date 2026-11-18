@@ -165,7 +165,7 @@ public class CommandLineTests
 
         // So the first adopter to run Reach locally does not commit a report.
         Assert.True(File.Exists(gitignore));
-        Assert.Equal("*", File.ReadAllText(gitignore).Trim());
+        Assert.Equal("*", (await File.ReadAllTextAsync(gitignore, TestContext.Current.CancellationToken)).Trim());
     }
 
     [Fact]
@@ -395,8 +395,9 @@ public class CommandLineTests
 
         // A tool that writes nothing when it fails is one you debug by re-running it with more
         // flags, on CI, which is the worst place to need a second run.
-        var report = File.ReadAllText(
-            Path.Combine(repository.Path, ReachDirectory.DefaultName, "report.json"));
+        var report = await File.ReadAllTextAsync(
+            Path.Combine(repository.Path, ReachDirectory.DefaultName, "report.json"),
+            TestContext.Current.CancellationToken);
 
         Assert.Contains("\"outcome\": \"failed\"", report);
         Assert.Contains("\"baseline\"", report);
@@ -427,8 +428,9 @@ public class CommandLineTests
         Assert.Contains("No changes to analyse", Out);
         Assert.Contains("Baseline ", Out);
 
-        var report = File.ReadAllText(
-            Path.Combine(repository.Path, ReachDirectory.DefaultName, "report.json"));
+        var report = await File.ReadAllTextAsync(
+            Path.Combine(repository.Path, ReachDirectory.DefaultName, "report.json"),
+            TestContext.Current.CancellationToken);
 
         Assert.Contains("\"outcome\": \"no-changes\"", report);
     }
