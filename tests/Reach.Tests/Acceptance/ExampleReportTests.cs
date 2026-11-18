@@ -30,11 +30,14 @@ public sealed partial class ExampleReportTests : IDisposable
     {
         var path = fixture.ReadFile("src/Contoso.Core/Invoice.cs");
 
+        // A miss would leave the fixture unchanged and the report a quiet no-changes.
+        Assert.Contains("public static int Tax(int net) => net * StandardRate / Percent;", path);
+
         fixture.WriteFile(
             "src/Contoso.Core/Invoice.cs",
             path.Replace(
-                "public int Tax(int net) => net * StandardRate / 100;",
-                "public int Tax(int net) => (net * StandardRate / 100) + 0;",
+                "public static int Tax(int net) => net * StandardRate / Percent;",
+                "public static int Tax(int net) => (net * StandardRate / Percent) + 0;",
                 StringComparison.Ordinal));
 
         fixture.Rebuild();

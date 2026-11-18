@@ -35,8 +35,8 @@ public sealed class AcceptanceTests : IDisposable
     [Fact]
     public async Task The_NUnit_filter_renders_with_contains_and_reports_the_extra_it_will_run()
     {
-        Touch("src/Contoso.Core/Invoice.cs", "public int Tax(int net) => net * StandardRate / 100;",
-            "public int Tax(int net) => (net * StandardRate / 100) + 0;");
+        Touch("src/Contoso.Core/Invoice.cs", "public static int Tax(int net) => net * StandardRate / Percent;",
+            "public static int Tax(int net) => (net * StandardRate / Percent) + 0;");
 
         var report = await fixture.SelectAsync(baseline, Token);
         var entry = EntryFor(report, "Contoso.Tests.NUnit");
@@ -74,8 +74,8 @@ public sealed class AcceptanceTests : IDisposable
         // A comment-only change: real paths in the diff, no changed member anywhere.
         Touch(
             "src/Contoso.Core/Invoice.cs",
-            "public int Untouched() => 0;",
-            "// nothing here changes what compiles\n    public int Untouched() => 0;");
+            "public static int Untouched(int net) => net;",
+            "// nothing here changes what compiles\n    public static int Untouched(int net) => net;");
 
         var report = await fixture.SelectAsync(baseline, Token);
 
@@ -147,8 +147,8 @@ public sealed class AcceptanceTests : IDisposable
     [Fact]
     public async Task A_change_selects_exactly_the_tests_that_reach_it()
     {
-        Touch("src/Contoso.Core/Invoice.cs", "public int Tax(int net) => net * StandardRate / 100;",
-            "public int Tax(int net) => (net * StandardRate / 100) + 0;");
+        Touch("src/Contoso.Core/Invoice.cs", "public static int Tax(int net) => net * StandardRate / Percent;",
+            "public static int Tax(int net) => (net * StandardRate / Percent) + 0;");
 
         var report = await fixture.SelectAsync(baseline, Token);
         var xunit = EntryFor(report, "Contoso.Tests.Xunit");
@@ -251,13 +251,23 @@ public sealed class AcceptanceTests : IDisposable
     /// --no-build is a correspondence failure by design, which is a different assertion from
     /// every one in this file.
     /// </summary>
+    /// <remarks>
+    /// <paramref name="find"/> and <paramref name="replace"/> are written with <c>\n</c>; they are
+    /// translated to the line ending the fixture file was checked out with, so the edit matches
+    /// on a CRLF checkout as well as an LF one.
+    /// </remarks>
     private void Touch(string relativePath, string find, string replace)
     {
         var contents = fixture.ReadFile(relativePath);
+        var newline = contents.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
 
-        Assert.Contains(find, contents);
+        var matched = find.ReplaceLineEndings(newline);
 
-        fixture.WriteFile(relativePath, contents.Replace(find, replace, StringComparison.Ordinal));
+        Assert.Contains(matched, contents);
+
+        fixture.WriteFile(
+            relativePath,
+            contents.Replace(matched, replace.ReplaceLineEndings(newline), StringComparison.Ordinal));
         fixture.Rebuild();
     }
 

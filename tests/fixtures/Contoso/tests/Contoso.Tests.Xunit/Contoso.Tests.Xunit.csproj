@@ -5,6 +5,8 @@
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The namespace the acceptance tests' expected test names use. -->
+    <RootNamespace>Contoso.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
