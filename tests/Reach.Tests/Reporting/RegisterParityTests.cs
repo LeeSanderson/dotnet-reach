@@ -96,12 +96,12 @@ public partial class RegisterParityTests
                 continue;
             }
 
-            if (!YesDetectable().IsMatch(line))
+            if (!YesDetectable.IsMatch(line))
             {
                 continue;
             }
 
-            foreach (Match match in Backticked().Matches(line))
+            foreach (Match match in Backticked.Matches(line))
             {
                 var code = match.Groups[1].Value;
 
@@ -124,8 +124,8 @@ public partial class RegisterParityTests
     /// detection is what most of these holes offer.
     /// </summary>
     [GeneratedRegex(@"\*\*Detectable\*\*:\s*\*{0,2}(yes|partially)", RegexOptions.IgnoreCase)]
-    private static partial Regex YesDetectable();
+    private static partial Regex YesDetectable { get; }
 
     [GeneratedRegex(@"`([a-z][a-z0-9-]*)`")]
-    private static partial Regex Backticked();
+    private static partial Regex Backticked { get; }
 }
