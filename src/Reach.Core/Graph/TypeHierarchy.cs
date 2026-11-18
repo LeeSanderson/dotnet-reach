@@ -209,7 +209,7 @@ internal sealed class TypeHierarchy
                 methods,
                 implementations,
                 virtuals,
-                (definition.Attributes & TypeAttributes.Interface) != 0);
+                definition.Attributes.HasFlag(TypeAttributes.Interface));
         }
     }
 

@@ -227,5 +227,5 @@ internal static class MetadataNames
         method.GetGenericParameters().Count;
 
     internal static bool IsStatic(MethodDefinition method) =>
-        (method.Attributes & MethodAttributes.Static) != 0;
+        method.Attributes.HasFlag(MethodAttributes.Static);
 }

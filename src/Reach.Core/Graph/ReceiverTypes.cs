@@ -429,7 +429,7 @@ internal static class ReceiverTypes
     {
         var types = new List<string?>();
 
-        if ((method.Attributes & MethodAttributes.Static) == 0)
+        if (!method.Attributes.HasFlag(MethodAttributes.Static))
         {
             types.Add(MetadataNames.FullNameOf(reader, method.GetDeclaringType()));
         }
@@ -580,7 +580,7 @@ internal static class ReceiverTypes
 
                     return (
                         signature.ParameterTypes.Length,
-                        (method.Attributes & MethodAttributes.Static) == 0,
+                        !method.Attributes.HasFlag(MethodAttributes.Static),
                         Returns(signature));
                 }
 
