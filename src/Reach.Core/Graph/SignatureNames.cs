@@ -96,12 +96,6 @@ internal sealed class SignatureNames : ISignatureTypeProvider<string, object?>
     public string GetFunctionPointerType(MethodSignature<string> signature) =>
         "delegate*<" + string.Join(",", signature.ParameterTypes.Append(signature.ReturnType)) + ">";
 
-    public string GetTypeFromSerializedName(string name) => name;
-
-    public PrimitiveTypeCode GetUnderlyingEnumType(string type) => PrimitiveTypeCode.Int32;
-
-    public bool IsSystemType(string type) => type == "System.Type";
-
     private void Remember(EntityHandle handle)
     {
         if (FirstType.IsNil)

@@ -24,9 +24,11 @@ internal sealed record Report
 {
     internal const int Version = 1;
 
-    public int SchemaVersion { get; init; } = Version;
+    [JsonInclude]
+    internal int SchemaVersion { get; init; } = Version;
 
-    public required string Outcome { get; init; }
+    [JsonInclude]
+    internal required string Outcome { get; init; }
 
     /// <summary>
     /// Notice codes, never prose, and required non-empty when the outcome is
@@ -34,33 +36,40 @@ internal sealed record Report
     /// code and the taxonomy is enumerable rather than a place people add ad-hoc strings.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IReadOnlyList<string>? Reasons { get; init; }
+    [JsonInclude]
+    internal IReadOnlyList<string>? Reasons { get; init; }
 
-    public required ReportEnvelope Envelope { get; init; }
+    [JsonInclude]
+    internal required ReportEnvelope Envelope { get; init; }
 
-    public required ReportScope Scope { get; init; }
+    [JsonInclude]
+    internal required ReportScope Scope { get; init; }
 
     /// <summary>
     /// The over-selection measurement. Arithmetic over inputs already carried.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public ReportMeasurement? Summary { get; init; }
+    [JsonInclude]
+    internal ReportMeasurement? Summary { get; init; }
 
     /// <summary>
     /// Every change, with its tier and the count of tests it reached. Counts only, never test
     /// names — the pairs live once, on the test side.
     /// </summary>
-    public required IReadOnlyList<ReportChange> Changes { get; init; }
+    [JsonInclude]
+    internal required IReadOnlyList<ReportChange> Changes { get; init; }
 
     /// <summary>
     /// One per (test project, target framework), uniformly, even for a single-targeted project.
     /// </summary>
-    public required IReadOnlyList<ReportEntry> Entries { get; init; }
+    [JsonInclude]
+    internal required IReadOnlyList<ReportEntry> Entries { get; init; }
 
     /// <summary>
     /// A single global array with locators, never notices on entries as well.
     /// </summary>
-    public required IReadOnlyList<ReportNotice> Notices { get; init; }
+    [JsonInclude]
+    internal required IReadOnlyList<ReportNotice> Notices { get; init; }
 }
 
 /// <summary>
@@ -69,51 +78,62 @@ internal sealed record Report
 /// </summary>
 internal sealed record ReportEnvelope
 {
-    public required string ToolVersion { get; init; }
+    [JsonInclude]
+    internal required string ToolVersion { get; init; }
 
     /// <summary>
     /// Resolved to a SHA, not left as <c>origin/main</c>. It earns its place alone: the
     /// empty-change-set trap <em>is</em> a baseline that quietly resolved to <c>HEAD</c>.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public ReportBaseline? Baseline { get; init; }
+    [JsonInclude]
+    internal ReportBaseline? Baseline { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Head { get; init; }
+    [JsonInclude]
+    internal string? Head { get; init; }
 
     /// <summary>
     /// Which of committed, staged, unstaged and untracked were read.
     /// </summary>
-    public required IReadOnlyList<string> ChangeSources { get; init; }
+    [JsonInclude]
+    internal required IReadOnlyList<string> ChangeSources { get; init; }
 
-    public required string BuildMode { get; init; }
+    [JsonInclude]
+    internal required string BuildMode { get; init; }
 
     /// <summary>
     /// Everything after <c>--</c>, verbatim, so a surprising run stays reproducible.
     /// </summary>
-    public required IReadOnlyList<string> ForwardedBuildArguments { get; init; }
+    [JsonInclude]
+    internal required IReadOnlyList<string> ForwardedBuildArguments { get; init; }
 
-    public required string Correspondence { get; init; }
+    [JsonInclude]
+    internal required string Correspondence { get; init; }
 
     /// <summary>
     /// Segregated into this one clearly-marked object, so that excluding a single key makes two
     /// reports comparable. No test durations — Reach does not run tests.
     /// </summary>
-    public required ReportTimings Timings { get; init; }
+    [JsonInclude]
+    internal required ReportTimings Timings { get; init; }
 }
 
 internal sealed record ReportBaseline(string Sha, string Reference, string DetectedFrom, bool IsHead);
 
 internal sealed record ReportTimings
 {
-    public required string StartedUtc { get; init; }
+    [JsonInclude]
+    internal required string StartedUtc { get; init; }
 
-    public required long TotalMs { get; init; }
+    [JsonInclude]
+    internal required long TotalMs { get; init; }
 
     /// <summary>
     /// Reach's own phases, plus the build when Reach ran it.
     /// </summary>
-    public required IReadOnlyDictionary<string, long> Phases { get; init; }
+    [JsonInclude]
+    internal required IReadOnlyDictionary<string, long> Phases { get; init; }
 }
 
 /// <summary>
@@ -122,9 +142,11 @@ internal sealed record ReportTimings
 /// </summary>
 internal sealed record ReportScope
 {
-    public required IReadOnlyList<string> TestProjects { get; init; }
+    [JsonInclude]
+    internal required IReadOnlyList<string> TestProjects { get; init; }
 
-    public required IReadOnlyList<ReportAssembly> Assemblies { get; init; }
+    [JsonInclude]
+    internal required IReadOnlyList<ReportAssembly> Assemblies { get; init; }
 }
 
 internal sealed record ReportAssembly(string Name, string TargetFramework);
@@ -143,33 +165,43 @@ internal sealed record ReportChange(
 
 internal sealed record ReportEntry
 {
-    public required string Project { get; init; }
+    [JsonInclude]
+    internal required string Project { get; init; }
 
-    public required string TargetFramework { get; init; }
+    [JsonInclude]
+    internal required string TargetFramework { get; init; }
 
     /// <summary>
     /// All four are needed: the package version changed xUnit's filter surface.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Framework { get; init; }
+    [JsonInclude]
+    internal string? Framework { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PackageVersion { get; init; }
+    [JsonInclude]
+    internal string? PackageVersion { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? RunnerHost { get; init; }
+    [JsonInclude]
+    internal string? RunnerHost { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Dialect { get; init; }
+    [JsonInclude]
+    internal string? Dialect { get; init; }
 
-    public required string Mode { get; init; }
+    [JsonInclude]
+    internal required string Mode { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Delivery { get; init; }
+    [JsonInclude]
+    internal string? Delivery { get; init; }
 
-    public required ReportCounts Counts { get; init; }
+    [JsonInclude]
+    internal required ReportCounts Counts { get; init; }
 
-    public required IReadOnlyList<ReportTest> Tests { get; init; }
+    [JsonInclude]
+    internal required IReadOnlyList<ReportTest> Tests { get; init; }
 
     /// <summary>
     /// Always an array: many when chunked, one for <c>run-all</c>, <strong>zero for
@@ -177,7 +209,8 @@ internal sealed record ReportEntry
     /// nothing for an empty selection, so "emit no command at all" is the only representable
     /// answer rather than a rule to remember. Argv vectors, never shell strings.
     /// </summary>
-    public required IReadOnlyList<IReadOnlyList<string>> Invocations { get; init; }
+    [JsonInclude]
+    internal required IReadOnlyList<IReadOnlyList<string>> Invocations { get; init; }
 }
 
 /// <param name="Total">
@@ -188,46 +221,57 @@ internal sealed record ReportEntry
 internal sealed record ReportCounts(int Selected, int WillRun, int? Total)
 {
     [JsonPropertyName("total")]
-    public object TotalOrUnknown => Total.HasValue ? Total.Value : "unknown";
+    [JsonInclude]
+    internal object TotalOrUnknown => Total.HasValue ? Total.Value : "unknown";
 
     [JsonIgnore]
-    public int? Total { get; init; } = Total;
+    internal int? Total { get; init; } = Total;
 }
 
 internal sealed record ReportTest
 {
-    public required string Display { get; init; }
+    [JsonInclude]
+    internal required string Display { get; init; }
 
-    public required string Id { get; init; }
+    [JsonInclude]
+    internal required string Id { get; init; }
 
-    public required IReadOnlyList<string> Rules { get; init; }
+    [JsonInclude]
+    internal required IReadOnlyList<string> Rules { get; init; }
 
     /// <summary>
     /// Indices into <see cref="Report.Changes"/>. Empty exactly when not reverse-reachable.
     /// </summary>
-    public required IReadOnlyList<int> Changes { get; init; }
+    [JsonInclude]
+    internal required IReadOnlyList<int> Changes { get; init; }
 
     /// <summary>
     /// Null exactly when not reverse-reachable.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PathClass { get; init; }
+    [JsonInclude]
+    internal string? PathClass { get; init; }
 
     /// <summary>
     /// Hop-by-hop, only under <c>--paths</c>. Every hop names a kernel method.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IReadOnlyList<IReadOnlyList<string>>? Paths { get; init; }
+    [JsonInclude]
+    internal IReadOnlyList<IReadOnlyList<string>>? Paths { get; init; }
 }
 
 internal sealed record ReportNotice
 {
-    public required string Code { get; init; }
+    [JsonInclude]
+    internal required string Code { get; init; }
 
-    public required string Kind { get; init; }
+    [JsonInclude]
+    internal required string Kind { get; init; }
 
-    public required string Message { get; init; }
+    [JsonInclude]
+    internal required string Message { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IReadOnlyDictionary<string, object?>? Data { get; init; }
+    [JsonInclude]
+    internal IReadOnlyDictionary<string, object?>? Data { get; init; }
 }
