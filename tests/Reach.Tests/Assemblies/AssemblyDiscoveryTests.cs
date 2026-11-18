@@ -39,7 +39,7 @@ public class AssemblyDiscoveryTests
         return (tree, scope.Scope!);
     }
 
-    private static string Emit(
+    private static void Emit(
         ProjectTree tree,
         string project,
         string source,
