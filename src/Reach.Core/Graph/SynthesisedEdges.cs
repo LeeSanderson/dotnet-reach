@@ -118,16 +118,7 @@ internal static class SynthesisedEdges
 
         foreach (var instruction in instructions)
         {
-            var type = instruction.OpCode switch
-            {
-                ILOpCode.Newobj or ILOpCode.Call or ILOpCode.Callvirt or ILOpCode.Ldftn =>
-                    DeclaringTypeOfMember(assembly, instruction.Token),
-
-                ILOpCode.Ldsfld or ILOpCode.Ldsflda or ILOpCode.Stsfld =>
-                    DeclaringTypeOfField(assembly, instruction.Token),
-
-                _ => null,
-            };
+            var type = TriggeredType(assembly, instruction);
 
             if (type is null || !triggered.Add(type))
             {
@@ -140,6 +131,21 @@ internal static class SynthesisedEdges
             }
         }
     }
+
+    /// <summary>
+    /// The type whose initialization <paramref name="instruction"/> triggers, if it triggers one.
+    /// </summary>
+    private static string? TriggeredType(GraphAssembly assembly, TokenInstruction instruction) =>
+        instruction.OpCode switch
+        {
+            ILOpCode.Newobj or ILOpCode.Call or ILOpCode.Callvirt or ILOpCode.Ldftn =>
+                DeclaringTypeOfMember(assembly, instruction.Token),
+
+            ILOpCode.Ldsfld or ILOpCode.Ldsflda or ILOpCode.Stsfld =>
+                DeclaringTypeOfField(assembly, instruction.Token),
+
+            _ => null,
+        };
 
     /// <summary>
     /// The generated types an attribute on <paramref name="method"/> names.

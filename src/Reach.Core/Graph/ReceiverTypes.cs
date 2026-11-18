@@ -367,19 +367,23 @@ internal static class ReceiverTypes
                 continue;
             }
 
-            sizes[(ushort)opCode.Value] = opCode.OperandType switch
-            {
-                OperandType.InlineNone => 0,
-                OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => sizeof(byte),
-                OperandType.InlineVar => sizeof(short),
-                OperandType.InlineI8 or OperandType.InlineR => sizeof(long),
-                OperandType.InlineSwitch => 0,
-                _ => sizeof(int),
-            };
+            sizes[(ushort)opCode.Value] = SizeOf(opCode.OperandType);
         }
 
         return sizes;
     }
+
+    /// <summary>
+    /// The operand's width in bytes. A switch's is variable and worked out where it is read.
+    /// </summary>
+    private static int SizeOf(OperandType operandType) => operandType switch
+    {
+        OperandType.InlineNone or OperandType.InlineSwitch => 0,
+        OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => sizeof(byte),
+        OperandType.InlineVar => sizeof(short),
+        OperandType.InlineI8 or OperandType.InlineR => sizeof(long),
+        _ => sizeof(int),
+    };
 
     private static int Index(ushort value) =>
         value > byte.MaxValue ? OneByteOpCodes + (value & byte.MaxValue) : value;
