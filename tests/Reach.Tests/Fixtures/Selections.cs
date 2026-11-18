@@ -71,8 +71,8 @@ internal sealed class Selections : IDisposable
         var coreProject = Project("/repo/src/Core/Core.csproj", "Core");
         var testsProject = Project("/repo/tests/Tests/Tests.csproj", "Tests");
 
-        var coreAssembly = selections.Open(0, "Core", core, CorePath);
-        var testsAssembly = selections.Open(1, "Tests", tests, TestsPath);
+        var coreAssembly = selections.Open(0, "Core", core);
+        var testsAssembly = selections.Open(1, "Tests", tests);
 
         var scope = new AnalysisScope(
             [coreProject, testsProject],
@@ -168,7 +168,7 @@ internal sealed class Selections : IDisposable
                 IsFirstParty: true,
                 []));
 
-    private GraphAssembly Open(int ordinal, string name, CompiledAssembly compiled, string documentPath)
+    private GraphAssembly Open(int ordinal, string name, CompiledAssembly compiled)
     {
         var reader = new PEReader(ImmutableArray.Create(compiled.Image));
         var symbols = MetadataReaderProvider.FromPortablePdbImage(ImmutableArray.Create(compiled.Symbols));
