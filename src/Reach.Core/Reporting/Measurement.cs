@@ -38,7 +38,7 @@ internal sealed record ReportMeasurement(
     /// Null when nothing was enumerable, which is reported as <c>unknown</c> rather than as a
     /// zero denominator.
     /// </summary>
-    public double? Ratio => Total > 0 ? Math.Round(Fraction(WillRun, Total), 4) : null;
+    public double? Ratio => Total > 0 ? Math.Round(Fraction(WillRun, Total), 4, MidpointRounding.ToEven) : null;
 
     internal static ReportMeasurement Of(RenderedSelection rendered)
     {
