@@ -20,6 +20,12 @@ namespace Reach.Tests.Acceptance;
 /// </remarks>
 public sealed partial class ExampleReportTests : IDisposable
 {
+    private static readonly JsonSerializerOptions Readable = new()
+    {
+        WriteIndented = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
     private readonly FixtureSolution fixture;
     private readonly string baseline;
 
@@ -79,13 +85,7 @@ public sealed partial class ExampleReportTests : IDisposable
                 : property.Value;
         }
 
-        return JsonSerializer.Serialize(
-            root,
-            new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            }).ReplaceLineEndings("\n");
+        return JsonSerializer.Serialize(root, Readable).ReplaceLineEndings("\n");
     }
 
     /// <summary>
