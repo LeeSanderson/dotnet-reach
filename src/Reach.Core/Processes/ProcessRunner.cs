@@ -115,16 +115,11 @@ internal sealed class ProcessRunner : IProcessRunner
         }
     }
 
-    private static async Task DrainAsync(params Task<string>[] reads)
-    {
-        try
-        {
-            await Task.WhenAll(reads).ConfigureAwait(false);
-        }
-        catch (Exception)
-        {
-            // The pipes were closed under the reader when the child was killed. The
-            // cancellation is the news; whatever the child had written is not.
-        }
-    }
+    /// <summary>
+    /// Waits for every read and ignores how it ended. The pipes were closed under the reader
+    /// when the child was killed: the cancellation is the news, and whatever the child had
+    /// written is not.
+    /// </summary>
+    private static async Task DrainAsync(params Task[] reads) =>
+        await Task.WhenAll(reads).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 }
