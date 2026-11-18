@@ -3,7 +3,7 @@ namespace Reach.Changes;
 /// <summary>
 /// What git said happened to a path between the baseline and now.
 /// </summary>
-internal enum ChangeStatus
+public enum ChangeStatus
 {
     Added,
     Modified,
@@ -21,7 +21,7 @@ internal enum ChangeStatus
 /// One path from git, repository-relative and forward-slashed — the spelling git itself
 /// returns, which is never re-interpreted by git afterwards.
 /// </summary>
-internal sealed record ChangedPath(string Path, ChangeStatus Status)
+public sealed record ChangedPath(string Path, ChangeStatus Status)
 {
     internal bool IsCSharp =>
         Path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);

@@ -17,7 +17,7 @@ namespace Reach.Reporting;
 /// the only place it can live.
 /// </para>
 /// </remarks>
-internal static class NoticeCatalogue
+public static class NoticeCatalogue
 {
     internal static IReadOnlyDictionary<string, NoticeKind> All { get; } =
         new Dictionary<string, NoticeKind>(StringComparer.Ordinal)

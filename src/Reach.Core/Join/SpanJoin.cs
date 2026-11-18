@@ -13,7 +13,7 @@ namespace Reach.Join;
 /// widening for its project — over-selection, and it is what makes a phantom member from a
 /// misparse survivable rather than a silent hole.
 /// </param>
-internal sealed record JoinResult(ChangedMember Member, IReadOnlyList<MethodId> Methods)
+public sealed record JoinResult(ChangedMember Member, IReadOnlyList<MethodId> Methods)
 {
     internal bool Joined => Methods.Count > 0;
 }

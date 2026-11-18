@@ -12,7 +12,7 @@ namespace Reach.Assemblies;
 /// than assumed, because comparing a file against the wrong algorithm's digest fails in the
 /// direction that stops a run.
 /// </param>
-internal sealed record SourceDocument(string Path, Guid HashAlgorithm, byte[] Hash)
+public sealed record SourceDocument(string Path, Guid HashAlgorithm, byte[] Hash)
 {
     internal bool HasChecksum => Hash.Length > 0;
 }

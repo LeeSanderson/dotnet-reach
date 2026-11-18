@@ -21,7 +21,7 @@ namespace Reach.Graph;
 /// simplification that makes the representation fit; do not add a field.
 /// </para>
 /// </remarks>
-internal readonly record struct MethodId(ulong Value)
+public readonly record struct MethodId(ulong Value)
 {
     private const int OrdinalShift = 32;
     private const ulong Discriminator = 1UL << 63;

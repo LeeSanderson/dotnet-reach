@@ -10,7 +10,7 @@ namespace Reach.Graph;
 /// anchor is interned only where a first-party type occupies the slot, which bounds the set by
 /// the solution's own shape rather than by the BCL's size.
 /// </remarks>
-internal sealed class ExternalAnchors
+public sealed class ExternalAnchors
 {
     private readonly Dictionary<string, int> ordinalOf = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(int Ordinal, string Key), int> idOf = [];

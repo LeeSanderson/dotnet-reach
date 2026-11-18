@@ -10,7 +10,7 @@ namespace Reach.Reporting;
 /// Segregated into the envelope's one clearly-marked object, so that excluding a single key
 /// makes two reports comparable.
 /// </remarks>
-internal sealed class PhaseTimings
+public sealed class PhaseTimings
 {
     private readonly Dictionary<string, long> phases = new(StringComparer.Ordinal);
     private readonly Stopwatch total = Stopwatch.StartNew();

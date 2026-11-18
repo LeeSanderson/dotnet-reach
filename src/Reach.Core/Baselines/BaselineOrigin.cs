@@ -5,7 +5,7 @@ namespace Reach.Baselines;
 /// and in the report, because a wrong baseline is Reach's most dangerous failure and an audit
 /// trail that cannot say what it audited will not catch one.
 /// </summary>
-internal enum BaselineOrigin
+public enum BaselineOrigin
 {
     /// <summary>
     /// <c>--base</c>, which wins over every variable.

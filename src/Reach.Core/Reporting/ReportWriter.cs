@@ -7,7 +7,7 @@ namespace Reach.Reporting;
 /// <summary>
 /// Serialises the report, and puts it where the command line said.
 /// </summary>
-internal static class ReportWriter
+public static class ReportWriter
 {
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -28,7 +28,7 @@ internal static class ReportWriter
     /// <summary>
     /// Writes the report and returns where it went, or null when it went to a stream.
     /// </summary>
-    internal static string? Write(Report report, ReportDestination destination, Streams streams)
+    public static string? Write(Report report, ReportDestination destination, Streams streams)
     {
         var json = Serialise(report);
 

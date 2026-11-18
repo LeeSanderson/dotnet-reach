@@ -6,7 +6,7 @@ namespace Reach.Assemblies;
 /// <c>Windows7.0</c>, and neither spelling can be turned into the other.
 /// </summary>
 /// <param name="Platform">Lower-cased and with its version stripped: <c>windows</c>, not <c>Windows7.0</c>.</param>
-internal sealed record TargetFrameworkMoniker(string Identifier, Version Version, string? Platform)
+public sealed record TargetFrameworkMoniker(string Identifier, Version Version, string? Platform)
 {
     private const string NetCoreApp = ".NETCoreApp";
     private const string NetFramework = ".NETFramework";

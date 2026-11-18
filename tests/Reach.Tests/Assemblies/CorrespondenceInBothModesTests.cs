@@ -151,7 +151,7 @@ internal sealed class SplitRunner(Reach.Processes.IProcessRunner scripted, Reach
 {
     public Task<Reach.Processes.ProcessResult> RunAsync(
         Reach.Processes.ProcessRequest request,
-        CancellationToken cancellationToken = default) =>
+        CancellationToken cancellationToken) =>
         request.Executable == "dotnet"
             ? scripted.RunAsync(request, cancellationToken)
             : real.RunAsync(request, cancellationToken);

@@ -5,7 +5,7 @@ namespace Reach.Projects;
 /// <summary>
 /// One project compiled for one target framework — the unit Reach actually analyses.
 /// </summary>
-internal sealed record ExpectedAssemblyInstance(ProjectFile Project, string TargetFramework)
+public sealed record ExpectedAssemblyInstance(ProjectFile Project, string TargetFramework)
 {
     public override string ToString() => $"{Project.AssemblyName} ({TargetFramework})";
 }
@@ -22,7 +22,7 @@ internal sealed record ExpectedAssemblyInstance(ProjectFile Project, string Targ
 /// where Reach will look. A missing member of this set is exit 3, so a wrong exclusion here is
 /// a false error there.
 /// </param>
-internal sealed record AnalysisScope(
+public sealed record AnalysisScope(
     IReadOnlyList<ProjectFile> Projects,
     IReadOnlyList<ProjectFile> TestProjects,
     IReadOnlyList<ExpectedAssemblyInstance> ExpectedAssemblies);

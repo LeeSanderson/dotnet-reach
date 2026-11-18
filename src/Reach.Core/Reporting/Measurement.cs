@@ -27,7 +27,7 @@ namespace Reach.Reporting;
 /// widened path reads <c>compiled</c>, so this <em>understates</em> widening's contribution — a
 /// registered measurement limitation, with a second traversal as the upgrade path.
 /// </param>
-internal sealed record ReportMeasurement(
+public sealed record ReportMeasurement(
     int Selected,
     int WillRun,
     int Total,

@@ -8,7 +8,7 @@ namespace Reach.Selection;
 /// Why a test was selected. The rules are not interchangeable and only the first is an
 /// analysis result, so each selected test records which of them applied.
 /// </summary>
-internal enum SelectionRule
+public enum SelectionRule
 {
     /// <summary>
     /// Reachable backwards along call edges from a change somewhere else.
@@ -31,7 +31,7 @@ internal enum SelectionRule
 /// <summary>
 /// What a test project is going to be asked to run.
 /// </summary>
-internal enum SelectionMode
+public enum SelectionMode
 {
     /// <summary>
     /// Some of its tests, named by a filter.
@@ -52,7 +52,7 @@ internal enum SelectionMode
 /// <summary>
 /// How a change was attributed. The tier lives on the change, not on the pair.
 /// </summary>
-internal enum ChangeTier
+public enum ChangeTier
 {
     /// <summary>
     /// Attributed to one or more methods.
@@ -85,7 +85,7 @@ internal enum ChangeTier
 /// nothing runs" a line you read rather than an absence you have to notice.
 /// </para>
 /// </remarks>
-internal sealed record ChangeEntry(int Index, string Display, ChangeTier Tier, string Reason)
+public sealed record ChangeEntry(int Index, string Display, ChangeTier Tier, string Reason)
 {
     internal int TestsReached { get; set; }
 }
@@ -93,7 +93,7 @@ internal sealed record ChangeEntry(int Index, string Display, ChangeTier Tier, s
 /// <param name="Changes">Indices into the forward change list. Empty exactly when the test is not reverse-reachable.</param>
 /// <param name="Class">Null exactly when the test is not reverse-reachable.</param>
 /// <param name="Paths">Hop-by-hop, only under <c>--paths</c>.</param>
-internal sealed record SelectedTest(
+public sealed record SelectedTest(
     TestMethod Test,
     IReadOnlyList<SelectionRule> Rules,
     IReadOnlyList<int> Changes,
@@ -112,7 +112,7 @@ internal sealed record SelectedTest(
 /// Every test method in the project, not only the selected ones. The rendered-match
 /// computation reads it, and so does the over-selection measurement.
 /// </param>
-internal sealed record ProjectSelection(
+public sealed record ProjectSelection(
     ProjectFile Project,
     string TargetFramework,
     SelectionMode Mode,
@@ -124,7 +124,7 @@ internal sealed record ProjectSelection(
 /// <summary>
 /// The whole selection, plus the forward change list and anything it had to disclose.
 /// </summary>
-internal sealed record SelectionResult(
+public sealed record SelectionResult(
     IReadOnlyList<ProjectSelection> Projects,
     IReadOnlyList<ChangeEntry> Changes,
     IReadOnlyList<Notice> Notices)

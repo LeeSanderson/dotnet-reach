@@ -27,7 +27,7 @@ internal readonly ref struct IncomingEdges(ReadOnlySpan<MethodId> sources, ReadO
 /// reconstruct backwards. A forward index would be a second structure obliged to agree with
 /// the first.
 /// </remarks>
-internal sealed class CallGraph
+public sealed class CallGraph
 {
     private readonly Dictionary<MethodId, int> indexOf;
     private readonly MethodId[] nodes;

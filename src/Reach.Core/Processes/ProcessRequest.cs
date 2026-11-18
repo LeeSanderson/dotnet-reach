@@ -8,7 +8,7 @@ namespace Reach.Processes;
 /// <param name="Executable">The program to run, resolved through <c>PATH</c> if not rooted.</param>
 /// <param name="Arguments">The argument vector, one element per argument, already unquoted.</param>
 /// <param name="WorkingDirectory">The directory the child starts in.</param>
-internal sealed record ProcessRequest(
+public sealed record ProcessRequest(
     string Executable,
     IReadOnlyList<string> Arguments,
     string WorkingDirectory)

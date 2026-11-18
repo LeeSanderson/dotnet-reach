@@ -8,7 +8,7 @@ namespace Reach.Rendering;
 /// <summary>
 /// How a selection reached the runner.
 /// </summary>
-internal enum Delivery
+public enum Delivery
 {
     /// <summary>
     /// On the command line.
@@ -40,14 +40,14 @@ internal enum Delivery
 /// What the rendered filter actually matches, which deliberately disagrees with the selection
 /// where the dialect renders with <c>~</c>.
 /// </param>
-internal sealed record RenderedEntry(
+public sealed record RenderedEntry(
     ProjectSelection Selection,
     SelectionMode Mode,
     Delivery Delivery,
     int WillRun,
     IReadOnlyList<IReadOnlyList<string>> Invocations);
 
-internal sealed record RenderedSelection(
+public sealed record RenderedSelection(
     IReadOnlyList<RenderedEntry> Entries,
     IReadOnlyList<Notice> Notices);
 

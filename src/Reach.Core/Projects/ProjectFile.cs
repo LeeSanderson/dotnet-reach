@@ -16,7 +16,7 @@ namespace Reach.Projects;
 /// metadata closure is narrower than the real one.
 /// </param>
 /// <param name="PackageReferences">Package ids only. What test-framework recognition reads.</param>
-internal sealed record ProjectFile(
+public sealed record ProjectFile(
     string Path,
     string AssemblyName,
     IReadOnlyList<string> TargetFrameworks,
@@ -45,4 +45,4 @@ internal sealed record ProjectFile(
 /// <c>OutputItemType="Analyzer"</c> — a source generator or analyser, whose output is loaded
 /// by the compiler and never lands beside the consumer's own assemblies.
 /// </param>
-internal sealed record ProjectReference(string Path, bool ReferenceOutputAssembly, bool IsAnalyzer);
+public sealed record ProjectReference(string Path, bool ReferenceOutputAssembly, bool IsAnalyzer);

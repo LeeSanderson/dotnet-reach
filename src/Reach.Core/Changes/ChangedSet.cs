@@ -6,7 +6,7 @@ namespace Reach.Changes;
 /// <summary>
 /// Which side of the comparison a member appeared on.
 /// </summary>
-internal enum MemberChange
+public enum MemberChange
 {
     Added,
     Modified,
@@ -22,7 +22,7 @@ internal enum MemberChange
 /// The compiler bakes these into consumers, so the declaring side alone cannot cover them —
 /// recompilation widening reads this.
 /// </param>
-internal sealed record ChangedMember(
+public sealed record ChangedMember(
     string DeclaringType,
     MemberKey Member,
     MemberChange Change,
@@ -37,7 +37,7 @@ internal sealed record ChangedMember(
 /// Where a declaration sits in its file, in the spelling debug symbols use: one-based lines
 /// and columns. What the join matches on.
 /// </summary>
-internal readonly record struct DeclarationSpan(int StartLine, int StartColumn, int EndLine, int EndColumn)
+public readonly record struct DeclarationSpan(int StartLine, int StartColumn, int EndLine, int EndColumn)
 {
     internal bool IsEmpty => StartLine == 0 && EndLine == 0;
 
@@ -52,7 +52,7 @@ internal readonly record struct DeclarationSpan(int StartLine, int StartColumn, 
 /// <summary>
 /// Why a widening was applied. Every one of these errs toward over-selection.
 /// </summary>
-internal enum WideningReason
+public enum WideningReason
 {
     /// <summary>
     /// A method was deleted. Unconditional, because a deletion can <em>rebind</em> rather than
@@ -82,7 +82,7 @@ internal enum WideningReason
 /// Every surviving member of a type goes into the changed set, and the reverse walk runs as
 /// normal. The same operation as whole-assembly widening, one granularity finer.
 /// </summary>
-internal sealed record TypeWidening(string DeclaringType, WideningReason Reason, string Path);
+public sealed record TypeWidening(string DeclaringType, WideningReason Reason, string Path);
 
 /// <summary>
 /// Every method of an assembly goes into the changed set. The response to a change Reach can
@@ -93,7 +93,7 @@ internal sealed record TypeWidening(string DeclaringType, WideningReason Reason,
 /// globbing without running MSBuild. Null when no project contains the path at all, which is
 /// the rule table's business.
 /// </param>
-internal sealed record AssemblyWidening(
+public sealed record AssemblyWidening(
     string DeclaringType,
     WideningReason Reason,
     string Path,
@@ -107,7 +107,7 @@ internal sealed record AssemblyWidening(
 /// Paths no member could be attributed to — a project file, a resource, a deleted source file
 /// that declared no type. Routed by the tier ladder, which always widens.
 /// </param>
-internal sealed record ChangedSet(
+public sealed record ChangedSet(
     IReadOnlyList<ChangedMember> Members,
     IReadOnlyList<TypeWidening> TypeWidenings,
     IReadOnlyList<AssemblyWidening> AssemblyWidenings,

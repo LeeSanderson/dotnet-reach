@@ -11,4 +11,4 @@ namespace Reach.Baselines;
 /// The baseline is <c>HEAD</c> itself, so only the working tree can differ from it. Disclosed
 /// whether or not the change set turns out empty.
 /// </param>
-internal sealed record Baseline(string Sha, string Reference, BaselineOrigin Origin, bool IsHead);
+public sealed record Baseline(string Sha, string Reference, BaselineOrigin Origin, bool IsHead);

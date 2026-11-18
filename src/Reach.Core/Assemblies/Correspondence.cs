@@ -7,7 +7,7 @@ namespace Reach.Assemblies;
 /// <summary>
 /// How one recorded document compared against the working tree.
 /// </summary>
-internal enum DocumentClass
+public enum DocumentClass
 {
     /// <summary>
     /// On disk, and the file's bytes hash to the checksum the compiler recorded.
@@ -36,12 +36,12 @@ internal enum DocumentClass
     Invisible,
 }
 
-internal sealed record DocumentVerdict(SourceDocument Document, DocumentClass Class);
+public sealed record DocumentVerdict(SourceDocument Document, DocumentClass Class);
 
 /// <summary>
 /// What the run concluded about the correspondence between source and binaries.
 /// </summary>
-internal enum CorrespondenceVerdict
+public enum CorrespondenceVerdict
 {
     /// <summary>
     /// At least one document was checked, and every checked document agreed.
@@ -59,7 +59,7 @@ internal enum CorrespondenceVerdict
     Failed,
 }
 
-internal sealed record CorrespondenceResult(
+public sealed record CorrespondenceResult(
     CorrespondenceVerdict Verdict,
     string Message,
     IReadOnlyList<Notice> Notices,

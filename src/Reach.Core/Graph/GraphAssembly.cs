@@ -15,7 +15,7 @@ namespace Reach.Graph;
 /// same type — and an <c>IAssemblyReader</c> wrapping it would be an interface nearly as
 /// complex as its implementation.
 /// </remarks>
-internal sealed class GraphAssembly
+public sealed class GraphAssembly
 {
     private Dictionary<string, List<MethodId>>? index;
 

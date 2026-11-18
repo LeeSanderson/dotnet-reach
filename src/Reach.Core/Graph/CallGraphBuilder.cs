@@ -13,7 +13,7 @@ namespace Reach.Graph;
 /// constraints is that it is exactly one, and this is what makes that a test rather than a
 /// review comment.
 /// </param>
-internal sealed record CallGraphResult(
+public sealed record CallGraphResult(
     CallGraph Graph,
     IReadOnlyList<GraphAssembly> Assemblies,
     ExternalAnchors Externals,

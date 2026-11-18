@@ -20,7 +20,7 @@ namespace Reach.Reporting;
 /// any other.
 /// </para>
 /// </remarks>
-internal sealed record Report
+public sealed record Report
 {
     internal const int Version = 1;
 
@@ -67,7 +67,7 @@ internal sealed record Report
 /// The run's own inputs. Everything needed to reproduce it, and nothing that would make two
 /// runs over the same input differ.
 /// </summary>
-internal sealed record ReportEnvelope
+public sealed record ReportEnvelope
 {
     public required string ToolVersion { get; init; }
 
@@ -102,9 +102,9 @@ internal sealed record ReportEnvelope
     public required ReportTimings Timings { get; init; }
 }
 
-internal sealed record ReportBaseline(string Sha, string Reference, string DetectedFrom, bool IsHead);
+public sealed record ReportBaseline(string Sha, string Reference, string DetectedFrom, bool IsHead);
 
-internal sealed record ReportTimings
+public sealed record ReportTimings
 {
     public required string StartedUtc { get; init; }
 
@@ -120,28 +120,28 @@ internal sealed record ReportTimings
 /// Test projects always, and in-scope assemblies as a flat list of identities. <strong>Never
 /// closure edges</strong> — those are the project graph and belong nowhere near a report.
 /// </summary>
-internal sealed record ReportScope
+public sealed record ReportScope
 {
     public required IReadOnlyList<string> TestProjects { get; init; }
 
     public required IReadOnlyList<ReportAssembly> Assemblies { get; init; }
 }
 
-internal sealed record ReportAssembly(string Name, string TargetFramework);
+public sealed record ReportAssembly(string Name, string TargetFramework);
 
 /// <param name="Tier">Which granularity the change was routed at.</param>
 /// <param name="TestsReached">
 /// The field that makes an under-selection visible: a count of zero here is either a genuine
 /// coverage gap or an under-selection bug, and today both are invisible.
 /// </param>
-internal sealed record ReportChange(
+public sealed record ReportChange(
     int Index,
     string Display,
     string Tier,
     string Reason,
     int TestsReached);
 
-internal sealed record ReportEntry
+public sealed record ReportEntry
 {
     public required string Project { get; init; }
 
@@ -185,7 +185,7 @@ internal sealed record ReportEntry
 /// would silently corrupt the over-selection ratio in exactly the case where Reach is running
 /// an entire project.
 /// </param>
-internal sealed record ReportCounts(int Selected, int WillRun, int? Total)
+public sealed record ReportCounts(int Selected, int WillRun, int? Total)
 {
     [JsonPropertyName("total")]
     public object TotalOrUnknown => Total.HasValue ? Total.Value : "unknown";
@@ -194,7 +194,7 @@ internal sealed record ReportCounts(int Selected, int WillRun, int? Total)
     public int? Total { get; init; } = Total;
 }
 
-internal sealed record ReportTest
+public sealed record ReportTest
 {
     public required string Display { get; init; }
 
@@ -220,7 +220,7 @@ internal sealed record ReportTest
     public IReadOnlyList<IReadOnlyList<string>>? Paths { get; init; }
 }
 
-internal sealed record ReportNotice
+public sealed record ReportNotice
 {
     public required string Code { get; init; }
 

@@ -12,7 +12,7 @@ namespace Reach.Selection;
 /// exists; a test reachable only through widening is <see cref="Widened"/>, which is where
 /// over-selection is plausible and the only class narrowing may ever touch.
 /// </remarks>
-internal enum PathClass
+public enum PathClass
 {
     /// <summary>
     /// Reachable without a widened edge. Synthesised edges count here: containment and type

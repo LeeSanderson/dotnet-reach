@@ -9,7 +9,7 @@ namespace Reach.Selection;
 /// independently of the method that declares them.
 /// </summary>
 /// <param name="DeclaringType">Fully qualified, as a filter expression will need it.</param>
-internal sealed record TestMethod(MethodId Id, string DeclaringType, string Name)
+public sealed record TestMethod(MethodId Id, string DeclaringType, string Name)
 {
     internal string FullyQualifiedName => DeclaringType + "." + Name;
 

@@ -13,7 +13,7 @@ namespace Reach.Assemblies;
 /// consuming projects' output — so this resolves the document paths recorded <em>inside</em>
 /// the symbols and never checks whether a file exists beside the assembly.
 /// </param>
-internal sealed record ScannedAssembly(
+public sealed record ScannedAssembly(
     string Path,
     string SimpleName,
     Guid ModuleVersionId,

@@ -5,7 +5,7 @@ namespace Reach.Reporting;
 /// this could only ever disagree with it, and a pipeline that wants to gate gates on
 /// <see cref="BlindSpot"/>.
 /// </summary>
-internal enum NoticeKind
+public enum NoticeKind
 {
     /// <summary>
     /// May under-select. Every code of this kind has an entry in the limitations register.
