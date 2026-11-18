@@ -40,9 +40,9 @@ internal sealed record LayoutHints(string? Configuration, string? Output, string
     /// </summary>
     private bool UnderConfiguration(string path) =>
         Configuration is null
-        || path
-            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            .Any(segment => segment.Equals(Configuration, StringComparison.OrdinalIgnoreCase));
+        || Array.Exists(
+            path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            segment => segment.Equals(Configuration, StringComparison.OrdinalIgnoreCase));
 
     private static string? Absolute(string? path, string workingDirectory) =>
         string.IsNullOrEmpty(path) ? null : Paths.Normalise(Path.GetFullPath(path, workingDirectory));

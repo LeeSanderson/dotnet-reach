@@ -97,7 +97,7 @@ internal static class FilterDialect
         return
         [
             .. allTests
-                .Where(candidate => names.Any(name => candidate.Contains(name, StringComparison.Ordinal)))
+                .Where(candidate => Array.Exists(names, name => candidate.Contains(name, StringComparison.Ordinal)))
                 .Order(StringComparer.Ordinal)
         ];
     }

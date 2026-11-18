@@ -113,9 +113,9 @@ internal static class Correspondence
     }
 
     private static bool IsBuildOutput(string path) =>
-        path
-            .Split('/', '\\')
-            .Any(segment => BuildDirectories.Contains(segment, StringComparer.OrdinalIgnoreCase));
+        Array.Exists(
+            path.Split('/', '\\'),
+            segment => BuildDirectories.Contains(segment, StringComparer.OrdinalIgnoreCase));
 
     private static string Message(IReadOnlyList<DocumentVerdict> mismatched) =>
         "The assemblies Reach read were not compiled from the source in the working tree, so "

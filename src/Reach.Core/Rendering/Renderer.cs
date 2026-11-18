@@ -65,7 +65,7 @@ internal sealed class Renderer(
         // runs every target framework, so one sibling that cannot be pinned makes every
         // sibling's filter reach it — pinning the others correctly would not save the run.
         if (multiTargeted
-            && (selector is null || siblings.Any(sibling => FrameworkSelector.Derive(sibling.Assembly.Framework) is null)))
+            && (selector is null || Array.Exists(siblings, sibling => FrameworkSelector.Derive(sibling.Assembly.Framework) is null)))
         {
             return ProjectWide(project, projectWideEmitted);
         }

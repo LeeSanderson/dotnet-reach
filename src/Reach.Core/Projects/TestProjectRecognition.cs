@@ -29,7 +29,7 @@ internal static class TestProjectRecognition
         project.PackageReferences.Any(IsTestFramework);
 
     private static bool IsTestFramework(string packageId) =>
-        TestFrameworkPackages.Any(known =>
+        Array.Exists(TestFrameworkPackages, known =>
             packageId.Equals(known, StringComparison.OrdinalIgnoreCase)
             || packageId.StartsWith(known + ".", StringComparison.OrdinalIgnoreCase));
 }
