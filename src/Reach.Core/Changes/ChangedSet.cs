@@ -79,8 +79,8 @@ internal readonly record struct DeclarationSpan(int StartLine, int StartColumn, 
     /// Whether a point sits inside this span, comparing line and column together.
     /// </summary>
     internal bool Contains(int line, int column) =>
-        (line > StartLine || (line == StartLine && column >= StartColumn))
-        && (line < EndLine || (line == EndLine && column <= EndColumn));
+        (line, column).CompareTo((StartLine, StartColumn)) >= 0
+        && (line, column).CompareTo((EndLine, EndColumn)) <= 0;
 }
 
 /// <summary>

@@ -30,6 +30,17 @@ internal static class Canonicaliser
     /// </summary>
     private const char Separator = '\u0001';
 
+    private static readonly HashSet<SyntaxKind> SignificantTrivia =
+    [
+        SyntaxKind.DisabledTextTrivia,
+        SyntaxKind.IfDirectiveTrivia,
+        SyntaxKind.ElifDirectiveTrivia,
+        SyntaxKind.ElseDirectiveTrivia,
+        SyntaxKind.EndIfDirectiveTrivia,
+        SyntaxKind.DefineDirectiveTrivia,
+        SyntaxKind.UndefDirectiveTrivia,
+    ];
+
     internal static string Of(IReadOnlyList<SyntaxNodeOrToken> parts)
     {
         var builder = new StringBuilder();
@@ -72,21 +83,11 @@ internal static class Canonicaliser
         }
     }
 
-    private static bool IsSignificant(SyntaxTrivia trivia) => trivia.Kind() switch
-    {
-        // The branch the parser did not take. Invisible to the token stream, and a change to
-        // it changes what another configuration compiles.
-        SyntaxKind.DisabledTextTrivia => true,
-
-        SyntaxKind.IfDirectiveTrivia
-            or SyntaxKind.ElifDirectiveTrivia
-            or SyntaxKind.ElseDirectiveTrivia
-            or SyntaxKind.EndIfDirectiveTrivia
-            or SyntaxKind.DefineDirectiveTrivia
-            or SyntaxKind.UndefDirectiveTrivia => true,
-
-        // #region, #pragma, #nullable, #line and every comment form are formatting or
-        // tooling, not compilation.
-        _ => false,
-    };
+    /// <summary>
+    /// The branch the parser did not take is invisible to the token stream, and a change to it
+    /// changes what another configuration compiles; the conditional directives decide which
+    /// branch that is. <c>#region</c>, <c>#pragma</c>, <c>#nullable</c>, <c>#line</c> and every
+    /// comment form are formatting or tooling, not compilation.
+    /// </summary>
+    private static bool IsSignificant(SyntaxTrivia trivia) => SignificantTrivia.Contains(trivia.Kind());
 }

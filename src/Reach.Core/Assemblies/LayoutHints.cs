@@ -22,8 +22,8 @@ internal sealed record LayoutHints(string? Configuration, string? Output, string
 
     internal bool Keeps(ScannedAssembly assembly) =>
         UnderConfiguration(assembly.Path)
-        && (Output is null || Paths.IsUnder(assembly.Path, Output))
-        && (ArtifactsPath is null || Paths.IsUnder(assembly.Path, ArtifactsPath));
+        && UnderIfGiven(assembly.Path, Output)
+        && UnderIfGiven(assembly.Path, ArtifactsPath);
 
     /// <summary>
     /// What to tell someone whose scan came back ambiguous.
@@ -45,6 +45,9 @@ internal sealed record LayoutHints(string? Configuration, string? Output, string
         || Array.Exists(
             path.Split(Separators),
             segment => segment.Equals(Configuration, StringComparison.OrdinalIgnoreCase));
+
+    private static bool UnderIfGiven(string path, string? directory) =>
+        directory is null || Paths.IsUnder(path, directory);
 
     private static string? Absolute(string? path, string workingDirectory) =>
         string.IsNullOrEmpty(path) ? null : Paths.Normalise(Path.GetFullPath(path, workingDirectory));

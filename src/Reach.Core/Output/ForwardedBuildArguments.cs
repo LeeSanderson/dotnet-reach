@@ -68,7 +68,5 @@ internal static class ForwardedBuildArguments
     /// </summary>
     private static bool Matches(string token, string owned) =>
         token.Equals(owned, StringComparison.Ordinal)
-        || (token.StartsWith(owned, StringComparison.Ordinal)
-            && token.Length > owned.Length
-            && (token[owned.Length] == '=' || token[owned.Length] == ':'));
+        || (token.StartsWith(owned, StringComparison.Ordinal) && token.AsSpan(owned.Length) is ['=' or ':', ..]);
 }

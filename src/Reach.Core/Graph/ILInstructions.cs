@@ -29,6 +29,36 @@ internal static class ILInstructions
     private const byte TwoBytePrefix = 0xFE;
     private const ushort TwoByteBase = TwoBytePrefix << 8;
 
+    private static readonly Dictionary<OperandType, OperandKind> Kinds = new()
+    {
+        [OperandType.InlineNone] = OperandKind.None,
+
+        [OperandType.ShortInlineBrTarget] = OperandKind.One,
+        [OperandType.ShortInlineI] = OperandKind.One,
+        [OperandType.ShortInlineVar] = OperandKind.One,
+
+        [OperandType.InlineVar] = OperandKind.Two,
+
+        [OperandType.InlineBrTarget] = OperandKind.Four,
+        [OperandType.InlineI] = OperandKind.Four,
+        [OperandType.ShortInlineR] = OperandKind.Four,
+
+        // Everything that names something in metadata. Reach records all of them and lets each
+        // phase filter: type initialization reads the field and type tokens, widening reads
+        // the constrained. prefix, and calls read the method ones.
+        [OperandType.InlineField] = OperandKind.Token,
+        [OperandType.InlineMethod] = OperandKind.Token,
+        [OperandType.InlineSig] = OperandKind.Token,
+        [OperandType.InlineString] = OperandKind.Token,
+        [OperandType.InlineTok] = OperandKind.Token,
+        [OperandType.InlineType] = OperandKind.Token,
+
+        [OperandType.InlineI8] = OperandKind.Eight,
+        [OperandType.InlineR] = OperandKind.Eight,
+
+        [OperandType.InlineSwitch] = OperandKind.Switch,
+    };
+
     private static readonly OperandKind[] SingleByte = new OperandKind[256];
     private static readonly OperandKind[] TwoByte = new OperandKind[256];
 
@@ -151,36 +181,8 @@ internal static class ILInstructions
         return count > int.MaxValue / sizeof(int) ? -1 : sizeof(int) + ((int)count * sizeof(int));
     }
 
-    private static OperandKind KindOf(OperandType operandType) => operandType switch
-    {
-        OperandType.InlineNone => OperandKind.None,
-
-        OperandType.ShortInlineBrTarget
-            or OperandType.ShortInlineI
-            or OperandType.ShortInlineVar => OperandKind.One,
-
-        OperandType.InlineVar => OperandKind.Two,
-
-        OperandType.InlineBrTarget
-            or OperandType.InlineI
-            or OperandType.ShortInlineR => OperandKind.Four,
-
-        // Everything that names something in metadata. Reach records all of them and lets each
-        // phase filter: type initialization reads the field and type tokens, widening reads
-        // the constrained. prefix, and calls read the method ones.
-        OperandType.InlineField
-            or OperandType.InlineMethod
-            or OperandType.InlineSig
-            or OperandType.InlineString
-            or OperandType.InlineTok
-            or OperandType.InlineType => OperandKind.Token,
-
-        OperandType.InlineI8 or OperandType.InlineR => OperandKind.Eight,
-
-        OperandType.InlineSwitch => OperandKind.Switch,
-
-        _ => OperandKind.Unknown,
-    };
+    private static OperandKind KindOf(OperandType operandType) =>
+        Kinds.GetValueOrDefault(operandType, OperandKind.Unknown);
 
     private enum OperandKind
     {
