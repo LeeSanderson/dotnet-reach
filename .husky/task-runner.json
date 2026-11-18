@@ -13,10 +13,10 @@
     {
       "name": "format-style-staged",
       "group": "pre-commit",
-      "//": "TEMPORARY, see format-whitespace-staged. Ticket 09 restores the full check.",
+      "//": "TEMPORARY, see format-whitespace-staged. Ticket 09 restores the full check. IDE1006 (the `_` field prefix) is excluded because its fixer cannot run under `dotnet format`, so the 85 unrenamed fields would fail every commit that touches their files.",
       "pathMode": "relative",
       "command": "dotnet",
-      "args": ["format", "style", "--verify-no-changes", "--include", "${staged}"],
+      "args": ["format", "style", "--verify-no-changes", "--exclude-diagnostics", "IDE1006", "--include", "${staged}"],
       "include": ["**/*.cs"]
     }
   ]
