@@ -10,12 +10,20 @@ namespace Reach.Reporting;
 /// Segregated into the envelope's one clearly-marked object, so that excluding a single key
 /// makes two reports comparable.
 /// </remarks>
-internal sealed class PhaseTimings
+internal sealed class PhaseTimings(TimeProvider clock)
 {
     private readonly Dictionary<string, long> _phases = new(StringComparer.Ordinal);
     private readonly Stopwatch _total = Stopwatch.StartNew();
 
-    internal DateTimeOffset StartedUtc { get; } = DateTimeOffset.UtcNow;
+    /// <summary>
+    /// Starts timing against the system clock.
+    /// </summary>
+    internal PhaseTimings()
+        : this(TimeProvider.System)
+    {
+    }
+
+    internal DateTimeOffset StartedUtc { get; } = clock.GetUtcNow();
 
     /// <summary>
     /// Times <paramref name="work"/> and records it under <paramref name="phase"/>.
