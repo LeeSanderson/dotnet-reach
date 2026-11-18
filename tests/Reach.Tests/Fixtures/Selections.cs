@@ -29,11 +29,23 @@ internal sealed class Selections : IDisposable
     {
     }
 
-    internal SelectionResult Result { get; private set; } = null!;
+    internal SelectionResult Result
+    {
+        get => field ?? throw new InvalidOperationException("Set by Of before the fixture is returned.");
+        private set;
+    }
 
-    internal CallGraph Graph { get; private set; } = null!;
+    internal CallGraph Graph
+    {
+        get => field ?? throw new InvalidOperationException("Set by Of before the fixture is returned.");
+        private set;
+    }
 
-    internal AnalysisScope Scope { get; private set; } = null!;
+    internal AnalysisScope Scope
+    {
+        get => field ?? throw new InvalidOperationException("Set by Of before the fixture is returned.");
+        private set;
+    }
 
     internal IReadOnlyList<AssemblyInstance> Instances { get; private set; } = [];
 

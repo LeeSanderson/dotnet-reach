@@ -19,7 +19,11 @@ internal sealed class Graphs : IDisposable
 {
     private readonly List<PEReader> readers = [];
 
-    internal CallGraphResult Result { get; private set; } = null!;
+    internal CallGraphResult Result
+    {
+        get => field ?? throw new InvalidOperationException("Set by Of before the fixture is returned.");
+        private set;
+    }
 
     internal CallGraph Graph => Result.Graph;
 
