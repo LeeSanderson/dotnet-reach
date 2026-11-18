@@ -35,10 +35,15 @@ internal sealed record ReportMeasurement(
     int WidenedPairs)
 {
     /// <summary>
+    /// The ratio's precision in the report: hundredths of a percent.
+    /// </summary>
+    private const int RatioDecimals = 4;
+
+    /// <summary>
     /// Null when nothing was enumerable, which is reported as <c>unknown</c> rather than as a
     /// zero denominator.
     /// </summary>
-    public double? Ratio => Total > 0 ? Math.Round((double)WillRun / Total, 4) : null;
+    public double? Ratio => Total > 0 ? Math.Round((double)WillRun / Total, RatioDecimals) : null;
 
     internal static ReportMeasurement Of(RenderedSelection rendered)
     {

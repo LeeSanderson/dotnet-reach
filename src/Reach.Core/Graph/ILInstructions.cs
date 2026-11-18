@@ -27,6 +27,7 @@ internal readonly record struct TokenInstruction(int Offset, ILOpCode OpCode, in
 internal static class ILInstructions
 {
     private const byte TwoBytePrefix = 0xFE;
+    private const ushort TwoByteBase = TwoBytePrefix << 8;
 
     private static readonly OperandKind[] SingleByte = new OperandKind[256];
     private static readonly OperandKind[] TwoByte = new OperandKind[256];
@@ -47,9 +48,9 @@ internal static class ILInstructions
             var value = (ushort)opCode.Value;
             var kind = KindOf(opCode.OperandType);
 
-            if (value > 0xFF)
+            if (value > byte.MaxValue)
             {
-                TwoByte[value & 0xFF] = kind;
+                TwoByte[value & byte.MaxValue] = kind;
             }
             else
             {
@@ -82,7 +83,7 @@ internal static class ILInstructions
                 }
 
                 var second = il[offset++];
-                opCode = (ILOpCode)((TwoBytePrefix << 8) | second);
+                opCode = (ILOpCode)(TwoByteBase | second);
                 kind = TwoByte[second];
             }
             else
@@ -110,7 +111,7 @@ internal static class ILInstructions
 
             if (kind == OperandKind.Token)
             {
-                found.Add(new TokenInstruction(start, opCode, BitConverter.ToInt32(il[offset..(offset + 4)])));
+                found.Add(new TokenInstruction(start, opCode, BitConverter.ToInt32(il[offset..(offset + sizeof(int))])));
             }
 
             offset += size;
@@ -121,14 +122,14 @@ internal static class ILInstructions
 
     private static int SwitchSize(ReadOnlySpan<byte> il, int offset)
     {
-        if (offset + 4 > il.Length)
+        if (offset + sizeof(int) > il.Length)
         {
             return -1;
         }
 
-        var count = BitConverter.ToUInt32(il[offset..(offset + 4)]);
+        var count = BitConverter.ToUInt32(il[offset..(offset + sizeof(int))]);
 
-        return count > int.MaxValue / 4 ? -1 : 4 + ((int)count * 4);
+        return count > int.MaxValue / sizeof(int) ? -1 : sizeof(int) + ((int)count * sizeof(int));
     }
 
     private static OperandKind KindOf(OperandType operandType) => operandType switch

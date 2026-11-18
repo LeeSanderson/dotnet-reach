@@ -33,6 +33,14 @@ namespace Reach.Graph;
 /// </remarks>
 internal static class ReceiverTypes
 {
+    private const byte TwoBytePrefix = 0xFE;
+    private const ushort TwoByteBase = TwoBytePrefix << 8;
+
+    /// <summary>
+    /// The per-opcode tables hold the one-byte opcodes, then the two-byte ones by second byte.
+    /// </summary>
+    private const int OneByteOpCodes = byte.MaxValue + 1;
+
     private static readonly int[] Pops = new int[512];
     private static readonly int[] Pushes = new int[512];
 
@@ -126,17 +134,12 @@ internal static class ReceiverTypes
                 return;
 
             // Rung 2: a signature type.
+            // The short forms are numbered consecutively, so the slot is the distance from _0.
             case ILOpCode.Ldarg_0:
-                stack.Add(At(arguments, 0));
-                return;
             case ILOpCode.Ldarg_1:
-                stack.Add(At(arguments, 1));
-                return;
             case ILOpCode.Ldarg_2:
-                stack.Add(At(arguments, 2));
-                return;
             case ILOpCode.Ldarg_3:
-                stack.Add(At(arguments, 3));
+                stack.Add(At(arguments, opCode - ILOpCode.Ldarg_0));
                 return;
             case ILOpCode.Ldarg:
             case ILOpCode.Ldarg_s:
@@ -144,16 +147,10 @@ internal static class ReceiverTypes
                 return;
 
             case ILOpCode.Ldloc_0:
-                stack.Add(At(locals, 0));
-                return;
             case ILOpCode.Ldloc_1:
-                stack.Add(At(locals, 1));
-                return;
             case ILOpCode.Ldloc_2:
-                stack.Add(At(locals, 2));
-                return;
             case ILOpCode.Ldloc_3:
-                stack.Add(At(locals, 3));
+                stack.Add(At(locals, opCode - ILOpCode.Ldloc_0));
                 return;
             case ILOpCode.Ldloc:
             case ILOpCode.Ldloc_s:
@@ -252,11 +249,14 @@ internal static class ReceiverTypes
             }
             else if (opCode == ILOpCode.Switch)
             {
-                var count = BitConverter.ToInt32(il[(start + 1)..(start + 5)]);
+                // One opcode byte, a four-byte count, then that many four-byte targets.
+                var targets = start + 1 + sizeof(int);
+                var count = BitConverter.ToInt32(il[(start + 1)..targets]);
 
                 for (var index = 0; index < count; index++)
                 {
-                    boundaries.Add(next + BitConverter.ToInt32(il[(start + 5 + (index * 4))..(start + 9 + (index * 4))]));
+                    var target = targets + (index * sizeof(int));
+                    boundaries.Add(next + BitConverter.ToInt32(il[target..(target + sizeof(int))]));
                 }
             }
 
@@ -304,14 +304,14 @@ internal static class ReceiverTypes
         var first = il[offset++];
         ILOpCode opCode;
 
-        if (first == 0xFE)
+        if (first == TwoBytePrefix)
         {
             if (offset >= il.Length)
             {
                 return (default, 0, -1);
             }
 
-            opCode = (ILOpCode)((0xFE << 8) | il[offset++]);
+            opCode = (ILOpCode)(TwoByteBase | il[offset++]);
         }
         else
         {
@@ -346,14 +346,14 @@ internal static class ReceiverTypes
     {
         if (opCode == ILOpCode.Switch)
         {
-            if (offset + 4 > il.Length)
+            if (offset + sizeof(int) > il.Length)
             {
                 return -1;
             }
 
-            var count = BitConverter.ToUInt32(il[offset..(offset + 4)]);
+            var count = BitConverter.ToUInt32(il[offset..(offset + sizeof(int))]);
 
-            return count > int.MaxValue / 4 ? -1 : 4 + ((int)count * 4);
+            return count > int.MaxValue / sizeof(int) ? -1 : sizeof(int) + ((int)count * sizeof(int));
         }
 
         return Sizes.TryGetValue((ushort)opCode, out var size) ? size : -1;
@@ -375,34 +375,29 @@ internal static class ReceiverTypes
             sizes[(ushort)opCode.Value] = opCode.OperandType switch
             {
                 OperandType.InlineNone => 0,
-                OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => 1,
-                OperandType.InlineVar => 2,
-                OperandType.InlineI8 or OperandType.InlineR => 8,
+                OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => sizeof(byte),
+                OperandType.InlineVar => sizeof(short),
+                OperandType.InlineI8 or OperandType.InlineR => sizeof(long),
                 OperandType.InlineSwitch => 0,
-                _ => 4,
+                _ => sizeof(int),
             };
         }
 
         return sizes;
     }
 
-    private static int Index(ushort value) => value > 0xFF ? 256 + (value & 0xFF) : value;
+    private static int Index(ushort value) =>
+        value > byte.MaxValue ? OneByteOpCodes + (value & byte.MaxValue) : value;
 
+    /// <summary>
+    /// How many slots a behaviour pops or pushes: one per underscore-separated part of its name,
+    /// so <c>Popref_popi_pop1</c> pops three. The variable behaviours count as none; the call
+    /// cases work theirs out from the signature.
+    /// </summary>
     private static int Count(StackBehaviour behaviour) => behaviour switch
     {
-        StackBehaviour.Pop0 or StackBehaviour.Push0 => 0,
-        StackBehaviour.Pop1 or StackBehaviour.Popi or StackBehaviour.Popref
-            or StackBehaviour.Push1 or StackBehaviour.Pushi or StackBehaviour.Pushi8
-            or StackBehaviour.Pushr4 or StackBehaviour.Pushr8 or StackBehaviour.Pushref => 1,
-        StackBehaviour.Pop1_pop1 or StackBehaviour.Popi_pop1 or StackBehaviour.Popi_popi
-            or StackBehaviour.Popi_popi8 or StackBehaviour.Popi_popr4 or StackBehaviour.Popi_popr8
-            or StackBehaviour.Popref_pop1 or StackBehaviour.Popref_popi
-            or StackBehaviour.Push1_push1 => 2,
-        StackBehaviour.Popi_popi_popi or StackBehaviour.Popref_popi_popi
-            or StackBehaviour.Popref_popi_popi8 or StackBehaviour.Popref_popi_popr4
-            or StackBehaviour.Popref_popi_popr8 or StackBehaviour.Popref_popi_popref
-            or StackBehaviour.Popref_popi_pop1 => 3,
-        _ => 0,
+        StackBehaviour.Pop0 or StackBehaviour.Push0 or StackBehaviour.Varpop or StackBehaviour.Varpush => 0,
+        _ => behaviour.ToString().Split('_').Length,
     };
 
     private static void Pop(List<string?> stack, int count)

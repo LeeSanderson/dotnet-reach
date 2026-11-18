@@ -29,6 +29,11 @@ namespace Reach.Graph;
 /// </remarks>
 internal sealed class CallGraphBuilder
 {
+    /// <summary>
+    /// How many members a notice names inline. The full list is always in the notice's data.
+    /// </summary>
+    private const int NamedInMessage = 20;
+
     private readonly List<GraphAssembly> _assemblies = [];
     private readonly Dictionary<string, List<GraphAssembly>> _firstPartyByName = new(StringComparer.OrdinalIgnoreCase);
     private readonly ExternalAnchors _externals = new();
@@ -586,7 +591,7 @@ internal sealed class CallGraphBuilder
                 $"{_unresolvedFirstParty.Count} call site(s) name a member of a first-party assembly "
                 + "that is not in it, so those calls produced no edge. The assemblies on disk do "
                 + "not agree with each other: "
-                + string.Join("; ", _unresolvedFirstParty.Order(StringComparer.Ordinal).Take(20)),
+                + string.Join("; ", _unresolvedFirstParty.Order(StringComparer.Ordinal).Take(NamedInMessage)),
                 new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
                     ["members"] = _unresolvedFirstParty.Order(StringComparer.Ordinal).ToArray(),
@@ -600,7 +605,7 @@ internal sealed class CallGraphBuilder
                 NoticeKind.Widening,
                 $"{_ambiguous.Count} call site(s) name a signature that matches more than one "
                 + "method, so every candidate got an edge: "
-                + string.Join("; ", _ambiguous.Order(StringComparer.Ordinal).Take(20)),
+                + string.Join("; ", _ambiguous.Order(StringComparer.Ordinal).Take(NamedInMessage)),
                 new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
                     ["members"] = _ambiguous.Order(StringComparer.Ordinal).ToArray(),

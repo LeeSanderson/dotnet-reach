@@ -33,6 +33,11 @@ internal enum PathClass
 internal static class ReverseWalk
 {
     /// <summary>
+    /// The longest path <see cref="PathFrom"/> reconstructs before giving up on it as a cycle.
+    /// </summary>
+    private const int MaxPathHops = 4096;
+
+    /// <summary>
     /// Every method that can reach one of <paramref name="roots"/>, with the strongest path
     /// class each was reached by.
     /// </summary>
@@ -100,7 +105,7 @@ internal static class ReverseWalk
             hops.Add(next);
             current = next;
 
-            if (hops.Count > 4096)
+            if (hops.Count > MaxPathHops)
             {
                 // Hop-by-hop paths are the one genuinely unbounded thing in the design, which
                 // is why they are opt-in. A cycle would otherwise never terminate.
