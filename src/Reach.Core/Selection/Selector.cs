@@ -117,23 +117,8 @@ internal static class Selector
 
         foreach (var test in project.Tests)
         {
-            var rules = new List<SelectionRule>();
             var changes = reachedBy.GetValueOrDefault(test.Id) ?? [];
-
-            if (changes.Count > 0)
-            {
-                rules.Add(SelectionRule.ReverseReachable);
-            }
-
-            if (ownChanged.Contains(test.Id))
-            {
-                rules.Add(SelectionRule.OwnSourceChanged);
-            }
-
-            if (added.Contains(test.Id))
-            {
-                rules.Add(SelectionRule.NewSinceBaseline);
-            }
+            var rules = RulesFor(test.Id, changes, ownChanged, added);
 
             if (rules.Count == 0)
             {
@@ -157,6 +142,35 @@ internal static class Selector
             project.Tests.Count,
             project.Framework.Dialect,
             project.Tests);
+    }
+
+    /// <summary>
+    /// Every rule that selects <paramref name="test"/>. None means it is not selected.
+    /// </summary>
+    private static List<SelectionRule> RulesFor(
+        MethodId test,
+        List<int> changes,
+        HashSet<MethodId> ownChanged,
+        HashSet<MethodId> added)
+    {
+        var rules = new List<SelectionRule>();
+
+        if (changes.Count > 0)
+        {
+            rules.Add(SelectionRule.ReverseReachable);
+        }
+
+        if (ownChanged.Contains(test))
+        {
+            rules.Add(SelectionRule.OwnSourceChanged);
+        }
+
+        if (added.Contains(test))
+        {
+            rules.Add(SelectionRule.NewSinceBaseline);
+        }
+
+        return rules;
     }
 
     private static IReadOnlyList<EnumeratedProject> Enumerate(

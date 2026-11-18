@@ -215,29 +215,38 @@ internal sealed class CallGraphBuilder
 
             var instructions = ILInstructions.Tokens(il);
 
-            foreach (var instruction in instructions)
-            {
-                var provenance = ProvenanceOf(instruction.OpCode);
-
-                if (provenance is null)
-                {
-                    continue;
-                }
-
-                foreach (var to in Resolve(assembly, instruction.Token))
-                {
-                    _edges.Add(new Edge(
-                        from,
-                        Anchor(assembly, instruction, receivers, to),
-                        provenance.Value));
-                }
-            }
+            AddCompiledEdges(assembly, from, instructions, receivers);
 
             _edges.AddRange(SynthesisedEdges.TypeInitialization(
                 assembly,
                 from,
                 instructions,
                 type => _classConstructors.TryGetValue(type, out var cctor) ? cctor : null));
+        }
+    }
+
+    private void AddCompiledEdges(
+        GraphAssembly assembly,
+        MethodId from,
+        IReadOnlyList<TokenInstruction> instructions,
+        IReadOnlyDictionary<int, string> receivers)
+    {
+        foreach (var instruction in instructions)
+        {
+            var provenance = ProvenanceOf(instruction.OpCode);
+
+            if (provenance is null)
+            {
+                continue;
+            }
+
+            foreach (var to in Resolve(assembly, instruction.Token))
+            {
+                _edges.Add(new Edge(
+                    from,
+                    Anchor(assembly, instruction, receivers, to),
+                    provenance.Value));
+            }
         }
     }
 
