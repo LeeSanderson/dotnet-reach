@@ -26,15 +26,15 @@ internal readonly record struct MethodId(ulong Value)
     private const int OrdinalShift = 32;
     private const ulong Discriminator = 1UL << 63;
     private const ulong LowMask = 0xFFFF_FFFFUL;
-    private const ulong OrdinalMask = 0x7FFF_FFFFUL;
+    private const ulong OrdinalMask = MaxOrdinal;
 
-    internal const int MaxOrdinal = (int)OrdinalMask;
+    internal const int MaxOrdinal = 0x7FFF_FFFF;
 
     /// <summary>
     /// A method Reach has the metadata for.
     /// </summary>
     internal static MethodId Definition(int ordinal, int token) =>
-        new(((ulong)(uint)ordinal << OrdinalShift) | ((uint)token & LowMask));
+        new((Bits(ordinal) << OrdinalShift) | Bits(token));
 
     /// <summary>
     /// A widening anchor in an assembly Reach never reads. Roslyn emits <c>callvirt</c> against
@@ -48,17 +48,23 @@ internal readonly record struct MethodId(ulong Value)
     /// override, not by the BCL's size.
     /// </remarks>
     internal static MethodId External(int ordinal, int interned) =>
-        new(Discriminator | ((ulong)(uint)ordinal << OrdinalShift) | ((uint)interned & LowMask));
+        new(Discriminator | (Bits(ordinal) << OrdinalShift) | Bits(interned));
 
     internal bool IsExternal => (Value & Discriminator) != 0;
 
-    internal int Ordinal => (int)((Value >> OrdinalShift) & OrdinalMask);
+    internal int Ordinal => int.CreateTruncating((Value >> OrdinalShift) & OrdinalMask);
 
     /// <summary>
     /// The metadata token, or the interned reference id when <see cref="IsExternal"/>.
     /// </summary>
-    internal int Token => (int)(Value & LowMask);
+    internal int Token => int.CreateTruncating(Value & LowMask);
 
     public override string ToString() =>
         IsExternal ? $"external:{Ordinal}#{Token}" : $"{Ordinal}:0x{Token:x8}";
+
+    /// <summary>
+    /// The 32 bits of <paramref name="value"/>, zero-extended, so shifting them into place
+    /// cannot smear a sign bit across the ordinal or the discriminator.
+    /// </summary>
+    private static ulong Bits(int value) => uint.CreateTruncating(value);
 }

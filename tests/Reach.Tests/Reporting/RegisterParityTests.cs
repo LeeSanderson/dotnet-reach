@@ -69,7 +69,7 @@ public partial class RegisterParityTests
                 | System.Reflection.BindingFlags.Public
                 | System.Reflection.BindingFlags.Static)
             .Where(field => field.IsLiteral && field.FieldType == typeof(string))
-            .Select(field => (string)field.GetRawConstantValue()!)
+            .Select(field => field.GetRawConstantValue()).OfType<string>()
             .ToArray();
 
         Assert.NotEmpty(declared);

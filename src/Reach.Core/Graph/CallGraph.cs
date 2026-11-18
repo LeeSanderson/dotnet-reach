@@ -122,7 +122,7 @@ internal sealed class CallGraph
 
         var sources = new MethodId[edges.Count];
         var provenances = new EdgeProvenance[edges.Count];
-        var cursor = (int[])offsets.Clone();
+        int[] cursor = [.. offsets];
 
         foreach (var edge in edges)
         {

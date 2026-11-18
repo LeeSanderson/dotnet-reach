@@ -61,10 +61,11 @@ internal static class Compiled
     private static readonly Lazy<ImmutableArray<MetadataReference>> FrameworkReferences =
         new(() =>
         [
-            .. ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+            .. (AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string
+                ?? throw new InvalidOperationException("The runtime reported no trusted platform assemblies."))
                 .Split(Path.PathSeparator)
                 .Where(path => path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-                .Select(path => (MetadataReference)MetadataReference.CreateFromFile(path))
+                .Select(MetadataReference (path) => MetadataReference.CreateFromFile(path))
         ]);
 
     /// <summary>
@@ -122,8 +123,8 @@ internal static class Compiled
             trees,
             [
                 .. FrameworkReferences.Value,
-                .. (references ?? []).Select(reference =>
-                    (MetadataReference)MetadataReference.CreateFromImage(reference.Image))
+                .. (references ?? []).Select(MetadataReference (reference) =>
+                    MetadataReference.CreateFromImage(reference.Image))
             ],
             new CSharpCompilationOptions(
                 OutputKind.DynamicallyLinkedLibrary,

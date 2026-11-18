@@ -198,7 +198,7 @@ internal static class ReportBuilder
             PathClass = test.Class?.ToString().ToLowerInvariant(),
             Paths = test.Paths is null
                 ? null
-                : [.. test.Paths.Select(path => (IReadOnlyList<string>)[.. path.Select(hop => hop.ToString())])],
+                : [.. test.Paths.Select(IReadOnlyList<string> (path) => [.. path.Select(hop => hop.ToString())])],
         };
 
     /// <summary>

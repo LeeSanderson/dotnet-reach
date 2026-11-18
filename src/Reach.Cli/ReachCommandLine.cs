@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.Globalization;
 using Reach.Output;
 using Reach.Processes;
 using Reach.Reporting;
@@ -192,7 +193,7 @@ internal static class ReachCli
 
             Print(run, request, timings, standardOutput, standardError, environment, outputIsRedirected);
 
-            return (int)run.ExitCode;
+            return Convert.ToInt32(run.ExitCode, CultureInfo.InvariantCulture);
         });
 
         return await commandLine

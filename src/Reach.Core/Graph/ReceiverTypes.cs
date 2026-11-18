@@ -45,7 +45,7 @@ internal static class ReceiverTypes
                 continue;
             }
 
-            var index = Index((ushort)opCode.Value);
+            var index = Index(OpCodeValues.ValueOf(opCode));
 
             Pops[index] = Count(opCode.StackBehaviourPop);
             Pushes[index] = Count(opCode.StackBehaviourPush);
@@ -214,7 +214,7 @@ internal static class ReceiverTypes
 
             default:
             {
-                var index = Index((ushort)opCode);
+                var index = Index(OpCodeValues.ValueOf(opCode));
 
                 Pop(stack, index < Pops.Length ? Pops[index] : 0);
 
@@ -311,11 +311,11 @@ internal static class ReceiverTypes
                 return (default, 0, -1);
             }
 
-            opCode = (ILOpCode)((0xFE << 8) | il[offset++]);
+            opCode = OpCodeValues.ToTwoByteOpCode(il[offset++]);
         }
         else
         {
-            opCode = (ILOpCode)first;
+            opCode = OpCodeValues.ToOpCode(first);
         }
 
         var size = OperandSize(opCode, il, offset);
@@ -340,7 +340,7 @@ internal static class ReceiverTypes
     /// A short branch offset is signed; a short variable index is not.
     /// </summary>
     private static int ShortOperand(ILOpCode opCode, byte value) =>
-        IsBranch(opCode) ? (sbyte)value : value;
+        IsBranch(opCode) ? sbyte.CreateTruncating(value) : value;
 
     private static int OperandSize(ILOpCode opCode, ReadOnlySpan<byte> il, int offset)
     {
@@ -353,10 +353,10 @@ internal static class ReceiverTypes
 
             var count = BitConverter.ToUInt32(il[offset..(offset + 4)]);
 
-            return count > int.MaxValue / 4 ? -1 : 4 + ((int)count * 4);
+            return count > int.MaxValue / 4 ? -1 : 4 + (int.CreateTruncating(count) * 4);
         }
 
-        return Sizes.TryGetValue((ushort)opCode, out var size) ? size : -1;
+        return Sizes.TryGetValue(OpCodeValues.ValueOf(opCode), out var size) ? size : -1;
     }
 
     private static readonly Dictionary<ushort, int> Sizes = BuildSizes();
@@ -372,7 +372,7 @@ internal static class ReceiverTypes
                 continue;
             }
 
-            sizes[(ushort)opCode.Value] = opCode.OperandType switch
+            sizes[OpCodeValues.ValueOf(opCode)] = opCode.OperandType switch
             {
                 OperandType.InlineNone => 0,
                 OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => 1,

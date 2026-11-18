@@ -1,3 +1,4 @@
+using System.Globalization;
 using Reach.Cli;
 using Reach.Output;
 using Reach.Tests.Fixtures;
@@ -31,6 +32,8 @@ public class CommandLineTests
 
     private string Error => standardError.ToString();
 
+    private static int Numeric(ExitCode code) => Convert.ToInt32(code, CultureInfo.InvariantCulture);
+
     // ---- The verb -----------------------------------------------------------------------
 
     [Fact]
@@ -44,7 +47,7 @@ public class CommandLineTests
         // guaranteed to try must not trigger a multi-minute build and write files into their
         // repository — and a bare invocation writes no report, so exiting 0 would hand a
         // mis-wired pipeline "success" plus a missing report.
-        Assert.Equal((int)ExitCode.UsageError, exitCode);
+        Assert.Equal(Numeric(ExitCode.UsageError), exitCode);
         Assert.Contains("select", Out + Error);
     }
 
@@ -55,7 +58,7 @@ public class CommandLineTests
 
         var exitCode = await Run(tree.Root, "--help");
 
-        Assert.Equal((int)ExitCode.Success, exitCode);
+        Assert.Equal(Numeric(ExitCode.Success), exitCode);
         Assert.Contains("select", Out);
     }
 
@@ -64,7 +67,7 @@ public class CommandLineTests
     {
         using var tree = ProjectTree.Create();
 
-        Assert.Equal((int)ExitCode.UsageError, await Run(tree.Root, "select", "--bogus"));
+        Assert.Equal(Numeric(ExitCode.UsageError), await Run(tree.Root, "select", "--bogus"));
     }
 
     [Fact]
@@ -72,7 +75,7 @@ public class CommandLineTests
     {
         using var tree = ProjectTree.Create();
 
-        Assert.Equal((int)ExitCode.UsageError, await Run(tree.Root, "select", "-v", "loud"));
+        Assert.Equal(Numeric(ExitCode.UsageError), await Run(tree.Root, "select", "-v", "loud"));
     }
 
     // ---- The -- boundary ----------------------------------------------------------------
@@ -92,7 +95,7 @@ public class CommandLineTests
         var exitCode = await Run(tree.Root, "select", "--", forwarded, "somewhere");
 
         // A forwarded output switch changes the layout through a channel Reach never read.
-        Assert.Equal((int)ExitCode.UsageError, exitCode);
+        Assert.Equal(Numeric(ExitCode.UsageError), exitCode);
         Assert.Contains(instead, Out + Error);
     }
 
@@ -102,7 +105,7 @@ public class CommandLineTests
         using var tree = ProjectTree.Create();
 
         Assert.Equal(
-            (int)ExitCode.UsageError,
+            Numeric(ExitCode.UsageError),
             await Run(tree.Root, "select", "--", "--output=somewhere"));
     }
 
@@ -147,7 +150,7 @@ public class CommandLineTests
         var exitCode = await Run(tree.Root, "select", "--", "-o", "somewhere");
 
         // Exit 1 is the one case that writes no report.
-        Assert.Equal((int)ExitCode.UsageError, exitCode);
+        Assert.Equal(Numeric(ExitCode.UsageError), exitCode);
         Assert.False(Directory.Exists(Path.Combine(tree.Root, ReachDirectory.DefaultName)));
     }
 
@@ -352,7 +355,7 @@ public class CommandLineTests
 
         var exitCode = await Run(tree.Root, "select", "src/Worker/Worker.csproj");
 
-        Assert.Equal((int)ExitCode.UsageError, exitCode);
+        Assert.Equal(Numeric(ExitCode.UsageError), exitCode);
         Assert.Contains("Worker.csproj", Out + Error);
     }
 
@@ -365,7 +368,7 @@ public class CommandLineTests
         // all, so the shallow probe fails and resolution stops.
         var exitCode = await Run(tree.Root, "select");
 
-        Assert.Equal((int)ExitCode.BaselineUnresolvable, exitCode);
+        Assert.Equal(Numeric(ExitCode.BaselineUnresolvable), exitCode);
     }
 
     [Fact]
@@ -375,7 +378,7 @@ public class CommandLineTests
 
         environment["GITHUB_ACTIONS"] = "true";
 
-        Assert.Equal((int)ExitCode.BaselineUnresolvable, await Run(tree.Root, "select"));
+        Assert.Equal(Numeric(ExitCode.BaselineUnresolvable), await Run(tree.Root, "select"));
         Assert.Contains("fetch-depth: 0", Out + Error);
     }
 
@@ -387,7 +390,7 @@ public class CommandLineTests
         var exitCode = await Run(repository.Path, "select", "--base", "main", "--no-build");
 
         // Absence is unambiguous when the tree was searched rather than a path predicted.
-        Assert.Equal((int)ExitCode.AssemblyDiscoveryFailed, exitCode);
+        Assert.Equal(Numeric(ExitCode.AssemblyDiscoveryFailed), exitCode);
         Assert.Contains("No assembly was found", Out + Error);
 
         // A tool that writes nothing when it fails is one you debug by re-running it with more
@@ -417,7 +420,7 @@ public class CommandLineTests
 
         var exitCode = await Run(repository.Path, "select", "--base", "main", "--no-build");
 
-        Assert.Equal((int)ExitCode.Success, exitCode);
+        Assert.Equal(Numeric(ExitCode.Success), exitCode);
 
         // Nothing changed since the baseline, which is a different piece of news from an empty
         // selection and gets a visibly different verdict.

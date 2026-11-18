@@ -49,13 +49,13 @@ internal sealed class PhaseTimings
     }
 
     internal void Record(string phase, TimeSpan elapsed) =>
-        phases[phase] = phases.GetValueOrDefault(phase) + (long)elapsed.TotalMilliseconds;
+        phases[phase] = phases.GetValueOrDefault(phase) + (elapsed.Ticks / TimeSpan.TicksPerMillisecond);
 
     internal ReportTimings ToReport() =>
         new()
         {
             StartedUtc = StartedUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
-            TotalMs = (long)total.Elapsed.TotalMilliseconds,
+            TotalMs = total.Elapsed.Ticks / TimeSpan.TicksPerMillisecond,
             Phases = new SortedDictionary<string, long>(phases, StringComparer.Ordinal),
         };
 }
