@@ -164,10 +164,10 @@ internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbol
     /// <summary>
     /// Opens the image the way production code does, without writing anything to disk.
     /// </summary>
-    internal T Read<T>(Func<MetadataReader, T> read)
+    internal T Read<T>(Func<MetadataReader, T> inspect)
     {
         using var peReader = new PEReader(ImmutableArray.Create(Image));
 
-        return read(peReader.GetMetadataReader());
+        return inspect(peReader.GetMetadataReader());
     }
 }
