@@ -329,13 +329,16 @@ internal static class SynthesisedEdges
         }
     }
 
-    private static string? TypeNameOf(MetadataReader reader, EntityHandle handle) => handle.IsNil ? null : handle.Kind switch
-    {
-        HandleKind.TypeDefinition => MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)handle),
-        HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)handle),
-        HandleKind.TypeSpecification => MetadataNames.WithoutInstantiation(
-            reader.GetTypeSpecification((TypeSpecificationHandle)handle)
-                .DecodeSignature(new SignatureNames(), genericContext: null)),
-        _ => null,
-    };
+    private static string? TypeNameOf(MetadataReader reader, EntityHandle handle) =>
+        handle.IsNil
+            ? null
+            : handle.Kind switch
+            {
+                HandleKind.TypeDefinition => MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)handle),
+                HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)handle),
+                HandleKind.TypeSpecification => MetadataNames.WithoutInstantiation(
+                    reader.GetTypeSpecification((TypeSpecificationHandle)handle)
+                        .DecodeSignature(new SignatureNames(), genericContext: null)),
+                _ => null,
+            };
 }

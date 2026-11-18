@@ -280,15 +280,18 @@ internal sealed class TypeHierarchy
     /// <c>&lt;Module&gt;</c> has no base type, and a nil handle still reports a kind — so the
     /// emptiness check comes first or the row lookup reads off the end of the table.
     /// </summary>
-    private static string? NameOf(MetadataReader reader, EntityHandle handle) => handle.IsNil ? null : handle.Kind switch
-    {
-        HandleKind.TypeDefinition => MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)handle),
-        HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)handle),
-        HandleKind.TypeSpecification => MetadataNames.WithoutInstantiation(
-            reader.GetTypeSpecification((TypeSpecificationHandle)handle)
-                .DecodeSignature(new SignatureNames(), genericContext: null)),
-        _ => null,
-    };
+    private static string? NameOf(MetadataReader reader, EntityHandle handle) =>
+        handle.IsNil
+            ? null
+            : handle.Kind switch
+            {
+                HandleKind.TypeDefinition => MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)handle),
+                HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)handle),
+                HandleKind.TypeSpecification => MetadataNames.WithoutInstantiation(
+                    reader.GetTypeSpecification((TypeSpecificationHandle)handle)
+                        .DecodeSignature(new SignatureNames(), genericContext: null)),
+                _ => null,
+            };
 
     private static List<T> Bucket<T>(Dictionary<string, List<T>> index, string key)
     {

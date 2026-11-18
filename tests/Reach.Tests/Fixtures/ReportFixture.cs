@@ -75,20 +75,19 @@ internal static class ReportFixture
             },
             Scope = new ReportScope { TestProjects = [], Assemblies = [] },
             Changes = [],
-            Entries = counts is null
-                ? []
-                : [
-                    new ReportEntry
-                    {
-                        Project = "tests/T/T.csproj",
-                        TargetFramework = "net10.0",
-                        Mode = "run-all",
-                        Counts = counts,
-                        Tests = [],
-                        Invocations = [],
-                    },
-                ],
+            Entries = counts is null ? [] : [RunAllEntry(counts)],
             Notices = [],
+        };
+
+    private static ReportEntry RunAllEntry(ReportCounts counts) =>
+        new()
+        {
+            Project = "tests/T/T.csproj",
+            TargetFramework = "net10.0",
+            Mode = "run-all",
+            Counts = counts,
+            Tests = [],
+            Invocations = [],
         };
 
     /// <summary>
