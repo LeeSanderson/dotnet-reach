@@ -13,7 +13,7 @@ This is a batch on the integration branch. The build stays red until ticket 09.
 
 **Status:** ready-for-agent
 
-- [ ] Zero MA and CA diagnostics in Reach's own projects
+- [x] Zero MA and CA diagnostics in Reach's own projects
 - [x] Every culture-sensitive formatting call fixed in this ticket names the invariant culture
 - [x] CA5350/CA5351 are suppressed only at the two checksum sites, with the agreed justification
 - [x] No other suppressions added unless approved (approval quoted under `## Comments`)
@@ -58,37 +58,35 @@ Tests: `dotnet test --project tests/Reach.Tests -p:TreatWarningsAsErrors=false -
 `GenerateDocumentationFile=false` is needed now because the CS1573s are errors under the
 package's `.editorconfig`, and `TreatWarningsAsErrors=false` does not lower them.
 
-### Open: questions for the maintainer (rules stopped, not fixed)
+### Resolved: MA0182 and MA0224 (maintainer decisions)
 
-**MA0182, 8 types (`ColourSupport`, `ProcessRunner`, `ReachPipeline`, `HumanSummary`,
-`NoticeCatalogue`, `ReportBuilder`, `ReportWriter`, `Verbosities`).** These are not false
-positives in the analyzer's own terms. I decompiled MA0182 (Meziantou 3.0.341): it counts only
-uses inside the declaring assembly and has no exemption for `InternalsVisibleTo`. Each of these
-types is used only from Reach.Cli and/or Reach.Tests, through Reach.Core's `InternalsVisibleTo`.
-`NoticeCatalogue` is used only by the tests. The analyzer's only escape hatch is
-`[DynamicallyAccessedMembers]` on the type, which is a suppression in disguise (ticket 04
-rejected it). The code-only options I see:
-1. Make the 8 types `public`. No runtime change, but Reach.Core gains a public surface.
-2. Move each type to where it is used: the composition types (`ReachPipeline`, `ProcessRunner`,
-   `ReportWriter`, ...) move into Reach.Cli, and the tests reach them through Cli's
-   `InternalsVisibleTo`. This is a real restructuring.
-3. Approve a per-type `SuppressMessage` (or disabling MA0182 for Reach.Core) with the
-   justification "used by friend assemblies through InternalsVisibleTo". This is also a likely
-   upstream item for the package, which turns on a rule that misfires on any multi-project
-   solution that uses InternalsVisibleTo.
-Which do you want?
+**MA0182.** Maintainer: "The sonar issue is valid and indicative of bad design decision. Remove
+the InternalsVisibleTo Reach.Cli and make Reach.Core classes public". (My question set out three
+options; the decision was to remove the friend link and make the types public.)
 
-**MA0224 (RespectNullableAnnotations), 3 sites: `ReportWriter.Options`, `ReportTests`,
-`ExampleReportTests`.** All three options are serialise-only. Unlike MA0225, this setting
-*does* affect serialisation: with `true`, writing a report throws if a non-nullable property
-holds null at runtime. Today such a value would be written as `null`. As an experiment I set it
-to `true` on `ReportWriter` and the full suite still passed (520/1, the known failure), so no
-tested path hits it. But it changes behaviour on untested paths: a nullability bug becomes a
-crash, where today it writes a `null` field. Options:
-(a) `true` everywhere. Fail fast; a null in a non-nullable report field becomes an internal
-    error (exit 70) instead of a report.
-(b) `false` explicitly. No behaviour change, and the analyzer accepts any explicit assignment,
-    but it may read as a suppression in disguise.
-(c) `true` on the two test-only options (dictionary payloads; it has no effect there) and decide
-    `ReportWriter` separately.
-Which do you want?
+- `Reach.Core.csproj` no longer grants `InternalsVisibleTo` to Reach.Cli. Reach.Tests keeps its
+  grant. Reach.Cli's own `InternalsVisibleTo Reach.Tests` is still needed and stays.
+- Public now: every Core type Reach.Cli uses, plus every type their public signatures expose.
+  Because Cli's public records carry public positional properties, that set reaches most of
+  the pipeline's result types. The eight flagged types are public too. Members Cli calls are
+  public; everything else keeps its `internal` members.
+- Making these public raised three new diagnostics, each fixed in code:
+  - S2339: `ReachDirectory.DefaultName` is now a static read-only property instead of a
+    public const.
+  - S2360 and S1006: the optional `CancellationToken` is now required on
+    `IProcessRunner.RunAsync`, `ProcessRunner`, `ReachPipeline.SelectAsync` and the two test
+    runners. The two fixture callers that relied on the default pass `CancellationToken.None`,
+    which is what the default was.
+  - No CS1591 or public-API CA rule fired. Every other diagnostic is the same as before, only
+    shifted by column.
+- `ScaffoldingTests.Nothing_in_Core_is_public` asserted the M1 scaffolding rule this decision
+  reverses. It now asserts that Reach.Core does not grant `InternalsVisibleTo` to Reach.Cli.
+  It has its own commit, so it is easy to revert if a different guard is wanted.
+
+**MA0224.** Maintainer: "yes, true everywhere". `RespectNullableAnnotations = true` is set on
+`ReportWriter.Options` and on both test options. A null in a non-nullable report property now
+fails the run instead of being written as `null`.
+
+After both decisions, a clean (`--no-incremental`) build shows no MA, CA or RS diagnostic in
+Reach's own projects. The suite gives 520 passed and 1 failed. The failure is the known ticket
+08 acceptance test.
