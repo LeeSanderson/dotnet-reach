@@ -209,6 +209,10 @@ internal static class MetadataNames
             {
                 return index == 0 ? typeName : typeName[..index];
             }
+            else
+            {
+                // Part of a type argument, or a '<' closing a nested one.
+            }
         }
 
         return typeName;

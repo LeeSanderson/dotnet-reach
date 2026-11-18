@@ -294,6 +294,10 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
                     member.IsCompileTimeConstant || previous.IsCompileTimeConstant,
                     member.Span));
             }
+            else
+            {
+                // Present on both sides with the same declaration: unchanged.
+            }
         }
 
         var removed = baselineMembers.Where(entry => !currentMembers.ContainsKey(entry.Key)).ToArray();

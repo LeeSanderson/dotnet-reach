@@ -134,6 +134,10 @@ internal sealed class TypeHierarchy
             {
                 found.Add(implicitly);
             }
+            else
+            {
+                // Inherits the slot without overriding it; its subtypes may still implement it.
+            }
 
             foreach (var child in _subtypes.GetValueOrDefault(name) ?? [])
             {
