@@ -35,8 +35,8 @@ public sealed class AcceptanceTests : IDisposable
     [Fact]
     public async Task The_NUnit_filter_renders_with_contains_and_reports_the_extra_it_will_run()
     {
-        Touch("src/Contoso.Core/Invoice.cs", "public int Tax(int net) => net * StandardRate / 100;",
-            "public int Tax(int net) => (net * StandardRate / 100) + 0;");
+        Touch("src/Contoso.Core/Invoice.cs", "public int Tax(int net) => net * StandardRate / Percent;",
+            "public int Tax(int net) => (net * StandardRate / Percent) + 0;");
 
         var report = await fixture.SelectAsync(baseline, Token);
         var entry = EntryFor(report, "Contoso.Tests.NUnit");
@@ -147,8 +147,8 @@ public sealed class AcceptanceTests : IDisposable
     [Fact]
     public async Task A_change_selects_exactly_the_tests_that_reach_it()
     {
-        Touch("src/Contoso.Core/Invoice.cs", "public int Tax(int net) => net * StandardRate / 100;",
-            "public int Tax(int net) => (net * StandardRate / 100) + 0;");
+        Touch("src/Contoso.Core/Invoice.cs", "public int Tax(int net) => net * StandardRate / Percent;",
+            "public int Tax(int net) => (net * StandardRate / Percent) + 0;");
 
         var report = await fixture.SelectAsync(baseline, Token);
         var xunit = EntryFor(report, "Contoso.Tests.Xunit");

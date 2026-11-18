@@ -7,9 +7,11 @@ public class Invoice
     /// </summary>
     public const int StandardRate = 20;
 
+    private const int Percent = 100;
+
     public int Total(int net) => net + Tax(net);
 
-    public int Tax(int net) => net * StandardRate / 100;
+    public int Tax(int net) => net * StandardRate / Percent;
 
     public int Untouched() => 0;
 }

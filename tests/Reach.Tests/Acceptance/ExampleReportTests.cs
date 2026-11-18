@@ -33,8 +33,8 @@ public sealed partial class ExampleReportTests : IDisposable
         fixture.WriteFile(
             "src/Contoso.Core/Invoice.cs",
             path.Replace(
-                "public int Tax(int net) => net * StandardRate / 100;",
-                "public int Tax(int net) => (net * StandardRate / 100) + 0;",
+                "public int Tax(int net) => net * StandardRate / Percent;",
+                "public int Tax(int net) => (net * StandardRate / Percent) + 0;",
                 StringComparison.Ordinal));
 
         fixture.Rebuild();
