@@ -9,7 +9,7 @@ namespace Reach.Tests.Cli;
 /// The command line as a product surface: which invocations are refused, where each stream
 /// goes, and what Reach writes into the one directory it owns.
 /// </summary>
-public class CommandLineTests
+public sealed class CommandLineTests : IDisposable
 {
     private const string TestPackage = "xunit.v3";
 
@@ -467,5 +467,11 @@ public class CommandLineTests
         tree.AddSlnx("Solution", core, tests);
 
         return tree;
+    }
+
+    public void Dispose()
+    {
+        standardOutput.Dispose();
+        standardError.Dispose();
     }
 }
