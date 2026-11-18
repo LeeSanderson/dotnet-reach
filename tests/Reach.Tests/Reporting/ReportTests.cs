@@ -33,7 +33,11 @@ public class ReportTests
         }
         """;
 
-    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions Indented = new()
+    {
+        WriteIndented = true,
+        RespectRequiredConstructorParameters = true,
+    };
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 

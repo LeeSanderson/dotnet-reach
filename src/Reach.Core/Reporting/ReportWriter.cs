@@ -14,6 +14,9 @@ internal static class ReportWriter
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
 
+        // Only ever used to serialise, which this setting does not affect.
+        RespectRequiredConstructorParameters = true,
+
         // The report carries filter fragments and type names. HTML-escaping them would make
         // the document unreadable for the one person it exists for.
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
