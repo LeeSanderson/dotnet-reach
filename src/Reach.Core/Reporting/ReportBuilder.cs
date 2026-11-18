@@ -13,9 +13,9 @@ namespace Reach.Reporting;
 /// which is the worst place to need a second run. The one exception is a usage error, whose
 /// arguments were never valid enough to establish where to write one.
 /// </remarks>
-internal static class ReportBuilder
+public static class ReportBuilder
 {
-    internal static Report Build(SelectRun run, SelectRequest request, PhaseTimings timings)
+    public static Report Build(SelectRun run, SelectRequest request, PhaseTimings timings)
     {
         var outcome = OutcomeOf(run);
         var entries = EntriesOf(run);
@@ -198,7 +198,7 @@ internal static class ReportBuilder
             PathClass = test.Class?.ToString().ToLowerInvariant(),
             Paths = test.Paths is null
                 ? null
-                : [.. test.Paths.Select(path => (IReadOnlyList<string>)[.. path.Select(hop => hop.ToString())])],
+                : [.. test.Paths.Select(IReadOnlyList<string> (path) => [.. path.Select(hop => hop.ToString())])],
         };
 
     /// <summary>

@@ -46,7 +46,7 @@ internal static class ILInstructions
                 continue;
             }
 
-            var value = (ushort)opCode.Value;
+            var value = OpCodeValues.ValueOf(opCode);
             var kind = KindOf(opCode.OperandType);
 
             if (value > 0xFF)
@@ -84,12 +84,12 @@ internal static class ILInstructions
                 }
 
                 var second = il[offset++];
-                opCode = (ILOpCode)((TwoBytePrefix << 8) | second);
+                opCode = OpCodeValues.ToTwoByteOpCode(second);
                 kind = TwoByte[second];
             }
             else
             {
-                opCode = (ILOpCode)first;
+                opCode = OpCodeValues.ToOpCode(first);
                 kind = SingleByte[first];
             }
 
@@ -102,7 +102,12 @@ internal static class ILInstructions
             {
                 OperandKind.Switch => SwitchSize(il, offset),
                 OperandKind.Token => 4,
-                _ => (int)kind,
+                OperandKind.None => 0,
+                OperandKind.One => 1,
+                OperandKind.Two => 2,
+                OperandKind.Four => 4,
+                OperandKind.Eight => 8,
+                _ => -1,
             };
 
             if (size < 0 || offset + size > il.Length)
@@ -130,7 +135,7 @@ internal static class ILInstructions
 
         var count = BitConverter.ToUInt32(il[offset..(offset + 4)]);
 
-        return count > int.MaxValue / 4 ? -1 : 4 + ((int)count * 4);
+        return count > int.MaxValue / 4 ? -1 : 4 + (int.CreateTruncating(count) * 4);
     }
 
     private static OperandKind KindOf(OperandType operandType) => operandType switch

@@ -52,7 +52,7 @@ internal sealed class ScriptedProcessRunner : IProcessRunner
 
     public Task<ProcessResult> RunAsync(
         ProcessRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         requests.Add(request);

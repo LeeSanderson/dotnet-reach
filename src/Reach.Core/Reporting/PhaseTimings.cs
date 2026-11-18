@@ -10,7 +10,7 @@ namespace Reach.Reporting;
 /// Segregated into the envelope's one clearly-marked object, so that excluding a single key
 /// makes two reports comparable.
 /// </remarks>
-internal sealed class PhaseTimings
+public sealed class PhaseTimings
 {
     private readonly Dictionary<string, long> phases = new(StringComparer.Ordinal);
     private readonly Stopwatch total = Stopwatch.StartNew();
@@ -49,13 +49,13 @@ internal sealed class PhaseTimings
     }
 
     internal void Record(string phase, TimeSpan elapsed) =>
-        phases[phase] = phases.GetValueOrDefault(phase) + (long)elapsed.TotalMilliseconds;
+        phases[phase] = phases.GetValueOrDefault(phase) + (elapsed.Ticks / TimeSpan.TicksPerMillisecond);
 
     internal ReportTimings ToReport() =>
         new()
         {
             StartedUtc = StartedUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
-            TotalMs = (long)total.Elapsed.TotalMilliseconds,
+            TotalMs = total.Elapsed.Ticks / TimeSpan.TicksPerMillisecond,
             Phases = new SortedDictionary<string, long>(phases, StringComparer.Ordinal),
         };
 }

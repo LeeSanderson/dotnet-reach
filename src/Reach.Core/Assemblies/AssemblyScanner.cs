@@ -18,7 +18,7 @@ namespace Reach.Assemblies;
 /// the symbols and never checks whether a file exists beside the assembly.
 /// </param>
 /// <param name="Documents">The source files its debug symbols record; empty when it has none.</param>
-internal sealed record ScannedAssembly(
+public sealed record ScannedAssembly(
     string Path,
     string SimpleName,
     Guid ModuleVersionId,

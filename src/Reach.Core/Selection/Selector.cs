@@ -68,8 +68,8 @@ internal static class Selector
                 Bucket(reachedBy, method).Add(change.Entry.Index);
                 change.Entry.TestsReached++;
 
-                classOf[method] = classOf.TryGetValue(method, out var existing)
-                    ? (PathClass)Math.Min((int)existing, (int)pathClass)
+                classOf[method] = classOf.TryGetValue(method, out var existing) && existing < pathClass
+                    ? existing
                     : pathClass;
             }
 

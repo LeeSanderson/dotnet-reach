@@ -40,7 +40,7 @@ namespace Reach;
 /// write one. Every other outcome, failure included, carries a report — a tool that writes
 /// nothing when it fails is one you debug by re-running it with more flags, on CI.
 /// </param>
-internal sealed record SelectRun(
+public sealed record SelectRun(
     ExitCode ExitCode,
     string Message,
     IReadOnlyList<Notice> Notices,
@@ -62,13 +62,13 @@ internal sealed record SelectRun(
 /// one case that writes no report, so nothing may touch the directory Reach owns before the
 /// invocation has been shown to be a usable one.
 /// </summary>
-internal sealed class ReachPipeline(IProcessRunner processRunner)
+public sealed class ReachPipeline(IProcessRunner processRunner)
 {
-    internal async Task<SelectRun> SelectAsync(
+    public async Task<SelectRun> SelectAsync(
         SelectRequest request,
         EnvironmentLookup environment,
         PhaseTimings timings,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var refusal = ForwardedBuildArguments.Refuse(request.ForwardedBuildArguments);
 

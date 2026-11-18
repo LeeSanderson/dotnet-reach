@@ -5,7 +5,7 @@ namespace Reach;
 /// makes the pipeline rule operational: if Reach exits non-zero, run the whole suite or stop
 /// the build.
 /// </summary>
-internal enum ExitCode
+public enum ExitCode
 {
     /// <summary>
     /// Success, including an empty selection.

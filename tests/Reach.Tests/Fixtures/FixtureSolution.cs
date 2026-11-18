@@ -123,7 +123,7 @@ internal sealed class FixtureSolution : IDisposable
     private static void Copy(string source, string destination)
     {
         var listing = new Reach.Processes.ProcessRunner()
-            .RunAsync(new Reach.Processes.ProcessRequest("git", ["ls-files", "-z"], source))
+            .RunAsync(new Reach.Processes.ProcessRequest("git", ["ls-files", "-z"], source), CancellationToken.None)
             .GetAwaiter()
             .GetResult();
 
@@ -145,7 +145,7 @@ internal sealed class FixtureSolution : IDisposable
     private static (int ExitCode, string Output) Run(string executable, string[] arguments, string workingDirectory)
     {
         var result = new Reach.Processes.ProcessRunner()
-            .RunAsync(new Reach.Processes.ProcessRequest(executable, arguments, workingDirectory))
+            .RunAsync(new Reach.Processes.ProcessRequest(executable, arguments, workingDirectory), CancellationToken.None)
             .GetAwaiter()
             .GetResult();
 

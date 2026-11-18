@@ -14,7 +14,7 @@ namespace Reach.Reporting;
 /// Free-form per code. The names <c>projects</c>, <c>assemblies</c>, <c>paths</c> and
 /// <c>members</c> are reserved and used consistently wherever they apply.
 /// </param>
-internal sealed record Notice(
+public sealed record Notice(
     string Code,
     NoticeKind Kind,
     string Message,

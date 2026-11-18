@@ -4,7 +4,7 @@ namespace Reach.Processes;
 /// What a child process did. A non-zero exit code is a result, never an exception: every
 /// caller in Reach has something to say about a failure, and none of them want a stack trace.
 /// </summary>
-internal sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError)
+public sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError)
 {
     internal bool Succeeded => ExitCode == 0;
 

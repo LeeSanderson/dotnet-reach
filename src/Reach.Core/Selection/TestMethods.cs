@@ -11,7 +11,7 @@ namespace Reach.Selection;
 /// <param name="Id">The method's node in the call graph.</param>
 /// <param name="DeclaringType">Fully qualified, as a filter expression will need it.</param>
 /// <param name="Name">The method's name.</param>
-internal sealed record TestMethod(MethodId Id, string DeclaringType, string Name)
+public sealed record TestMethod(MethodId Id, string DeclaringType, string Name)
 {
     internal string FullyQualifiedName => DeclaringType + "." + Name;
 

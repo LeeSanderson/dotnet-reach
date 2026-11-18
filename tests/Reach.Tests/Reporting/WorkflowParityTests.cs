@@ -60,7 +60,7 @@ public partial class WorkflowParityTests
 
         foreach (var document in new[] { "README.md", Path.Combine("docs", "adopting-reach.md") })
         {
-            var pins = Pins().Matches(Read(RepositoryRoot.Combine(document))).Cast<Match>().ToArray();
+            var pins = Pins.Matches(Read(RepositoryRoot.Combine(document))).Cast<Match>().ToArray();
 
             // Otherwise a document that lost its quickstart passes this test by having nothing
             // to check, which is the failure it is least able to afford.
@@ -68,16 +68,16 @@ public partial class WorkflowParityTests
             Assert.All(pins, pinned => Assert.Equal(version, pinned.Groups[1].Value));
         }
 
-        Assert.Equal(version, Assert.Single(Pins().Matches(Workflow()).Cast<Match>()).Groups[1].Value);
+        Assert.Equal(version, Assert.Single(Pins.Matches(Workflow()).Cast<Match>()).Groups[1].Value);
     }
 
     [GeneratedRegex(@"dnx dotnet-reach@([^\s`]+)")]
-    private static partial Regex Pins();
+    private static partial Regex Pins { get; }
 
     private static string Version()
     {
         var properties = Read(RepositoryRoot.Combine("Directory.Build.props"));
-        var version = VersionElement().Match(properties);
+        var version = VersionElement.Match(properties);
 
         Assert.True(version.Success, "Directory.Build.props declares no <Version>.");
 
@@ -85,7 +85,7 @@ public partial class WorkflowParityTests
     }
 
     [GeneratedRegex(@"<Version>([^<]+)</Version>")]
-    private static partial Regex VersionElement();
+    private static partial Regex VersionElement { get; }
 
     [Fact]
     public void The_documented_recipe_fetches_the_whole_history() =>

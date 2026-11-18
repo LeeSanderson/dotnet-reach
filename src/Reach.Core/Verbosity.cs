@@ -4,7 +4,7 @@ namespace Reach;
 /// Mirrors the SDK's <c>quiet|minimal|normal|detailed|diagnostic</c>, spelling included, so a
 /// pipeline author transfers what they already know.
 /// </summary>
-internal enum Verbosity
+public enum Verbosity
 {
     Quiet,
     Minimal,
@@ -13,15 +13,15 @@ internal enum Verbosity
     Diagnostic,
 }
 
-internal static class Verbosities
+public static class Verbosities
 {
     /// <summary>
     /// Every spelling <c>dotnet build -v</c> accepts, long and short.
     /// </summary>
-    internal static IReadOnlyList<string> Spellings { get; } =
+    public static IReadOnlyList<string> Spellings { get; } =
         ["q", "quiet", "m", "minimal", "n", "normal", "d", "detailed", "diag", "diagnostic"];
 
-    internal static Verbosity Parse(string? value) => value?.ToLowerInvariant() switch
+    public static Verbosity Parse(string? value) => value?.ToLowerInvariant() switch
     {
         "q" or "quiet" => Verbosity.Quiet,
         "m" or "minimal" => Verbosity.Minimal,

@@ -20,6 +20,14 @@ namespace Reach.Tests.Acceptance;
 /// </remarks>
 public sealed partial class ExampleReportTests : IDisposable
 {
+    private static readonly JsonSerializerOptions Readable = new()
+    {
+        WriteIndented = true,
+        RespectNullableAnnotations = true,
+        RespectRequiredConstructorParameters = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
     private readonly FixtureSolution fixture;
     private readonly string baseline;
 
@@ -53,7 +61,7 @@ public sealed partial class ExampleReportTests : IDisposable
     /// the SHAs and the tool version. Everything the documentation actually walks survives.
     /// </summary>
     [System.Text.RegularExpressions.GeneratedRegex("[0-9a-f]{40}")]
-    private static partial System.Text.RegularExpressions.Regex Sha();
+    private static partial System.Text.RegularExpressions.Regex Sha { get; }
 
     private static string Stabilise(string json, string fixtureRoot)
     {
@@ -69,7 +77,7 @@ public sealed partial class ExampleReportTests : IDisposable
             .Replace("/repo\\\\", "/repo/", StringComparison.Ordinal)
             .Replace("\\\\", "/", StringComparison.Ordinal);
 
-        json = Sha().Replace(json, "0000000000000000000000000000000000000000");
+        json = Sha.Replace(json, "0000000000000000000000000000000000000000");
 
         using var document = JsonDocument.Parse(json);
 
@@ -82,13 +90,7 @@ public sealed partial class ExampleReportTests : IDisposable
                 : property.Value;
         }
 
-        return JsonSerializer.Serialize(
-            root,
-            new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            }).ReplaceLineEndings("\n");
+        return JsonSerializer.Serialize(root, Readable).ReplaceLineEndings("\n");
     }
 
     /// <summary>

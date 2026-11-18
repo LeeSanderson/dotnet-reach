@@ -13,7 +13,7 @@ namespace Reach.Assemblies;
 /// direction that stops a run.
 /// </param>
 /// <param name="Hash">The recorded digest; empty when the symbols carry none.</param>
-internal sealed record SourceDocument(string Path, Guid HashAlgorithm, byte[] Hash)
+public sealed record SourceDocument(string Path, Guid HashAlgorithm, byte[] Hash)
 {
     internal bool HasChecksum => Hash.Length > 0;
 }

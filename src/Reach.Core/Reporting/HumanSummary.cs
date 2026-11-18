@@ -11,9 +11,9 @@ namespace Reach.Reporting;
 /// not run tests and a second verb would create two code paths obliged to agree. So three
 /// things have to be right here, not only in the JSON.
 /// </remarks>
-internal static class HumanSummary
+public static class HumanSummary
 {
-    internal static string Write(Report report, string? reportPath, string? reachDirectory)
+    public static string Write(Report report, string? reportPath, string? reachDirectory)
     {
         var text = new StringBuilder();
 

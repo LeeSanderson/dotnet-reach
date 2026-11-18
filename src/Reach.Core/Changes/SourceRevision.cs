@@ -329,7 +329,7 @@ internal static class SourceRevision
     private static string TypeOf(ParameterSyntax parameter) =>
         parameter.Type is null
             ? string.Empty
-            : string.Join(' ', parameter.Type.ToString().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+            : string.Join(' ', parameter.Type.ToString().Split(Array.Empty<char>(), StringSplitOptions.RemoveEmptyEntries));
 
     private static string Mode(ParameterSyntax parameter)
     {

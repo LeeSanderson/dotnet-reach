@@ -10,7 +10,7 @@ namespace Reach.Join;
 /// </summary>
 /// <param name="Member">The changed declaration.</param>
 /// <param name="Methods">The call-graph methods its source span matched; empty when nothing did.</param>
-internal sealed record JoinResult(ChangedMember Member, IReadOnlyList<MethodId> Methods)
+public sealed record JoinResult(ChangedMember Member, IReadOnlyList<MethodId> Methods)
 {
     /// <summary>
     /// False when nothing matched. A declaration that fails to join falls through to whole-assembly

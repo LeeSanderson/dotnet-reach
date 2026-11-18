@@ -27,7 +27,7 @@ namespace Reach.Reporting;
 /// widened path reads <c>compiled</c>, so this <em>understates</em> widening's contribution — a
 /// registered measurement limitation, with a second traversal as the upgrade path.
 /// </param>
-internal sealed record ReportMeasurement(
+public sealed record ReportMeasurement(
     int Selected,
     int WillRun,
     int Total,
@@ -38,7 +38,7 @@ internal sealed record ReportMeasurement(
     /// Null when nothing was enumerable, which is reported as <c>unknown</c> rather than as a
     /// zero denominator.
     /// </summary>
-    public double? Ratio => Total > 0 ? Math.Round((double)WillRun / Total, 4) : null;
+    public double? Ratio => Total > 0 ? Math.Round(Fraction(WillRun, Total), 4, MidpointRounding.ToEven) : null;
 
     internal static ReportMeasurement Of(RenderedSelection rendered)
     {
@@ -62,6 +62,11 @@ internal sealed record ReportMeasurement(
         entry.Selection.Selected
             .Where(test => test.Class == PathClass.Widened)
             .Sum(test => test.Changes.Count);
+
+    /// <summary>
+    /// Floating-point division: both counts widen to <see cref="double"/> on the way in.
+    /// </summary>
+    private static double Fraction(double part, double whole) => part / whole;
 
     /// <summary>
     /// The line a person reads. Two numbers, never one — no estimated denominator and no

@@ -5,7 +5,7 @@ namespace Reach.Assemblies;
 /// <summary>
 /// One project compiled for one target framework, matched to the file that holds it.
 /// </summary>
-internal sealed record AssemblyInstance(ExpectedAssemblyInstance Expected, ScannedAssembly Assembly)
+public sealed record AssemblyInstance(ExpectedAssemblyInstance Expected, ScannedAssembly Assembly)
 {
     internal string Name => Expected.Project.AssemblyName;
 }

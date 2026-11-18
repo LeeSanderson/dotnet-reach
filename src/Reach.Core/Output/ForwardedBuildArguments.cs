@@ -9,7 +9,7 @@ namespace Reach.Output;
 /// <c>--no-restore</c> or a binlog is pushed onto <c>--no-build</c> permanently, quietly
 /// making the documented default the minority path.
 /// </remarks>
-internal static class ForwardedBuildArguments
+public static class ForwardedBuildArguments
 {
     /// <summary>
     /// Each owned switch, with the Reach option that replaces it. A forwarded <c>-o</c>
@@ -30,7 +30,7 @@ internal static class ForwardedBuildArguments
     /// leaving it to the parser, whose positional argument would otherwise swallow the first
     /// forwarded token when no target was given.
     /// </summary>
-    internal static (IReadOnlyList<string> Reach, IReadOnlyList<string> Build) Split(IReadOnlyList<string> arguments)
+    public static (IReadOnlyList<string> Reach, IReadOnlyList<string> Build) Split(IReadOnlyList<string> arguments)
     {
         for (var index = 0; index < arguments.Count; index++)
         {

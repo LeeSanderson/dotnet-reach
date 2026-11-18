@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Reach.Changes;
 
 /// <summary>
 /// What kind of declaration a member is. Distinguishes overload sets that share a name.
 /// </summary>
-internal enum MemberKind
+public enum MemberKind
 {
     Method,
     Constructor,
@@ -28,13 +30,13 @@ internal enum MemberKind
 /// sides agree by construction. Turning one of these into a method identity in the call graph
 /// is the <em>join</em>, and the join is a separate step with a separate mechanism.
 /// </remarks>
-internal sealed record MemberKey(
+public sealed record MemberKey(
     MemberKind Kind,
     string Name,
     int TypeParameterCount,
     IReadOnlyList<string> ParameterTypes)
 {
-    public bool Equals(MemberKey? other) =>
+    public bool Equals([NotNullWhen(true)] MemberKey? other) =>
         other is not null
         && Kind == other.Kind
         && Name == other.Name

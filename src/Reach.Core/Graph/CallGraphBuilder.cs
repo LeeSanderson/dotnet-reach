@@ -18,7 +18,7 @@ namespace Reach.Graph;
 /// constraints is that it is exactly one, and this is what makes that a test rather than a
 /// review comment.
 /// </param>
-internal sealed record CallGraphResult(
+public sealed record CallGraphResult(
     CallGraph Graph,
     IReadOnlyList<GraphAssembly> Assemblies,
     ExternalAnchors Externals,
@@ -79,7 +79,14 @@ internal sealed class CallGraphBuilder
     /// </summary>
     private readonly Dictionary<string, MethodId> classConstructors = new(StringComparer.Ordinal);
 
-    private TypeHierarchy hierarchy = null!;
+    /// <summary>
+    /// Built once at the start of a run, after every first-party assembly is known.
+    /// </summary>
+    private TypeHierarchy Hierarchy
+    {
+        get => field ?? throw new InvalidOperationException("The type hierarchy is built at the start of a run.");
+        set;
+    }
 
     private int hierarchyConstructions;
 
@@ -126,7 +133,7 @@ internal sealed class CallGraphBuilder
         // Exactly one, built here and passed down. Resolving implementations per call site is
         // accidentally quadratic and will look fine on a sample repository and fail on a
         // client's.
-        hierarchy = new TypeHierarchy(assemblies);
+        Hierarchy = new TypeHierarchy(assemblies);
         hierarchyConstructions++;
 
         foreach (var assembly in assemblies)
@@ -312,7 +319,7 @@ internal sealed class CallGraphBuilder
             return token;
         }
 
-        if (!isDispatch && !hierarchy.IsDispatchable(member.Value.Type, member.Value.Member))
+        if (!isDispatch && !Hierarchy.IsDispatchable(member.Value.Type, member.Value.Member))
         {
             return token;
         }
@@ -323,9 +330,9 @@ internal sealed class CallGraphBuilder
             return token;
         }
 
-        var slot = hierarchy.SlotFor(receiver, member.Value.Member);
+        var slot = Hierarchy.SlotFor(receiver, member.Value.Member);
 
-        if (slot is null || hierarchy.MethodOf(slot, member.Value.Member) is not { } anchored)
+        if (slot is null || Hierarchy.MethodOf(slot, member.Value.Member) is not { } anchored)
         {
             Remember(token, member.Value);
             return token;
@@ -409,7 +416,7 @@ internal sealed class CallGraphBuilder
     {
         foreach (var (node, (type, member)) in dispatchTargets)
         {
-            foreach (var implementation in hierarchy.ImplementationsOf(type, member))
+            foreach (var implementation in Hierarchy.ImplementationsOf(type, member))
             {
                 if (implementation != node)
                 {

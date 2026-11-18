@@ -6,11 +6,11 @@ namespace Reach.Processes;
 /// <summary>
 /// The one implementation of <see cref="IProcessRunner"/>: a real child process.
 /// </summary>
-internal sealed class ProcessRunner : IProcessRunner
+public sealed class ProcessRunner : IProcessRunner
 {
     public async Task<ProcessResult> RunAsync(
         ProcessRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         using var process = new Process { StartInfo = StartInfoFor(request) };
 
