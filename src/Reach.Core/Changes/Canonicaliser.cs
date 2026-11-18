@@ -66,12 +66,9 @@ internal static class Canonicaliser
     /// </summary>
     private static void AppendSignificant(StringBuilder builder, SyntaxTriviaList trivia)
     {
-        foreach (var item in trivia)
+        foreach (var item in trivia.Where(IsSignificant))
         {
-            if (IsSignificant(item))
-            {
-                builder.Append(item.ToString()).Append(Separator);
-            }
+            builder.Append(item.ToString()).Append(Separator);
         }
     }
 

@@ -246,12 +246,12 @@ internal static class Selector
     {
         var predecessors = ReverseWalk.Predecessors(graph, change.Roots);
 
-        foreach (var method in reached.Keys)
+        var reachedTests = reached.Keys
+            .Where(method => tests.ContainsKey(method) && !ownRoots.Contains(method));
+
+        foreach (var method in reachedTests)
         {
-            if (tests.ContainsKey(method) && !ownRoots.Contains(method))
-            {
-                Bucket(into, method).Add(ReverseWalk.PathFrom(predecessors, method));
-            }
+            Bucket(into, method).Add(ReverseWalk.PathFrom(predecessors, method));
         }
     }
 

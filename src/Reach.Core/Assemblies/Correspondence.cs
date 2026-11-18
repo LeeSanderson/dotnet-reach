@@ -42,18 +42,13 @@ internal static class Correspondence
         IReadOnlyList<AssemblyInstance> instances,
         SourceVisibility visibility)
     {
-        var verdicts = new List<DocumentVerdict>();
-        var seen = new HashSet<string>(Paths.Comparer);
-
-        foreach (var document in instances.SelectMany(instance => instance.Assembly.Documents))
-        {
-            // One document belongs to several assembly instances in any multi-targeted
-            // project. Hashing it once is both faster and what keeps the report stable.
-            if (seen.Add(document.Path))
-            {
-                verdicts.Add(new DocumentVerdict(document, Classify(document, visibility)));
-            }
-        }
+        // One document belongs to several assembly instances in any multi-targeted project.
+        // Hashing it once is both faster and what keeps the report stable.
+        var verdicts = instances
+            .SelectMany(instance => instance.Assembly.Documents)
+            .DistinctBy(document => document.Path, Paths.Comparer)
+            .Select(document => new DocumentVerdict(document, Classify(document, visibility)))
+            .ToList();
 
         var mismatched = verdicts.Where(verdict => verdict.Class == DocumentClass.Mismatched).ToArray();
         var verified = verdicts.Count(verdict => verdict.Class == DocumentClass.Verified);

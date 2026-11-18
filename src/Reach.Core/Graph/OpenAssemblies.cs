@@ -27,7 +27,7 @@ internal sealed class OpenAssemblies : IDisposable
         var open = new OpenAssemblies([]);
         var assemblies = new List<GraphAssembly>();
 
-        foreach (var instance in CallGraphBuilder.InOrdinalOrder(instances))
+        foreach (var assembly in CallGraphBuilder.InOrdinalOrder(instances).Select(instance => instance.Assembly))
         {
             PEReader reader;
 
@@ -37,7 +37,7 @@ internal sealed class OpenAssemblies : IDisposable
                 // sections, and reading those lazily would keep a file handle open on every
                 // assembly in the solution for the length of the run.
                 reader = new PEReader(
-                    File.OpenRead(instance.Assembly.Path),
+                    File.OpenRead(assembly.Path),
                     PEStreamOptions.PrefetchEntireImage);
             }
             catch (IOException)
@@ -53,11 +53,11 @@ internal sealed class OpenAssemblies : IDisposable
 
             assemblies.Add(new GraphAssembly(
                 assemblies.Count,
-                instance.Assembly.SimpleName,
-                instance.Assembly.Framework,
+                assembly.SimpleName,
+                assembly.Framework,
                 reader.GetMetadataReader(),
                 reader,
-                open.OpenSymbols(reader, instance.Assembly.Path)));
+                open.OpenSymbols(reader, assembly.Path)));
         }
 
         open.Assemblies = assemblies;

@@ -120,23 +120,23 @@ internal static class RecompilationWidening
 
         var transitive = new Dictionary<string, List<ProjectFile>>(Paths.Comparer);
 
-        foreach (var project in scope.Projects)
+        foreach (var projectPath in scope.Projects.Select(project => project.Path))
         {
             var reached = new Dictionary<string, ProjectFile>(Paths.Comparer);
-            var pending = new Queue<string>([project.Path]);
+            var pending = new Queue<string>([projectPath]);
 
             while (pending.TryDequeue(out var path))
             {
-                foreach (var consumer in direct.GetValueOrDefault(path) ?? [])
+                var consumers = direct.GetValueOrDefault(path) ?? [];
+
+                foreach (var consumer in consumers.Where(consumer => !reached.ContainsKey(consumer.Path)))
                 {
-                    if (reached.TryAdd(consumer.Path, consumer))
-                    {
-                        pending.Enqueue(consumer.Path);
-                    }
+                    reached[consumer.Path] = consumer;
+                    pending.Enqueue(consumer.Path);
                 }
             }
 
-            transitive[project.Path] = [.. reached.Values.OrderBy(p => p.Path, StringComparer.Ordinal)];
+            transitive[projectPath] = [.. reached.Values.OrderBy(p => p.Path, StringComparer.Ordinal)];
         }
 
         return transitive;

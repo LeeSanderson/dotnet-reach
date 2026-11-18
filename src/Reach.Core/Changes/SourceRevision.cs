@@ -299,18 +299,15 @@ internal static class SourceRevision
 
     private static string Mode(ParameterSyntax parameter)
     {
-        foreach (var modifier in parameter.Modifiers)
-        {
-            if (modifier.IsKind(SyntaxKind.RefKeyword)
-                || modifier.IsKind(SyntaxKind.OutKeyword)
-                || modifier.IsKind(SyntaxKind.InKeyword))
-            {
-                return modifier.Text + " ";
-            }
-        }
+        var mode = parameter.Modifiers.FirstOrDefault(IsPassingMode);
 
-        return string.Empty;
+        return mode.IsKind(SyntaxKind.None) ? string.Empty : mode.Text + " ";
     }
+
+    private static bool IsPassingMode(SyntaxToken modifier) =>
+        modifier.IsKind(SyntaxKind.RefKeyword)
+        || modifier.IsKind(SyntaxKind.OutKeyword)
+        || modifier.IsKind(SyntaxKind.InKeyword);
 
     private static bool HasDefault(BaseParameterListSyntax? parameters) =>
         parameters is not null && parameters.Parameters.Any(parameter => parameter.Default is not null);

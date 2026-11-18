@@ -170,15 +170,15 @@ internal static class AssemblyScanner
                 yield return file;
             }
 
-            foreach (var subdirectory in subdirectories)
+            foreach (var subdirectory in subdirectories.Where(IsSearched))
             {
-                if (!SkippedDirectories.Contains(Path.GetFileName(subdirectory), StringComparer.OrdinalIgnoreCase))
-                {
-                    pending.Push(subdirectory);
-                }
+                pending.Push(subdirectory);
             }
         }
     }
+
+    private static bool IsSearched(string directory) =>
+        !SkippedDirectories.Contains(Path.GetFileName(directory), StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>

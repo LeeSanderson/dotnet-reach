@@ -250,14 +250,14 @@ internal sealed class CallGraphBuilder
         {
             var name = MetadataNames.FullNameOf(reader, handle);
 
-            foreach (var methodHandle in reader.GetTypeDefinition(handle).GetMethods())
+            var classConstructors = reader.GetTypeDefinition(handle).GetMethods()
+                .Where(methodHandle => reader.GetString(reader.GetMethodDefinition(methodHandle).Name) == ".cctor");
+
+            foreach (var methodHandle in classConstructors)
             {
-                if (reader.GetString(reader.GetMethodDefinition(methodHandle).Name) == ".cctor")
-                {
-                    _classConstructors[name] = MethodId.Definition(
-                        assembly.Ordinal,
-                        MetadataTokens.GetToken(methodHandle));
-                }
+                _classConstructors[name] = MethodId.Definition(
+                    assembly.Ordinal,
+                    MetadataTokens.GetToken(methodHandle));
             }
         }
     }
@@ -393,14 +393,14 @@ internal sealed class CallGraphBuilder
     {
         foreach (var (node, (type, member)) in _dispatchTargets)
         {
-            foreach (var implementation in _hierarchy.ImplementationsOf(type, member))
+            var implementations = _hierarchy.ImplementationsOf(type, member)
+                .Where(implementation => implementation != node);
+
+            foreach (var implementation in implementations)
             {
-                if (implementation != node)
-                {
-                    // The only speculative class, and therefore the only class any future
-                    // narrowing may touch.
-                    _edges.Add(new Edge(node, implementation, EdgeProvenance.Widened));
-                }
+                // The only speculative class, and therefore the only class any future
+                // narrowing may touch.
+                _edges.Add(new Edge(node, implementation, EdgeProvenance.Widened));
             }
         }
     }

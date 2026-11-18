@@ -87,12 +87,12 @@ internal static class SynthesisedEdges
 
             // A generated member's kernel lives on the type that declared the closure, which is
             // the display class's own declaring type.
-            foreach (var kernel in MethodsNamed(assembly, DeclaringTypeOf(declaringType), kernelName))
+            var kernels = MethodsNamed(assembly, DeclaringTypeOf(declaringType), kernelName)
+                .Where(kernel => kernel != generated);
+
+            foreach (var kernel in kernels)
             {
-                if (kernel != generated)
-                {
-                    yield return new Edge(kernel, generated, EdgeProvenance.Containment);
-                }
+                yield return new Edge(kernel, generated, EdgeProvenance.Containment);
             }
         }
     }
