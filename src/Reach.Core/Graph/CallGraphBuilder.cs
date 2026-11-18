@@ -151,16 +151,16 @@ internal sealed class CallGraphBuilder
         {
             var type = reader.GetTypeDefinition(handle);
 
-            Remember(reader, type.BaseType);
+            RememberImplemented(reader, type.BaseType);
 
             foreach (var implementation in type.GetInterfaceImplementations())
             {
-                Remember(reader, reader.GetInterfaceImplementation(implementation).Interface);
+                RememberImplemented(reader, reader.GetInterfaceImplementation(implementation).Interface);
             }
         }
     }
 
-    private void Remember(MetadataReader reader, EntityHandle type)
+    private void RememberImplemented(MetadataReader reader, EntityHandle type)
     {
         if (type.IsNil)
         {
