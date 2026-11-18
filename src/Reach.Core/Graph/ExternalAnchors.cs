@@ -20,6 +20,11 @@ internal sealed class ExternalAnchors
 
     internal int Count => idOf.Count;
 
+    /// <summary>
+    /// The identity of one external member, minted the first time it is seen.
+    /// </summary>
+    /// <param name="assemblyName">The simple name of the assembly that declares it.</param>
+    /// <param name="key">The member's key within that assembly.</param>
     /// <param name="nextOrdinal">
     /// Where to number a newly-seen assembly. External assemblies sit above the first-party
     /// ones, in first-encounter order during a pass that itself runs in sorted order.

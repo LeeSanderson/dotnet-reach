@@ -8,13 +8,15 @@ namespace Reach.Join;
 /// <summary>
 /// What one changed declaration reached in the call graph.
 /// </summary>
-/// <param name="Joined">
-/// False when nothing matched. A declaration that fails to join falls through to whole-assembly
-/// widening for its project — over-selection, and it is what makes a phantom member from a
-/// misparse survivable rather than a silent hole.
-/// </param>
+/// <param name="Member">The changed declaration.</param>
+/// <param name="Methods">The call-graph methods its source span matched; empty when nothing did.</param>
 internal sealed record JoinResult(ChangedMember Member, IReadOnlyList<MethodId> Methods)
 {
+    /// <summary>
+    /// False when nothing matched. A declaration that fails to join falls through to whole-assembly
+    /// widening for its project — over-selection, and it is what makes a phantom member from a
+    /// misparse survivable rather than a silent hole.
+    /// </summary>
     internal bool Joined => Methods.Count > 0;
 }
 

@@ -6,6 +6,11 @@ namespace Reach.Selection;
 /// One row of the recognition table: which assembly a test project references, which versions
 /// of it this row covers, and which attributes mark a test method.
 /// </summary>
+/// <param name="Name">The framework's name, for the report.</param>
+/// <param name="Assembly">The simple name of the assembly a test project references.</param>
+/// <param name="Minimum">The lowest version this row covers.</param>
+/// <param name="Exclusive">The first version this row no longer covers.</param>
+/// <param name="TestAttributes">The full names of the attributes that mark a test method.</param>
 /// <param name="Dialect">
 /// The filter expression grammar this combination renders into. Gated on package version as
 /// well as framework, because <c>xunit.v3</c> 4.0.0 changed the filter surface.

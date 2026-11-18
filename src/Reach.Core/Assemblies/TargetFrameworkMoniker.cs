@@ -5,6 +5,8 @@ namespace Reach.Assemblies;
 /// <c>net10.0-windows</c>, the assembly stamps <c>.NETCoreApp,Version=v10.0</c> plus
 /// <c>Windows7.0</c>, and neither spelling can be turned into the other.
 /// </summary>
+/// <param name="Identifier">The framework family as assemblies spell it: <c>.NETCoreApp</c>, <c>.NETFramework</c> or <c>.NETStandard</c>.</param>
+/// <param name="Version">The framework version: <c>10.0</c> for <c>net10.0</c>, <c>4.7.2</c> for <c>net472</c>.</param>
 /// <param name="Platform">Lower-cased and with its version stripped: <c>windows</c>, not <c>Windows7.0</c>.</param>
 internal sealed record TargetFrameworkMoniker(string Identifier, Version Version, string? Platform)
 {

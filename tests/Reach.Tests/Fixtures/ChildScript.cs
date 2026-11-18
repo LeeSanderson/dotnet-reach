@@ -22,7 +22,8 @@ internal sealed class ChildScript : IDisposable
     }
 
     /// <summary>
-    /// Writes <paramref name="lines"/> long lines to standard output and the same to standard error.
+    /// Writes as many long lines as its first argument says to standard output, and the same to
+    /// standard error.
     /// </summary>
     internal static ChildScript Chatty() => Write("chatty", ChattyBody);
 

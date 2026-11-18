@@ -12,6 +12,8 @@ namespace Reach.Tests.Fixtures;
 /// <summary>
 /// One assembly compiled from a source string, with its portable PDB.
 /// </summary>
+/// <param name="Name">The assembly name, and the file name it is written under.</param>
+/// <param name="Image">The assembly's bytes.</param>
 /// <param name="Symbols">Empty when the symbols were embedded in <paramref name="Image"/>.</param>
 internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbols)
 {
@@ -70,12 +72,16 @@ internal static class Compiled
     /// <summary>
     /// Compiles one source file.
     /// </summary>
+    /// <param name="name">The assembly name.</param>
+    /// <param name="source">The C# to compile.</param>
     /// <param name="documentPath">
     /// The path the debug symbols will record. What first-party classification reads, so tests
     /// can put an assembly's source inside or outside a working tree without moving a file.
     /// </param>
     /// <param name="targetFramework">Stamped as <c>TargetFrameworkAttribute</c>, as the SDK does.</param>
     /// <param name="targetPlatform">Stamped as <c>TargetPlatformAttribute</c> when given.</param>
+    /// <param name="references">Other compiled assemblies this one references.</param>
+    /// <param name="embedSymbols">Put the portable PDB inside the image.</param>
     internal static CompiledAssembly Assembly(
         string name,
         string source,
@@ -86,6 +92,14 @@ internal static class Compiled
         bool embedSymbols = false) =>
         Assembly(name, [(source, documentPath)], targetFramework, targetPlatform, references, embedSymbols);
 
+    /// <summary>
+    /// Compiles several source files into one assembly.
+    /// </summary>
+    /// <param name="name">The assembly name.</param>
+    /// <param name="files">Each file's C#, with the path the debug symbols will record for it.</param>
+    /// <param name="targetFramework">Stamped as <c>TargetFrameworkAttribute</c>, as the SDK does.</param>
+    /// <param name="targetPlatform">Stamped as <c>TargetPlatformAttribute</c> when given.</param>
+    /// <param name="references">Other compiled assemblies this one references.</param>
     /// <param name="embedSymbols">
     /// Put the portable PDB inside the image, as <c>&lt;DebugType&gt;embedded&lt;/DebugType&gt;</c>
     /// does. Both shapes have to verify identically.

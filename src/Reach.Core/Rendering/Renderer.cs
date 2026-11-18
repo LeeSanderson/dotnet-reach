@@ -36,10 +36,17 @@ internal enum Delivery
     None,
 }
 
+/// <summary>
+/// One project's selection, rendered for its runner.
+/// </summary>
+/// <param name="Selection">The project's selection.</param>
+/// <param name="Mode">How the project's tests were selected.</param>
+/// <param name="Delivery">How the selection reaches the runner.</param>
 /// <param name="WillRun">
 /// What the rendered filter actually matches, which deliberately disagrees with the selection
 /// where the dialect renders with <c>~</c>.
 /// </param>
+/// <param name="Invocations">The argument vectors to run, one per runner invocation.</param>
 internal sealed record RenderedEntry(
     ProjectSelection Selection,
     SelectionMode Mode,

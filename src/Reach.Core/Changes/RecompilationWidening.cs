@@ -41,6 +41,8 @@ internal static class RecompilationWidening
     /// One change that widened its consumers, and which consumers.
     /// </summary>
     /// <param name="Trigger">The member that caused it, for the forward change list.</param>
+    /// <param name="Reason">Why this kind of change reaches consumers, in words for the report.</param>
+    /// <param name="Consumers">The in-scope projects that transitively reference the declaring one.</param>
     internal sealed record Widened(
         ChangedMember Trigger,
         string Reason,

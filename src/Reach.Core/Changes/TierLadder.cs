@@ -8,11 +8,15 @@ namespace Reach.Changes;
 /// Which rule routed an unmappable change, and which way it errs.
 /// </summary>
 /// <param name="Row">The rule table's own numbering, so a report line can be looked up.</param>
+/// <param name="Description">What the rule matches, in words for the report.</param>
+/// <param name="ErrsUnder">True when the rule can under-select; every other rule errs over.</param>
 internal sealed record RoutingRule(int Row, string Description, bool ErrsUnder = false);
 
 /// <summary>
 /// One unmappable change, routed.
 /// </summary>
+/// <param name="Path">The change.</param>
+/// <param name="Rule">The rule that routed it.</param>
 /// <param name="Projects">The in-scope projects whose assemblies widen. Empty is a valid answer.</param>
 internal sealed record RoutedChange(
     ChangedPath Path,
