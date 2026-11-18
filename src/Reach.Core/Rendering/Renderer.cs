@@ -121,7 +121,7 @@ internal sealed class Renderer(
         // for. Every other host under `dotnet test` has no such channel and gets chunks.
         return FilterDialect.UsesTestingPlatform(dialect)
             ? ViaResponseFile(project, selector, names, willRun)
-            : Chunked(project, selector, chunks, willRun);
+            : Chunked(project, selector, [.. chunks.Select(chunk => FilterDialect.Expression(dialect, chunk))], willRun);
     }
 
     private RenderedEntry ViaResponseFile(
@@ -152,7 +152,7 @@ internal sealed class Renderer(
     private RenderedEntry Chunked(
         ProjectSelection project,
         string? selector,
-        IReadOnlyList<IReadOnlyList<string>> chunks,
+        IReadOnlyList<string> filters,
         int willRun)
     {
         Note(
@@ -160,17 +160,14 @@ internal sealed class Renderer(
             NoticeKind.Environment,
             $"{project.Project.Name} ({project.TargetFramework}): the selection exceeds the "
             + $"command-line ceiling of {CommandLineCeiling.Characters} characters and this host "
-            + $"has no response-file channel, so it runs as {chunks.Count} invocations.");
+            + $"has no response-file channel, so it runs as {filters.Count} invocations.");
 
         return new RenderedEntry(
             project,
             SelectionMode.Filtered,
             Delivery.Chunked,
             willRun,
-            [
-                .. chunks.Select(chunk =>
-                    Command(project, selector, ["--filter", FilterDialect.Expression(project.Dialect!, chunk)]))
-            ]);
+            [.. filters.Select(filter => Command(project, selector, ["--filter", filter]))]);
     }
 
     private RenderedEntry WithRunSettings(

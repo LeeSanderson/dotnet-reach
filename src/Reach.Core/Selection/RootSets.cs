@@ -3,6 +3,7 @@ using Reach.Changes;
 using Reach.Graph;
 using Reach.Join;
 using Reach.Projects;
+using static Reach.Buckets;
 
 namespace Reach.Selection;
 
@@ -207,16 +208,6 @@ internal sealed class RootSets
         }
 
         return root;
-    }
-
-    private static List<T> Bucket<T>(Dictionary<string, List<T>> index, string key)
-    {
-        if (!index.TryGetValue(key, out var bucket))
-        {
-            index[key] = bucket = [];
-        }
-
-        return bucket;
     }
 }
 

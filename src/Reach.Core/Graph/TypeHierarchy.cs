@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
+using static Reach.Buckets;
 
 namespace Reach.Graph;
 
@@ -292,16 +293,6 @@ internal sealed class TypeHierarchy
                         .DecodeSignature(new SignatureNames(), genericContext: null)),
                 _ => null,
             };
-
-    private static List<T> Bucket<T>(Dictionary<string, List<T>> index, string key)
-    {
-        if (!index.TryGetValue(key, out var bucket))
-        {
-            index[key] = bucket = [];
-        }
-
-        return bucket;
-    }
 
     /// <param name="Parents">The base type and every directly implemented interface.</param>
     private sealed record TypeInfo(

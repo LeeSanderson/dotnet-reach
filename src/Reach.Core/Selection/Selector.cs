@@ -4,6 +4,7 @@ using Reach.Graph;
 using Reach.Join;
 using Reach.Projects;
 using Reach.Reporting;
+using static Reach.Buckets;
 
 namespace Reach.Selection;
 
@@ -40,9 +41,9 @@ internal static class Selector
             .SelectMany(project => project.Tests)
             .ToDictionary(test => test.Id);
 
-        var reachedBy = new Dictionary<MethodId, List<int>>();
+        var reachedBy = new ChangesByTest();
         var classOf = new Dictionary<MethodId, PathClass>();
-        var pathsOf = includePaths ? new Dictionary<MethodId, List<IReadOnlyList<MethodId>>>() : null;
+        var pathsOf = includePaths ? new PathsByTest() : null;
 
         foreach (var change in changes)
         {
@@ -92,11 +93,11 @@ internal static class Selector
 
     private static ProjectSelection Decide(
         EnumeratedProject project,
-        Dictionary<MethodId, List<int>> reachedBy,
+        ChangesByTest reachedBy,
         Dictionary<MethodId, PathClass> classOf,
         HashSet<MethodId> ownChanged,
         HashSet<MethodId> added,
-        Dictionary<MethodId, List<IReadOnlyList<MethodId>>>? pathsOf)
+        PathsByTest? pathsOf)
     {
         if (project.Framework is null)
         {
@@ -242,7 +243,7 @@ internal static class Selector
         IReadOnlyDictionary<MethodId, TestMethod> tests,
         IReadOnlyDictionary<MethodId, PathClass> reached,
         IReadOnlySet<MethodId> ownRoots,
-        Dictionary<MethodId, List<IReadOnlyList<MethodId>>> into)
+        PathsByTest into)
     {
         var predecessors = ReverseWalk.Predecessors(graph, change.Roots);
 
@@ -255,15 +256,15 @@ internal static class Selector
         }
     }
 
-    private static List<T> Bucket<T>(Dictionary<MethodId, List<T>> index, MethodId key)
-    {
-        if (!index.TryGetValue(key, out var bucket))
-        {
-            index[key] = bucket = [];
-        }
+    /// <summary>
+    /// Per test, the index of every change that reached it.
+    /// </summary>
+    private sealed class ChangesByTest : Dictionary<MethodId, List<int>>;
 
-        return bucket;
-    }
+    /// <summary>
+    /// Per test, the hop-by-hop path from every change that reached it.
+    /// </summary>
+    private sealed class PathsByTest : Dictionary<MethodId, List<IReadOnlyList<MethodId>>>;
 
     private sealed record EnumeratedProject(
         ProjectFile Project,

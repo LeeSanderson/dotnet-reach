@@ -1,4 +1,5 @@
 using Reach.Projects;
+using static Reach.Buckets;
 
 namespace Reach.Changes;
 
@@ -140,15 +141,5 @@ internal static class RecompilationWidening
         }
 
         return transitive;
-    }
-
-    private static List<T> Bucket<T>(Dictionary<string, List<T>> index, string key)
-    {
-        if (!index.TryGetValue(key, out var bucket))
-        {
-            index[key] = bucket = [];
-        }
-
-        return bucket;
     }
 }
