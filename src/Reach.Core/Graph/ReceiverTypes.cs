@@ -44,6 +44,23 @@ internal static class ReceiverTypes
     private static readonly int[] Pops = new int[512];
     private static readonly int[] Pushes = new int[512];
 
+    private static readonly HashSet<StackBehaviour> SlotlessBehaviours =
+        [StackBehaviour.Pop0, StackBehaviour.Push0, StackBehaviour.Varpop, StackBehaviour.Varpush];
+
+    /// <summary>
+    /// Every instruction whose operand is a branch target: the conditional and unconditional
+    /// branches and <c>leave</c>, long and short. Read from <see cref="OpCodes"/>, like the
+    /// other tables here, rather than typed out.
+    /// </summary>
+    private static readonly HashSet<ILOpCode> Branches =
+    [
+        .. typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Select(field => field.GetValue(null))
+            .OfType<OpCode>()
+            .Where(opCode => opCode.OperandType is OperandType.InlineBrTarget or OperandType.ShortInlineBrTarget)
+            .Select(opCode => (ILOpCode)opCode.Value),
+    ];
+
     static ReceiverTypes()
     {
         foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
@@ -271,24 +288,7 @@ internal static class ReceiverTypes
         return boundaries;
     }
 
-    private static bool IsBranch(ILOpCode opCode) => opCode switch
-    {
-        ILOpCode.Br or ILOpCode.Br_s
-            or ILOpCode.Brtrue or ILOpCode.Brtrue_s
-            or ILOpCode.Brfalse or ILOpCode.Brfalse_s
-            or ILOpCode.Beq or ILOpCode.Beq_s
-            or ILOpCode.Bge or ILOpCode.Bge_s
-            or ILOpCode.Bge_un or ILOpCode.Bge_un_s
-            or ILOpCode.Bgt or ILOpCode.Bgt_s
-            or ILOpCode.Bgt_un or ILOpCode.Bgt_un_s
-            or ILOpCode.Ble or ILOpCode.Ble_s
-            or ILOpCode.Ble_un or ILOpCode.Ble_un_s
-            or ILOpCode.Blt or ILOpCode.Blt_s
-            or ILOpCode.Blt_un or ILOpCode.Blt_un_s
-            or ILOpCode.Bne_un or ILOpCode.Bne_un_s
-            or ILOpCode.Leave or ILOpCode.Leave_s => true,
-        _ => false,
-    };
+    private static bool IsBranch(ILOpCode opCode) => Branches.Contains(opCode);
 
     /// <summary>
     /// Decodes one instruction: its opcode, its operand as an integer, and where the next one starts.
@@ -389,11 +389,8 @@ internal static class ReceiverTypes
     /// so <c>Popref_popi_pop1</c> pops three. The variable behaviours count as none; the call
     /// cases work theirs out from the signature.
     /// </summary>
-    private static int Count(StackBehaviour behaviour) => behaviour switch
-    {
-        StackBehaviour.Pop0 or StackBehaviour.Push0 or StackBehaviour.Varpop or StackBehaviour.Varpush => 0,
-        _ => behaviour.ToString().Split('_').Length,
-    };
+    private static int Count(StackBehaviour behaviour) =>
+        SlotlessBehaviours.Contains(behaviour) ? 0 : behaviour.ToString().Split('_').Length;
 
     private static void Pop(List<string?> stack, int count)
     {
