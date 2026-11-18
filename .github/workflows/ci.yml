@@ -42,10 +42,14 @@ jobs:
       - name: Verify formatting
         run: dotnet format --verify-no-changes --no-restore
 
+      # Reach's own test project, not the solution: the solution also holds the sample
+      # solutions' projects, whose NUnit and framework-less test projects use VSTest, which the
+      # testing-platform runner set in global.json rejects. Those sample tests run only through
+      # Reach, inside the acceptance tests.
       # --report-xunit-trx needs no extra package. --report-trx and --coverage are Microsoft
       # extensions that exit 5 without theirs; do not use them.
       - name: Test
-        run: dotnet test -c Release --no-build --report-xunit-trx --results-directory ./TestResults
+        run: dotnet test --project tests/Reach.Tests/Reach.Tests.csproj -c Release --no-build --report-xunit-trx --results-directory ./TestResults
 
       - name: Upload test results
         if: always()
