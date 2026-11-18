@@ -100,17 +100,12 @@ internal static class ReverseWalk
         var hops = new List<MethodId> { test };
         var current = test;
 
-        while (predecessors.TryGetValue(current, out var next))
+        // Hop-by-hop paths are the one genuinely unbounded thing in the design, which is why
+        // they are opt-in. A cycle would otherwise never terminate.
+        while (hops.Count <= MaxPathHops && predecessors.TryGetValue(current, out var next))
         {
             hops.Add(next);
             current = next;
-
-            if (hops.Count > MaxPathHops)
-            {
-                // Hop-by-hop paths are the one genuinely unbounded thing in the design, which
-                // is why they are opt-in. A cycle would otherwise never terminate.
-                break;
-            }
         }
 
         return hops;

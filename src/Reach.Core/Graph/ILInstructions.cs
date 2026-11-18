@@ -68,56 +68,75 @@ internal static class ILInstructions
         var found = new List<TokenInstruction>();
         var offset = 0;
 
-        while (offset < il.Length)
+        while (TryRead(il, ref offset, out var token))
         {
-            var start = offset;
-            var first = il[offset++];
-            ILOpCode opCode;
-            OperandKind kind;
-
-            if (first == TwoBytePrefix)
+            if (token is { } instruction)
             {
-                if (offset >= il.Length)
-                {
-                    break;
-                }
-
-                var second = il[offset++];
-                opCode = (ILOpCode)(TwoByteBase | second);
-                kind = TwoByte[second];
+                found.Add(instruction);
             }
-            else
-            {
-                opCode = (ILOpCode)first;
-                kind = SingleByte[first];
-            }
-
-            if (kind == OperandKind.Unknown)
-            {
-                break;
-            }
-
-            var size = kind switch
-            {
-                OperandKind.Switch => SwitchSize(il, offset),
-                OperandKind.Token => 4,
-                _ => (int)kind,
-            };
-
-            if (size < 0 || offset + size > il.Length)
-            {
-                break;
-            }
-
-            if (kind == OperandKind.Token)
-            {
-                found.Add(new TokenInstruction(start, opCode, BitConverter.ToInt32(il[offset..(offset + sizeof(int))])));
-            }
-
-            offset += size;
         }
 
         return found;
+    }
+
+    /// <summary>
+    /// Decodes the instruction at <paramref name="offset"/> and moves past it. False at the end
+    /// of the body, and at anything that cannot be decoded, which ends the walk.
+    /// </summary>
+    private static bool TryRead(ReadOnlySpan<byte> il, ref int offset, out TokenInstruction? token)
+    {
+        token = null;
+
+        if (offset >= il.Length)
+        {
+            return false;
+        }
+
+        var (opCode, kind, operand) = OpCodeAt(il, offset);
+
+        var size = kind switch
+        {
+            OperandKind.Unknown => -1,
+            OperandKind.Switch => SwitchSize(il, operand),
+            OperandKind.Token => sizeof(int),
+            _ => (int)kind,
+        };
+
+        if (size < 0 || operand + size > il.Length)
+        {
+            return false;
+        }
+
+        if (kind == OperandKind.Token)
+        {
+            token = new TokenInstruction(offset, opCode, BitConverter.ToInt32(il[operand..(operand + sizeof(int))]));
+        }
+
+        offset = operand + size;
+        return true;
+    }
+
+    /// <summary>
+    /// The opcode at <paramref name="offset"/>, its operand kind, and where its operand starts.
+    /// A two-byte prefix with nothing after it reads as unknown.
+    /// </summary>
+    private static (ILOpCode OpCode, OperandKind Kind, int Operand) OpCodeAt(ReadOnlySpan<byte> il, int offset)
+    {
+        var first = il[offset];
+
+        if (first != TwoBytePrefix)
+        {
+            return ((ILOpCode)first, SingleByte[first], offset + 1);
+        }
+
+        if (offset + 1 >= il.Length)
+        {
+            return (default, OperandKind.Unknown, offset + 1);
+        }
+
+        var second = il[offset + 1];
+
+        return ((ILOpCode)(TwoByteBase | second), TwoByte[second], offset + sizeof(ushort));
     }
 
     private static int SwitchSize(ReadOnlySpan<byte> il, int offset)

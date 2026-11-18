@@ -81,7 +81,8 @@ internal static class ReceiverTypes
         var stack = new List<string?>();
         var offset = 0;
 
-        while (offset < il.Length)
+        // An instruction Read cannot decode is a nop with a negative next offset: the walk ends.
+        while (offset >= 0 && offset < il.Length)
         {
             if (boundaries.Contains(offset))
             {
@@ -90,17 +91,11 @@ internal static class ReceiverTypes
                 stack.Clear();
             }
 
-            var start = offset;
             var (opCode, operand, next) = Read(il, offset);
 
-            if (next < 0)
-            {
-                break;
-            }
+            Apply(reader, names, arguments, locals, stack, inferred, offset, opCode, operand);
 
             offset = next;
-
-            Apply(reader, names, arguments, locals, stack, inferred, start, opCode, operand);
         }
 
         return inferred;
@@ -233,15 +228,10 @@ internal static class ReceiverTypes
         var boundaries = new HashSet<int>();
         var offset = 0;
 
-        while (offset < il.Length)
+        // An instruction Read cannot decode is a nop with a negative next offset: the walk ends.
+        while (offset >= 0 && offset < il.Length)
         {
-            var start = offset;
             var (opCode, operand, next) = Read(il, offset);
-
-            if (next < 0)
-            {
-                break;
-            }
 
             if (IsBranch(opCode))
             {
@@ -250,14 +240,18 @@ internal static class ReceiverTypes
             else if (opCode == ILOpCode.Switch)
             {
                 // One opcode byte, a four-byte count, then that many four-byte targets.
-                var targets = start + 1 + sizeof(int);
-                var count = BitConverter.ToInt32(il[(start + 1)..targets]);
+                var targets = offset + 1 + sizeof(int);
+                var count = BitConverter.ToInt32(il[(offset + 1)..targets]);
 
                 for (var index = 0; index < count; index++)
                 {
                     var target = targets + (index * sizeof(int));
                     boundaries.Add(next + BitConverter.ToInt32(il[target..(target + sizeof(int))]));
                 }
+            }
+            else
+            {
+                // Anything else falls through to the next instruction, which is no boundary.
             }
 
             offset = next;
@@ -298,6 +292,7 @@ internal static class ReceiverTypes
 
     /// <summary>
     /// Decodes one instruction: its opcode, its operand as an integer, and where the next one starts.
+    /// One it cannot decode reads as a <c>nop</c> with a negative next offset.
     /// </summary>
     private static (ILOpCode OpCode, int Operand, int Next) Read(ReadOnlySpan<byte> il, int offset)
     {
@@ -308,7 +303,7 @@ internal static class ReceiverTypes
         {
             if (offset >= il.Length)
             {
-                return (default, 0, -1);
+                return (ILOpCode.Nop, 0, -1);
             }
 
             opCode = (ILOpCode)(TwoByteBase | il[offset++]);
@@ -322,7 +317,7 @@ internal static class ReceiverTypes
 
         if (size < 0 || offset + size > il.Length)
         {
-            return (default, 0, -1);
+            return (ILOpCode.Nop, 0, -1);
         }
 
         var operand = size switch
