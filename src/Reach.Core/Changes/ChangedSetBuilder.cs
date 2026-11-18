@@ -251,7 +251,7 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
         }
     }
 
-    private void Compare(
+    private static void Compare(
         string name,
         List<(string Path, DeclaredType Type)> before,
         List<(string Path, DeclaredType Type)> after,
