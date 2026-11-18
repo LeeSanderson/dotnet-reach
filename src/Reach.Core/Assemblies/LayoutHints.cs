@@ -10,6 +10,8 @@ namespace Reach.Assemblies;
 /// </remarks>
 internal sealed record LayoutHints(string? Configuration, string? Output, string? ArtifactsPath)
 {
+    private static readonly char[] Separators = [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar];
+
     internal static LayoutHints None { get; } = new(null, null, null);
 
     internal static LayoutHints From(SelectRequest request) =>
@@ -41,7 +43,7 @@ internal sealed record LayoutHints(string? Configuration, string? Output, string
     private bool UnderConfiguration(string path) =>
         Configuration is null
         || Array.Exists(
-            path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            path.Split(Separators),
             segment => segment.Equals(Configuration, StringComparison.OrdinalIgnoreCase));
 
     private static string? Absolute(string? path, string workingDirectory) =>

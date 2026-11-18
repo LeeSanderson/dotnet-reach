@@ -34,6 +34,8 @@ internal static class Correspondence
     /// </summary>
     private static readonly string[] BuildDirectories = ["obj", "bin"];
 
+    private static readonly char[] Separators = ['/', '\\'];
+
     /// <param name="visibility">
     /// Which paths git can see. A document that is neither tracked nor listed as an ordinary
     /// untracked file is untracked <em>and</em> ignored.
@@ -53,10 +55,15 @@ internal static class Correspondence
         var mismatched = verdicts.Where(verdict => verdict.Class == DocumentClass.Mismatched).ToArray();
         var verified = verdicts.Count(verdict => verdict.Class == DocumentClass.Verified);
 
+        var outcome = (mismatched.Length, verified) switch
+        {
+            ( > 0, _) => CorrespondenceVerdict.Failed,
+            (_, > 0) => CorrespondenceVerdict.Verified,
+            _ => CorrespondenceVerdict.Skipped,
+        };
+
         return new CorrespondenceResult(
-            mismatched.Length > 0
-                ? CorrespondenceVerdict.Failed
-                : verified > 0 ? CorrespondenceVerdict.Verified : CorrespondenceVerdict.Skipped,
+            outcome,
             mismatched.Length > 0 ? Message(mismatched) : string.Empty,
             Notices(verdicts),
             verdicts);
@@ -114,7 +121,7 @@ internal static class Correspondence
 
     private static bool IsBuildOutput(string path) =>
         Array.Exists(
-            path.Split('/', '\\'),
+            path.Split(Separators),
             segment => BuildDirectories.Contains(segment, StringComparer.OrdinalIgnoreCase));
 
     private static string Message(IReadOnlyList<DocumentVerdict> mismatched) =>
