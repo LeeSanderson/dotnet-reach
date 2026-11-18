@@ -16,35 +16,42 @@ This starts the **integration branch**. With warnings as errors, the build is ex
 
 - [x] The package is referenced once, from the shared build props, at exactly 0.0.22, with all assets private
 - [x] Properties the repository already sets (e.g. `LangVersion`) still take effect
-- [ ] The automatic fixes are committed, one commit per rule family where practical
+- [x] The automatic fixes are committed, one commit per rule family where practical
 - [x] The remaining diagnostics, by rule ID and count, are recorded under `## Comments`
 - [x] Reach's tests still pass with warnings not treated as errors (behaviour is unchanged by the automatic fixes)
 
 ## Comments
 
-### Blocker: the pre-commit hook rejects every `.cs` commit until ticket 09
+### Pre-commit hook: the full check rejects every `.cs` commit until ticket 09
 
 The Husky `format-staged` task runs `dotnet format --verify-no-changes --include <staged>`. That
 command exits non-zero for any diagnostic at error severity in a staged file, including ones with no
 code fix (checked: `--diagnostics S109` on `ReceiverTypes.cs` exits 2). With the package in, nearly
 every Reach `.cs` file carries an unfixable diagnostic, so no auto-fix commit (and no batch-ticket
 commit) can pass the hook until the file it touches is fully clean. The package commit itself
-(`Directory.Build.props` only) went through. The auto-fix commits below are prepared but not
-committed, because skipping hooks is not allowed. **Question for the maintainer:** how should
-commits on the integration branch get past the hook while it is red? Options: approve `HUSKY=0` /
-`--no-verify` for integration-branch commits until 09; or narrow the hook temporarily (e.g.
-`dotnet format whitespace --verify-no-changes` plus `dotnet format style --verify-no-changes`, which
-exits 0 on unfixable IDE1006) and restore it in 09.
+(`Directory.Build.props` only) went through. I asked how commits should get past the hook while
+the build is red.
 
-The prepared commits, in order, each one `dotnet format` run with no hand edits (patches kept by the
-implementer; also reproducible by rerunning the command):
+**Maintainer decision:** narrow the hook temporarily to `dotnet format whitespace` and
+`dotnet format style`, both with `--verify-no-changes`. `.husky/task-runner.json` has a comment
+saying the change is temporary, and ticket 09 restores the full check (noted in 09's `## Comments`).
+**One deviation:** `dotnet format style --verify-no-changes` turned out to fail on unfixable IDE1006
+as well. My earlier check passed only because it used `--diagnostics IDE1006`. So the style task
+also passes `--exclude-diagnostics IDE1006` (in its own commit). Otherwise every file with an
+unrenamed field would be rejected. Ticket 09 removes that exclusion along with the rest of the
+narrowing.
 
-1. `dotnet format whitespace` — IDE0055, `CallGraphBuilder.cs` and `ReceiverTypes.cs` (case-block braces)
-2. `dotnet format style` — IDE0005 unused usings, 8 lines in 6 files (also clears S1128)
-3. `dotnet format style --diagnostics IDE0059 IDE0062 --severity info` — 1 discarded `out var`, 2 static local functions
-4. `dotnet format analyzers --diagnostics MA0211 --severity info` — 209 one-line `<summary>`s to multi-line, 85 files
-5. `dotnet format analyzers --diagnostics MA0192 --severity info` — 4 bitwise flag tests to `HasFlag` (single-bit flags, equivalent)
-6. `dotnet format analyzers --diagnostics MA0243 --severity info` — 4 invisible characters to `\u0001` / `﻿` escapes (same strings)
+The commits, in order. Each one is a `dotnet format` run with no hand edits, and all went through
+the narrowed hook:
+
+1. `dotnet format whitespace` then `dotnet format style`: IDE0055 (case-block braces in
+   `CallGraphBuilder.cs` and `ReceiverTypes.cs`) and IDE0005 (8 unused usings in 6 files; also
+   clears S1128). These are one commit because the whitespace fix alone leaves IDE0005 in
+   `ReceiverTypes.cs`, which the style hook rejects.
+2. `dotnet format style --diagnostics IDE0059 IDE0062 --severity info` — 1 discarded `out var`, 2 static local functions
+3. `dotnet format analyzers --diagnostics MA0211 --severity info` — 209 one-line `<summary>`s to multi-line, 85 files
+4. `dotnet format analyzers --diagnostics MA0192 --severity info` — 4 bitwise flag tests to `HasFlag` (single-bit flags, equivalent)
+5. `dotnet format analyzers --diagnostics MA0243 --severity info` — 4 invisible characters to `\u0001` / `\uFEFF` escapes (same strings)
 
 `--severity info` is needed because `dotnet format` skips these rules at its default severity even
 though the build reports them as errors.
@@ -97,9 +104,9 @@ Fixture projects not counted (not in `Reach.slnx` on this branch; ticket 08).
 | CA5351 | 1 | Core 1 | Broken hash MD5 (`Correspondence.cs:171`) |
 | CA1001 | 1 | Tests 1 | `CommandLineTests` owns disposable fields but is not disposable |
 
-CA5350/CA5351 at `Correspondence.cs:170-171` are pre-approved. **Question for the maintainer:** the
-CA5350 in `tests/Reach.Tests/Assemblies/PortablePdbChecksumTests.cs:86` (the test recomputes the
-PDB checksum) is outside the pre-approval. Does the same justification cover it?
+CA5350/CA5351 at `Correspondence.cs:170-171` are pre-approved. **Maintainer approval:** the
+pre-approval also covers the CA5350 in `tests/Reach.Tests/Assemblies/PortablePdbChecksumTests.cs:86`
+(the test recomputes the PDB checksum), with the same justification. Batch 06 applies it.
 
 **07 S / SA and the long tail**
 
