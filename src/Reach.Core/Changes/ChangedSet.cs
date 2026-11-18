@@ -3,7 +3,9 @@ using Reach.Reporting;
 
 namespace Reach.Changes;
 
-/// <summary>Which side of the comparison a member appeared on.</summary>
+/// <summary>
+/// Which side of the comparison a member appeared on.
+/// </summary>
 internal enum MemberChange
 {
     Added,
@@ -39,13 +41,17 @@ internal readonly record struct DeclarationSpan(int StartLine, int StartColumn, 
 {
     internal bool IsEmpty => StartLine == 0 && EndLine == 0;
 
-    /// <summary>Whether a point sits inside this span, comparing line and column together.</summary>
+    /// <summary>
+    /// Whether a point sits inside this span, comparing line and column together.
+    /// </summary>
     internal bool Contains(int line, int column) =>
         (line > StartLine || (line == StartLine && column >= StartColumn))
         && (line < EndLine || (line == EndLine && column <= EndColumn));
 }
 
-/// <summary>Why a widening was applied. Every one of these errs toward over-selection.</summary>
+/// <summary>
+/// Why a widening was applied. Every one of these errs toward over-selection.
+/// </summary>
 internal enum WideningReason
 {
     /// <summary>
@@ -56,13 +62,19 @@ internal enum WideningReason
     /// </summary>
     DeletedMember,
 
-    /// <summary>A type's modifiers, attributes, base list or type parameters changed.</summary>
+    /// <summary>
+    /// A type's modifiers, attributes, base list or type parameters changed.
+    /// </summary>
     TypeHeaderChanged,
 
-    /// <summary>The type is declared in different files than it was at the baseline.</summary>
+    /// <summary>
+    /// The type is declared in different files than it was at the baseline.
+    /// </summary>
     TypeMoved,
 
-    /// <summary>The type has no identity in the current binaries at all.</summary>
+    /// <summary>
+    /// The type has no identity in the current binaries at all.
+    /// </summary>
     DeletedType,
 }
 
@@ -105,14 +117,18 @@ internal sealed record ChangedSet(
 {
     internal static ChangedSet Empty { get; } = new([], [], [], [], [], []);
 
-    /// <summary>Nothing changed at all — a different piece of news from an empty selection.</summary>
+    /// <summary>
+    /// Nothing changed at all — a different piece of news from an empty selection.
+    /// </summary>
     internal bool IsEmpty =>
         Members.Count == 0
         && TypeWidenings.Count == 0
         && AssemblyWidenings.Count == 0
         && UnmappablePaths.Count == 0;
 
-    /// <summary>Members that were removed. The one trigger recompilation widening cares about.</summary>
+    /// <summary>
+    /// Members that were removed. The one trigger recompilation widening cares about.
+    /// </summary>
     internal IEnumerable<ChangedMember> RemovedMembers =>
         Members.Where(member => member.Change == MemberChange.Removed);
 }

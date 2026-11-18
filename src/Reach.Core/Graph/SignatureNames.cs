@@ -111,7 +111,9 @@ internal sealed class SignatureNames : ISignatureTypeProvider<string, object?>
     }
 }
 
-/// <summary>Full names for types and the canonical key a method is looked up by.</summary>
+/// <summary>
+/// Full names for types and the canonical key a method is looked up by.
+/// </summary>
 internal static class MetadataNames
 {
     /// <summary>
@@ -166,7 +168,9 @@ internal static class MetadataNames
         return containing.Length == 0 ? name : containing + "." + name;
     }
 
-    /// <summary>The name of the assembly a type reference resolves into, or null when it is this one.</summary>
+    /// <summary>
+    /// The name of the assembly a type reference resolves into, or null when it is this one.
+    /// </summary>
     internal static string? AssemblyOf(MetadataReader reader, TypeReferenceHandle handle)
     {
         var scope = reader.GetTypeReference(handle).ResolutionScope;
@@ -216,10 +220,12 @@ internal static class MetadataNames
         return typeName;
     }
 
-    /// <summary>How many generic parameters a method declares. Part of what tells overloads apart.</summary>
+    /// <summary>
+    /// How many generic parameters a method declares. Part of what tells overloads apart.
+    /// </summary>
     internal static int GenericArityOf(MetadataReader reader, MethodDefinition method) =>
         method.GetGenericParameters().Count;
 
     internal static bool IsStatic(MethodDefinition method) =>
-        (method.Attributes & MethodAttributes.Static) != 0;
+        method.Attributes.HasFlag(MethodAttributes.Static);
 }

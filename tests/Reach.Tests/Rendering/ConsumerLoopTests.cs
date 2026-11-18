@@ -23,7 +23,9 @@ public class ConsumerLoopTests
         }
         """;
 
-    /// <summary>What a pipeline step does with the report: loop, and run each invocation.</summary>
+    /// <summary>
+    /// What a pipeline step does with the report: loop, and run each invocation.
+    /// </summary>
     private static async Task<int> DriveAsync(
         Reach.Reporting.Report report,
         IProcessRunner runner,

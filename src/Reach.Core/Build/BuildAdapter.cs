@@ -3,7 +3,9 @@ using Reach.Projects;
 
 namespace Reach.Build;
 
-/// <summary>What the build did, and the exact command that did it.</summary>
+/// <summary>
+/// What the build did, and the exact command that did it.
+/// </summary>
 /// <param name="Request">
 /// Null when <c>--no-build</c> meant no build was run. Recorded otherwise so a surprising run
 /// stays reproducible from the report envelope alone.

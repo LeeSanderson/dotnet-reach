@@ -18,7 +18,7 @@ public class TierLadderTests
     /// </summary>
     private static AnalysisScope Scope()
     {
-        ProjectFile Project(string path, string name, params ProjectReference[] references) =>
+        static ProjectFile Project(string path, string name, params ProjectReference[] references) =>
             new(Paths.Normalise(path), name, ["net10.0"], references, []);
 
         var generator = Project("/repo/src/Generator/Generator.csproj", "Generator");

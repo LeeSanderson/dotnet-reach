@@ -4,7 +4,9 @@ using Reach.Output;
 
 namespace Reach.Reporting;
 
-/// <summary>Serialises the report, and puts it where the command line said.</summary>
+/// <summary>
+/// Serialises the report, and puts it where the command line said.
+/// </summary>
 internal static class ReportWriter
 {
     private static readonly JsonSerializerOptions Options = new()

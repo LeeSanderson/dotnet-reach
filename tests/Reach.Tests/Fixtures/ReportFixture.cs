@@ -3,7 +3,9 @@ using Reach.Reporting;
 
 namespace Reach.Tests.Fixtures;
 
-/// <summary>Builds a report from a <see cref="Selections"/> fixture, or from a real run.</summary>
+/// <summary>
+/// Builds a report from a <see cref="Selections"/> fixture, or from a real run.
+/// </summary>
 internal static class ReportFixture
 {
     internal static Report Build(Selections selections, bool noChanges = false, SelectRequest? request = null)
@@ -50,7 +52,9 @@ internal static class ReportFixture
             Changes = [],
         };
 
-    /// <summary>The smallest report that serialises, for assertions about the shape itself.</summary>
+    /// <summary>
+    /// The smallest report that serialises, for assertions about the shape itself.
+    /// </summary>
     internal static Report Minimal(ReportCounts? counts = null) =>
         new()
         {
@@ -87,7 +91,9 @@ internal static class ReportFixture
             Notices = [],
         };
 
-    /// <summary>A real repository with real assemblies, for the determinism assertion.</summary>
+    /// <summary>
+    /// A real repository with real assemblies, for the determinism assertion.
+    /// </summary>
     internal static TempRepository Repository()
     {
         var repository = TempRepository.Create("reach-report");
@@ -151,7 +157,9 @@ internal static class ReportFixture
         return repository;
     }
 
-    /// <summary>Runs the pipeline over <paramref name="repository"/> and returns the report's JSON.</summary>
+    /// <summary>
+    /// Runs the pipeline over <paramref name="repository"/> and returns the report's JSON.
+    /// </summary>
     internal static async Task<string> RunAsync(TempRepository repository, CancellationToken cancellationToken)
     {
         var run = await new ReachPipeline(new Reach.Processes.ProcessRunner())

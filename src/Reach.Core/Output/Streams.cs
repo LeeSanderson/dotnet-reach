@@ -24,7 +24,9 @@ internal sealed class Streams
 
     internal TextWriter Notices { get; }
 
-    /// <summary>Non-null only when the report goes to a stream rather than a file.</summary>
+    /// <summary>
+    /// Non-null only when the report goes to a stream rather than a file.
+    /// </summary>
     internal TextWriter? Report { get; }
 
     internal bool Colour { get; }

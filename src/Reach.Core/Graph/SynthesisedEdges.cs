@@ -141,7 +141,9 @@ internal static class SynthesisedEdges
         }
     }
 
-    /// <summary>The generated types an attribute on <paramref name="method"/> names.</summary>
+    /// <summary>
+    /// The generated types an attribute on <paramref name="method"/> names.
+    /// </summary>
     private static IEnumerable<string> StateMachinesOf(MetadataReader reader, MethodDefinition method)
     {
         foreach (var handle in method.GetCustomAttributes())

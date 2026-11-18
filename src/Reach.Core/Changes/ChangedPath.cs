@@ -1,6 +1,8 @@
 namespace Reach.Changes;
 
-/// <summary>What git said happened to a path between the baseline and now.</summary>
+/// <summary>
+/// What git said happened to a path between the baseline and now.
+/// </summary>
 internal enum ChangeStatus
 {
     Added,
@@ -24,13 +26,19 @@ internal sealed record ChangedPath(string Path, ChangeStatus Status)
     internal bool IsCSharp =>
         Path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>The path existed at the baseline, so there is a revision to read.</summary>
+    /// <summary>
+    /// The path existed at the baseline, so there is a revision to read.
+    /// </summary>
     internal bool HasBaseline => Status is ChangeStatus.Modified or ChangeStatus.Deleted;
 
-    /// <summary>The path exists in the working tree now.</summary>
+    /// <summary>
+    /// The path exists in the working tree now.
+    /// </summary>
     internal bool HasWorkingTree => Status is not ChangeStatus.Deleted;
 
-    /// <summary>Parses one <c>git diff --name-status</c> line.</summary>
+    /// <summary>
+    /// Parses one <c>git diff --name-status</c> line.
+    /// </summary>
     internal static ChangedPath? FromNameStatus(string line)
     {
         var separator = line.IndexOf('\t');

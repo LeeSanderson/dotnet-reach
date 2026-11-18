@@ -23,7 +23,9 @@ internal sealed class ScriptedProcessRunner : IProcessRunner
     private readonly List<(string[] Arguments, Action Effect)> effects = [];
     private readonly List<ProcessRequest> requests = [];
 
-    /// <summary>Every request made, in order, exactly as issued.</summary>
+    /// <summary>
+    /// Every request made, in order, exactly as issued.
+    /// </summary>
     internal IReadOnlyList<ProcessRequest> Requests => requests;
 
     internal ScriptedProcessRunner Succeeds(string standardOutput, params string[] arguments) =>

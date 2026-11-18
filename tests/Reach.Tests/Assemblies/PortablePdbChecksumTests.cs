@@ -20,7 +20,9 @@ public class PortablePdbChecksumTests
     private static readonly Guid Sha256 = new("8829d00f-11b8-4213-878b-770e8597ac16");
     private static readonly Guid Sha1 = new("ff1816ec-aa5e-4d10-87f7-6f4963833460");
 
-    /// <summary>The assembly under test is the one this test is compiled into.</summary>
+    /// <summary>
+    /// The assembly under test is the one this test is compiled into.
+    /// </summary>
     private static ScannedAssembly Subject()
     {
         var path = typeof(Reach.Product).Assembly.Location;

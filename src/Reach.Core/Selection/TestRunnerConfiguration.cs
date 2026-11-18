@@ -53,7 +53,9 @@ internal static class TestRunnerConfiguration
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["projects"] = projects });
     }
 
-    /// <summary>Whether <c>global.json</c> carries the runner setting at all.</summary>
+    /// <summary>
+    /// Whether <c>global.json</c> carries the runner setting at all.
+    /// </summary>
     internal static bool IsConfigured(string repositoryRoot)
     {
         var path = Path.Combine(repositoryRoot, "global.json");

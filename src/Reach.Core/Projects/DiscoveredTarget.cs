@@ -1,6 +1,8 @@
 namespace Reach.Projects;
 
-/// <summary>What Reach was pointed at: a solution, or a single project.</summary>
+/// <summary>
+/// What Reach was pointed at: a solution, or a single project.
+/// </summary>
 /// <remarks>
 /// The two are different <em>analysis scopes</em>, not two ways of naming the same work,
 /// which is why discovery refuses to guess between them.

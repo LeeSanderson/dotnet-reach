@@ -2,7 +2,9 @@ using Reach.Reporting;
 
 namespace Reach.Projects;
 
-/// <summary>One project compiled for one target framework — the unit Reach actually analyses.</summary>
+/// <summary>
+/// One project compiled for one target framework — the unit Reach actually analyses.
+/// </summary>
 internal sealed record ExpectedAssemblyInstance(ProjectFile Project, string TargetFramework)
 {
     public override string ToString() => $"{Project.AssemblyName} ({TargetFramework})";

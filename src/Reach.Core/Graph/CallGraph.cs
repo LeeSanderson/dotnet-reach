@@ -1,9 +1,13 @@
 namespace Reach.Graph;
 
-/// <summary>One call edge. No string-typed field, by design and by test.</summary>
+/// <summary>
+/// One call edge. No string-typed field, by design and by test.
+/// </summary>
 internal readonly record struct Edge(MethodId From, MethodId To, EdgeProvenance Provenance);
 
-/// <summary>The callers of one node, with the provenance of each edge.</summary>
+/// <summary>
+/// The callers of one node, with the provenance of each edge.
+/// </summary>
 internal readonly ref struct IncomingEdges(ReadOnlySpan<MethodId> sources, ReadOnlySpan<EdgeProvenance> provenances)
 {
     internal ReadOnlySpan<MethodId> Sources { get; } = sources;
@@ -55,7 +59,9 @@ internal sealed class CallGraph
 
     internal bool Contains(MethodId id) => indexOf.ContainsKey(id);
 
-    /// <summary>Every method that can invoke <paramref name="id"/>. The only direction the graph indexes.</summary>
+    /// <summary>
+    /// Every method that can invoke <paramref name="id"/>. The only direction the graph indexes.
+    /// </summary>
     internal IncomingEdges CallersOf(MethodId id)
     {
         if (!indexOf.TryGetValue(id, out var index))

@@ -12,19 +12,29 @@ namespace Reach.Graph;
 /// </remarks>
 internal enum EdgeProvenance : byte
 {
-    /// <summary><c>call</c> or <c>callvirt</c> to an exactly-resolved target. Read from an instruction.</summary>
+    /// <summary>
+    /// <c>call</c> or <c>callvirt</c> to an exactly-resolved target. Read from an instruction.
+    /// </summary>
     CompiledCall = 0,
 
-    /// <summary><c>ldftn</c> or <c>ldvirtftn</c>, from the <em>capturing</em> method to the target.</summary>
+    /// <summary>
+    /// <c>ldftn</c> or <c>ldvirtftn</c>, from the <em>capturing</em> method to the target.
+    /// </summary>
     CompiledCapture = 1,
 
-    /// <summary>Kernel method to the compiler-generated members that carry its body.</summary>
+    /// <summary>
+    /// Kernel method to the compiler-generated members that carry its body.
+    /// </summary>
     Containment = 2,
 
-    /// <summary>An initialization trigger to the type's <c>.cctor</c>.</summary>
+    /// <summary>
+    /// An initialization trigger to the type's <c>.cctor</c>.
+    /// </summary>
     TypeInitialization = 3,
 
-    /// <summary>A dispatch declaration to an implementation that could run.</summary>
+    /// <summary>
+    /// A dispatch declaration to an implementation that could run.
+    /// </summary>
     Widened = 4,
 }
 
@@ -43,7 +53,9 @@ internal static class EdgeProvenances
     internal static bool IsSynthesised(this EdgeProvenance provenance) =>
         provenance is EdgeProvenance.Containment or EdgeProvenance.TypeInitialization;
 
-    /// <summary>The implementation that runs is not knowable, so every candidate gets an edge.</summary>
+    /// <summary>
+    /// The implementation that runs is not knowable, so every candidate gets an edge.
+    /// </summary>
     internal static bool IsWidened(this EdgeProvenance provenance) =>
         provenance == EdgeProvenance.Widened;
 }

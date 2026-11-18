@@ -9,11 +9,15 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Reach.Tests.Fixtures;
 
-/// <summary>One assembly compiled from a source string, with its portable PDB.</summary>
+/// <summary>
+/// One assembly compiled from a source string, with its portable PDB.
+/// </summary>
 /// <param name="Symbols">Empty when the symbols were embedded in <paramref name="Image"/>.</param>
 internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbols)
 {
-    /// <summary>Writes the assembly and, unless they are embedded, its symbols.</summary>
+    /// <summary>
+    /// Writes the assembly and, unless they are embedded, its symbols.
+    /// </summary>
     internal string WriteTo(string directory)
     {
         Directory.CreateDirectory(directory);
@@ -30,7 +34,9 @@ internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbol
         return path;
     }
 
-    /// <summary>Opens the image the way production code does, without writing anything to disk.</summary>
+    /// <summary>
+    /// Opens the image the way production code does, without writing anything to disk.
+    /// </summary>
     internal T Read<T>(Func<MetadataReader, T> read)
     {
         using var peReader = new PEReader(ImmutableArray.Create(Image));
@@ -47,7 +53,9 @@ internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbol
 /// </summary>
 internal static class Compiled
 {
-    /// <summary>What <see cref="File.WriteAllText(string, string?)"/> writes, byte for byte.</summary>
+    /// <summary>
+    /// What <see cref="File.WriteAllText(string, string?)"/> writes, byte for byte.
+    /// </summary>
     private static readonly Encoding Utf8NoPreamble = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
     private static readonly Lazy<ImmutableArray<MetadataReference>> FrameworkReferences =

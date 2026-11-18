@@ -9,6 +9,15 @@
   </PropertyGroup>
 
   <!--
+    The coding standard (analyzers, .editorconfig and build defaults) for every project. Pinned
+    exactly: an upgrade is a deliberate commit that fixes any new diagnostics in the same commit.
+    It only sets properties still empty, so the values above keep winning.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Opinionated.DotNet.CodingStandards" Version="[0.0.22]" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
     Hand-edited. A published package cannot be deleted, only unlisted, so the version
     bump and the tag push are two deliberate human acts. See spec section 16.4.
   -->

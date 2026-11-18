@@ -17,7 +17,9 @@ internal sealed class PhaseTimings
 
     internal DateTimeOffset StartedUtc { get; } = DateTimeOffset.UtcNow;
 
-    /// <summary>Times <paramref name="work"/> and records it under <paramref name="phase"/>.</summary>
+    /// <summary>
+    /// Times <paramref name="work"/> and records it under <paramref name="phase"/>.
+    /// </summary>
     internal async Task<T> MeasureAsync<T>(string phase, Func<Task<T>> work)
     {
         var timer = Stopwatch.StartNew();

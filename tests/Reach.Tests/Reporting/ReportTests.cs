@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Reach.Output;
 using Reach.Reporting;
 using Reach.Tests.Fixtures;
 

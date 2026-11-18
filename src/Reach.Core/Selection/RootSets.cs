@@ -6,7 +6,9 @@ using Reach.Projects;
 
 namespace Reach.Selection;
 
-/// <summary>One change, and every method the walk should start from for it.</summary>
+/// <summary>
+/// One change, and every method the walk should start from for it.
+/// </summary>
 /// <remarks>
 /// Whether the roots <em>are</em> the changed declaration is not carried separately: it is
 /// exactly <c>Entry.Tier == ChangeTier.Member</c>, and two fields that must agree forever is one
@@ -48,7 +50,9 @@ internal sealed class RootSets
         }
     }
 
-    /// <summary>Every method of an assembly, by its simple name. Several instances contribute together.</summary>
+    /// <summary>
+    /// Every method of an assembly, by its simple name. Several instances contribute together.
+    /// </summary>
     internal IReadOnlyList<MethodId> InAssembly(string name) =>
         byAssembly.GetValueOrDefault(name) ?? [];
 
@@ -74,7 +78,9 @@ internal sealed class RootSets
         return found;
     }
 
-    /// <summary>The changes the walk runs over, in a stable order.</summary>
+    /// <summary>
+    /// The changes the walk runs over, in a stable order.
+    /// </summary>
     internal IReadOnlyList<Change> ChangesFrom(
         ChangedSet changed,
         IReadOnlyList<JoinResult> joined,

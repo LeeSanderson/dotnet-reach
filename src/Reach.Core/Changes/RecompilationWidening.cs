@@ -37,7 +37,9 @@ namespace Reach.Changes;
 /// </remarks>
 internal static class RecompilationWidening
 {
-    /// <summary>One change that widened its consumers, and which consumers.</summary>
+    /// <summary>
+    /// One change that widened its consumers, and which consumers.
+    /// </summary>
     /// <param name="Trigger">The member that caused it, for the forward change list.</param>
     internal sealed record Widened(
         ChangedMember Trigger,

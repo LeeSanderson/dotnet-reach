@@ -11,25 +11,35 @@ namespace Reach;
 /// </remarks>
 internal sealed record SelectRequest
 {
-    /// <summary>The solution or single test project. Discovered in the working directory when absent.</summary>
+    /// <summary>
+    /// The solution or single test project. Discovered in the working directory when absent.
+    /// </summary>
     internal string? Target { get; init; }
 
-    /// <summary>The target branch. Auto-detected when absent.</summary>
+    /// <summary>
+    /// The target branch. Auto-detected when absent.
+    /// </summary>
     internal string? Base { get; init; }
 
     internal string? Configuration { get; init; }
 
-    /// <summary>Build output. Never means "where Reach writes" — that is <see cref="ReportDirectory"/>.</summary>
+    /// <summary>
+    /// Build output. Never means "where Reach writes" — that is <see cref="ReportDirectory"/>.
+    /// </summary>
     internal string? Output { get; init; }
 
     internal string? ArtifactsPath { get; init; }
 
     internal bool NoBuild { get; init; }
 
-    /// <summary>A path, or <c>-</c> for standard output. Moves the JSON alone.</summary>
+    /// <summary>
+    /// A path, or <c>-</c> for standard output. Moves the JSON alone.
+    /// </summary>
     internal string? Report { get; init; }
 
-    /// <summary>Moves the whole directory Reach owns, side-car files included.</summary>
+    /// <summary>
+    /// Moves the whole directory Reach owns, side-car files included.
+    /// </summary>
     internal string? ReportDirectory { get; init; }
 
     internal bool Paths { get; init; }

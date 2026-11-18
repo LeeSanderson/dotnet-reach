@@ -5,7 +5,9 @@ using Reach.Graph;
 
 namespace Reach.Join;
 
-/// <summary>What one changed declaration reached in the call graph.</summary>
+/// <summary>
+/// What one changed declaration reached in the call graph.
+/// </summary>
 /// <param name="Joined">
 /// False when nothing matched. A declaration that fails to join falls through to whole-assembly
 /// widening for its project — over-selection, and it is what makes a phantom member from a
@@ -159,7 +161,9 @@ internal sealed class SpanJoin
         return extents.Select(entry => (entry.Key, entry.Value));
     }
 
-    /// <summary>The first and last place in one document a method's IL came from.</summary>
+    /// <summary>
+    /// The first and last place in one document a method's IL came from.
+    /// </summary>
     private readonly record struct MethodExtent(
         MethodId Method,
         int StartLine,

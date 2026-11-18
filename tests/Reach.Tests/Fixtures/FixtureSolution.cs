@@ -28,7 +28,9 @@ internal sealed class FixtureSolution : IDisposable
 
     internal string Solution => repository.Combine("Contoso.slnx");
 
-    /// <summary>Copies, commits the baseline, and builds. The returned SHA is the baseline.</summary>
+    /// <summary>
+    /// Copies, commits the baseline, and builds. The returned SHA is the baseline.
+    /// </summary>
     internal static FixtureSolution Build(out string baseline, [CallerFilePath] string testFile = "")
     {
         var repository = TempRepository.Create("reach-contoso");
@@ -55,7 +57,9 @@ internal sealed class FixtureSolution : IDisposable
     internal void Delete(string relativePath) =>
         File.Delete(System.IO.Path.Combine(Path, relativePath));
 
-    /// <summary>Rebuilds after a change, for the assertions that need the binaries to agree.</summary>
+    /// <summary>
+    /// Rebuilds after a change, for the assertions that need the binaries to agree.
+    /// </summary>
     internal void Rebuild()
     {
         var build = Run("dotnet", ["build", Solution], Path);
@@ -63,7 +67,9 @@ internal sealed class FixtureSolution : IDisposable
         Assert.True(build.ExitCode == 0, "the fixture solution did not rebuild:\n" + build.Output);
     }
 
-    /// <summary>Runs Reach over the fixture and returns the report it wrote.</summary>
+    /// <summary>
+    /// Runs Reach over the fixture and returns the report it wrote.
+    /// </summary>
     internal async Task<Report> SelectAsync(string baseline, CancellationToken cancellationToken, bool paths = false)
     {
         var timings = new PhaseTimings();

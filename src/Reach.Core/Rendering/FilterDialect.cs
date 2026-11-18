@@ -36,7 +36,9 @@ internal static class FilterDialect
     internal static string OperatorFor(string dialect) =>
         dialect.StartsWith("nunit", StringComparison.Ordinal) ? "~" : "=";
 
-    /// <summary>Whether this dialect's operator can match tests the selection did not name.</summary>
+    /// <summary>
+    /// Whether this dialect's operator can match tests the selection did not name.
+    /// </summary>
     internal static bool OverMatches(string dialect) => OperatorFor(dialect) == "~";
 
     /// <summary>

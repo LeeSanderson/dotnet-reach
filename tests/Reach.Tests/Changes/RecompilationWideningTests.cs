@@ -10,7 +10,9 @@ namespace Reach.Tests.Changes;
 /// </summary>
 public class RecompilationWideningTests
 {
-    /// <summary>Core is referenced by App, which is referenced by Tests.</summary>
+    /// <summary>
+    /// Core is referenced by App, which is referenced by Tests.
+    /// </summary>
     private static AnalysisScope Scope()
     {
         var core = new ProjectFile(Paths.Normalise("/repo/src/Core/Core.csproj"), "Core", ["net10.0"], [], []);

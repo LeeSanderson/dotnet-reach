@@ -17,3 +17,7 @@ The 7 known Linux test failures are expected to remain. They are tickets 10–12
 - [ ] The Windows CI leg's tests pass
 - [ ] The Linux CI leg fails only the 7 known tests
 - [ ] The list of suppressions with approvals, and the list of upstream issues, are recorded under `## Comments`
+
+## Comments
+
+- Ticket 04 temporarily narrowed the Husky pre-commit hook (`.husky/task-runner.json`) to `dotnet format whitespace` and `dotnet format style` (with `--exclude-diagnostics IDE1006`), both with `--verify-no-changes`, because the full check fails on every unfixable diagnostic while the build is red. This ticket must restore the single full `dotnet format --verify-no-changes --include ${staged}` task.

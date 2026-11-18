@@ -8,7 +8,9 @@ namespace Reach;
 /// </summary>
 internal static class Paths
 {
-    /// <summary>Matches the filesystem: case-insensitive on Windows and macOS, case-sensitive elsewhere.</summary>
+    /// <summary>
+    /// Matches the filesystem: case-insensitive on Windows and macOS, case-sensitive elsewhere.
+    /// </summary>
     internal static StringComparer Comparer { get; } =
         CaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 

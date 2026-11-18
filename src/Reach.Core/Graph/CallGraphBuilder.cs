@@ -5,7 +5,9 @@ using Reach.Reporting;
 
 namespace Reach.Graph;
 
-/// <summary>The graph, plus everything the pass had to disclose while building it.</summary>
+/// <summary>
+/// The graph, plus everything the pass had to disclose while building it.
+/// </summary>
 /// <param name="HierarchyConstructions">
 /// How many type hierarchy indexes this run built. One of M1's two committed algorithmic
 /// constraints is that it is exactly one, and this is what makes that a test rather than a
@@ -67,7 +69,9 @@ internal sealed class CallGraphBuilder
     /// </summary>
     private readonly Dictionary<MethodId, (string Type, string Member)> dispatchTargets = [];
 
-    /// <summary>Type name to its <c>.cctor</c>, for the initialization-trigger edges.</summary>
+    /// <summary>
+    /// Type name to its <c>.cctor</c>, for the initialization-trigger edges.
+    /// </summary>
     private readonly Dictionary<string, MethodId> classConstructors = new(StringComparer.Ordinal);
 
     private TypeHierarchy hierarchy = null!;
@@ -330,7 +334,9 @@ internal sealed class CallGraphBuilder
     private void Remember(MethodId node, (string Type, string Member) member) =>
         dispatchTargets[node] = member;
 
-    /// <summary>The declaring type and member key a call instruction names, as the hierarchy spells them.</summary>
+    /// <summary>
+    /// The declaring type and member key a call instruction names, as the hierarchy spells them.
+    /// </summary>
     private (string Type, string Member)? MemberKeyOf(GraphAssembly assembly, int token)
     {
         try
@@ -342,37 +348,37 @@ internal sealed class CallGraphBuilder
             switch (handle.Kind)
             {
                 case HandleKind.MethodDefinition:
-                    {
-                        var method = reader.GetMethodDefinition((MethodDefinitionHandle)handle);
+                {
+                    var method = reader.GetMethodDefinition((MethodDefinitionHandle)handle);
 
-                        return (
-                            MetadataNames.FullNameOf(reader, method.GetDeclaringType()),
-                            MetadataNames.Key(
-                                reader.GetString(method.Name),
-                                MetadataNames.GenericArityOf(reader, method),
-                                method.DecodeSignature(names, genericContext: null)));
-                    }
+                    return (
+                        MetadataNames.FullNameOf(reader, method.GetDeclaringType()),
+                        MetadataNames.Key(
+                            reader.GetString(method.Name),
+                            MetadataNames.GenericArityOf(reader, method),
+                            method.DecodeSignature(names, genericContext: null)));
+                }
 
                 case HandleKind.MemberReference:
+                {
+                    var reference = reader.GetMemberReference((MemberReferenceHandle)handle);
+
+                    if (reference.GetKind() != MemberReferenceKind.Method)
                     {
-                        var reference = reader.GetMemberReference((MemberReferenceHandle)handle);
-
-                        if (reference.GetKind() != MemberReferenceKind.Method)
-                        {
-                            return null;
-                        }
-
-                        var signature = reference.DecodeMethodSignature(names, genericContext: null);
-                        var (declaringType, _) = ParentOf(reader, reference.Parent, names);
-
-                        return declaringType is null
-                            ? null
-                            : (declaringType,
-                                MetadataNames.Key(
-                                    reader.GetString(reference.Name),
-                                    signature.GenericParameterCount,
-                                    signature));
+                        return null;
                     }
+
+                    var signature = reference.DecodeMethodSignature(names, genericContext: null);
+                    var (declaringType, _) = ParentOf(reader, reference.Parent, names);
+
+                    return declaringType is null
+                        ? null
+                        : (declaringType,
+                            MetadataNames.Key(
+                                reader.GetString(reference.Name),
+                                signature.GenericParameterCount,
+                                signature));
+                }
 
                 case HandleKind.MethodSpecification:
                     return MemberKeyOf(
@@ -522,7 +528,9 @@ internal sealed class CallGraphBuilder
         return candidates;
     }
 
-    /// <summary>The declaring type's canonical name, and the assembly it lives in.</summary>
+    /// <summary>
+    /// The declaring type's canonical name, and the assembly it lives in.
+    /// </summary>
     private static (string? Type, string? Assembly) ParentOf(
         MetadataReader reader,
         EntityHandle parent,

@@ -209,11 +209,13 @@ internal sealed class TypeHierarchy
                 methods,
                 implementations,
                 virtuals,
-                (definition.Attributes & TypeAttributes.Interface) != 0);
+                definition.Attributes.HasFlag(TypeAttributes.Interface));
         }
     }
 
-    /// <summary>The <c>Type::member</c> spelling a <c>MethodImpl</c>'s declaration half resolves to.</summary>
+    /// <summary>
+    /// The <c>Type::member</c> spelling a <c>MethodImpl</c>'s declaration half resolves to.
+    /// </summary>
     private static string? DeclarationOf(MetadataReader reader, EntityHandle handle, SignatureNames names)
     {
         switch (handle.Kind)

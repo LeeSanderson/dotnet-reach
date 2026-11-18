@@ -17,7 +17,9 @@ internal sealed record SourceDocument(string Path, Guid HashAlgorithm, byte[] Ha
     internal bool HasChecksum => Hash.Length > 0;
 }
 
-/// <summary>Reads the document table out of an already-opened portable PDB.</summary>
+/// <summary>
+/// Reads the document table out of an already-opened portable PDB.
+/// </summary>
 internal static class PdbDocuments
 {
     internal static IReadOnlyList<SourceDocument> Of(MetadataReader pdbReader)

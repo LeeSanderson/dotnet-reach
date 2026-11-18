@@ -373,7 +373,9 @@ public class SpanJoinTests
         Assert.Equal(2, result.Methods.Select(method => method.Ordinal).Distinct().Count());
     }
 
-    /// <summary>The fixture compiled once, with a way to read back a method's name.</summary>
+    /// <summary>
+    /// The fixture compiled once, with a way to read back a method's name.
+    /// </summary>
     private sealed class Subject : IDisposable
     {
         private readonly List<IDisposable> open = [];

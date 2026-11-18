@@ -273,7 +273,7 @@ public class CommandLineTests
     public void An_empty_NO_COLOR_does_not_suppress_colour()
     {
         // no-color.org: present and *not an empty string*, whatever its value.
-        string? EmptyNoColor(string name) => name == "NO_COLOR" ? "" : null;
+        static string? EmptyNoColor(string name) => name == "NO_COLOR" ? "" : null;
 
         Assert.True(ColourSupport.Enabled(noColorOption: false, EmptyNoColor, outputIsRedirected: false));
     }
@@ -430,7 +430,9 @@ public class CommandLineTests
         Assert.Contains("\"outcome\": \"no-changes\"", report);
     }
 
-    /// <summary>The fixture solution inside a real repository, committed as the baseline.</summary>
+    /// <summary>
+    /// The fixture solution inside a real repository, committed as the baseline.
+    /// </summary>
     private static TempRepository SolutionRepository()
     {
         var repository = TempRepository.Create();

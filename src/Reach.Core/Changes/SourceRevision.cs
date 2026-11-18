@@ -54,7 +54,9 @@ internal static class SourceRevision
 
     internal static SyntaxTree Parse(string text) => CSharpSyntaxTree.ParseText(text, Options);
 
-    /// <summary>Every type the revision declares, keyed on fully-qualified name plus arity.</summary>
+    /// <summary>
+    /// Every type the revision declares, keyed on fully-qualified name plus arity.
+    /// </summary>
     internal static IReadOnlyDictionary<string, DeclaredType> DeclaredTypes(string text)
     {
         var root = Parse(text).GetRoot();
@@ -88,7 +90,7 @@ internal static class SourceRevision
             members[key] = member;
         }
 
-        return first with { Header = first.Header + "" + second.Header, Members = members };
+        return first with { Header = first.Header + "\u0001" + second.Header, Members = members };
     }
 
     private static DeclaredType Read(BaseTypeDeclarationSyntax declaration, string name)

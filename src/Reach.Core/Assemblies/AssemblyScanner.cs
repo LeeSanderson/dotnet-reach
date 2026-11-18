@@ -3,7 +3,9 @@ using System.Reflection.PortableExecutable;
 
 namespace Reach.Assemblies;
 
-/// <summary>One candidate file, opened and read.</summary>
+/// <summary>
+/// One candidate file, opened and read.
+/// </summary>
 /// <param name="IsFirstParty">
 /// True when the debug symbols point at source inside the working tree. Symbols sitting
 /// <em>beside</em> an assembly prove nothing — <c>.pdb</c> is an
@@ -124,7 +126,9 @@ internal static class AssemblyScanner
         }
     }
 
-    /// <summary>Handles both a separate <c>.pdb</c> and an embedded one.</summary>
+    /// <summary>
+    /// Handles both a separate <c>.pdb</c> and an embedded one.
+    /// </summary>
     private static IReadOnlyList<SourceDocument> DocumentsOf(PEReader peReader, string file)
     {
         try

@@ -14,7 +14,9 @@ internal sealed class ProjectTree : IDisposable
 
     internal static ProjectTree Create() => new(TempDirectory.Create("reach-tree"));
 
-    /// <summary>Writes <c>src/<paramref name="name"/>/<paramref name="name"/>.csproj</c>.</summary>
+    /// <summary>
+    /// Writes <c>src/<paramref name="name"/>/<paramref name="name"/>.csproj</c>.
+    /// </summary>
     internal string AddProject(
         string name,
         IEnumerable<string>? references = null,
@@ -79,7 +81,9 @@ internal sealed class ProjectTree : IDisposable
 
     internal string Combine(params string[] parts) => directory.Combine(parts);
 
-    /// <summary>Writes a <c>.slnx</c>, the default for <c>dotnet new sln</c> on .NET 10.</summary>
+    /// <summary>
+    /// Writes a <c>.slnx</c>, the default for <c>dotnet new sln</c> on .NET 10.
+    /// </summary>
     internal string AddSlnx(string name, params string[] projects)
     {
         var entries = projects.Select(project =>
@@ -143,7 +147,9 @@ internal sealed class ProjectTree : IDisposable
         return directory.WriteFile(name + ".sln", body.ToString());
     }
 
-    /// <summary>Writes a solution filter naming <paramref name="solution"/>.</summary>
+    /// <summary>
+    /// Writes a solution filter naming <paramref name="solution"/>.
+    /// </summary>
     internal string AddSlnf(string name, string solution, params string[] projects)
     {
         var included = string.Join(

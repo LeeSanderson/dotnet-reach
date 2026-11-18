@@ -21,7 +21,9 @@ internal sealed class ReachDirectory
 
     internal bool Exists => Directory.Exists(Path);
 
-    /// <summary><c>--report-dir</c> moves the whole directory; the default sits under the working directory.</summary>
+    /// <summary>
+    /// <c>--report-dir</c> moves the whole directory; the default sits under the working directory.
+    /// </summary>
     internal static ReachDirectory For(string workingDirectory, string? reportDirectory) =>
         new(System.IO.Path.GetFullPath(
             reportDirectory is { Length: > 0 } ? reportDirectory : DefaultName,

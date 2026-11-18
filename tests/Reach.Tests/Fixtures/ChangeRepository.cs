@@ -78,7 +78,9 @@ internal sealed class ChangeRepository : IDisposable
 
     internal void Git(params string[] arguments) => repository.Git(arguments);
 
-    /// <summary>Commits everything so far and returns the SHA to measure changes against.</summary>
+    /// <summary>
+    /// Commits everything so far and returns the SHA to measure changes against.
+    /// </summary>
     internal string CommitBaseline() => repository.Commit("baseline");
 
     internal async Task<ChangedSet> ChangesAsync(string baseline, CancellationToken cancellationToken)

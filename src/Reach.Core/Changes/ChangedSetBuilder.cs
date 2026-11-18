@@ -228,7 +228,9 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
         return declared.Count > 0;
     }
 
-    /// <summary>An added type has no baseline, so every member it declares is a root.</summary>
+    /// <summary>
+    /// An added type has no baseline, so every member it declares is a root.
+    /// </summary>
     private static void AddedType(
         List<(string Path, DeclaredType Type)> declarations,
         string name,
@@ -311,10 +313,12 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
         }
     }
 
-    /// <summary>Partial declarations in source order, which is deterministic for a fixed path order.</summary>
+    /// <summary>
+    /// Partial declarations in source order, which is deterministic for a fixed path order.
+    /// </summary>
     private static string Header(List<(string Path, DeclaredType Type)> declarations) =>
         string.Join(
-            '',
+            '\u0001',
             declarations
                 .OrderBy(entry => entry.Path, StringComparer.Ordinal)
                 .Select(entry => entry.Type.Header));

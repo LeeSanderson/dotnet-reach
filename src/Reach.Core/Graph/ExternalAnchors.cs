@@ -42,6 +42,8 @@ internal sealed class ExternalAnchors
         return methodId;
     }
 
-    /// <summary>For messages and the report only. Never part of identity.</summary>
+    /// <summary>
+    /// For messages and the report only. Never part of identity.
+    /// </summary>
     internal string? NameOf(MethodId id) => nameOf.GetValueOrDefault(id);
 }

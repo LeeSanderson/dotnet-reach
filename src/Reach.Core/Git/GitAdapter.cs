@@ -21,15 +21,21 @@ internal sealed class GitAdapter(IProcessRunner runner, string workingDirectory)
     /// </summary>
     private static readonly string[] GlobalOptions = ["-c", "core.quotePath=false"];
 
-    /// <summary>The commit a change is measured against, as the merge-base with a reference.</summary>
+    /// <summary>
+    /// The commit a change is measured against, as the merge-base with a reference.
+    /// </summary>
     internal Task<ProcessResult> MergeBaseAsync(string reference, CancellationToken cancellationToken = default) =>
         RunAsync(cancellationToken, "merge-base", "HEAD", reference);
 
-    /// <summary>Resolves a reference to a SHA. Also how a reference is shown to exist at all.</summary>
+    /// <summary>
+    /// Resolves a reference to a SHA. Also how a reference is shown to exist at all.
+    /// </summary>
     internal Task<ProcessResult> RevParseAsync(string reference, CancellationToken cancellationToken = default) =>
         RunAsync(cancellationToken, "rev-parse", reference);
 
-    /// <summary>Reports <c>true</c> or <c>false</c> on standard output. A shallow clone has no merge-base to find.</summary>
+    /// <summary>
+    /// Reports <c>true</c> or <c>false</c> on standard output. A shallow clone has no merge-base to find.
+    /// </summary>
     internal Task<ProcessResult> IsShallowCloneAsync(CancellationToken cancellationToken = default) =>
         RunAsync(cancellationToken, "rev-parse", "--is-shallow-repository");
 
@@ -72,7 +78,9 @@ internal sealed class GitAdapter(IProcessRunner runner, string workingDirectory)
     internal Task<ProcessResult> TrackedPathsAsync(CancellationToken cancellationToken = default) =>
         RunAsync(cancellationToken, "ls-files", "--cached");
 
-    /// <summary>The working tree's root, which is what repository-relative paths are relative to.</summary>
+    /// <summary>
+    /// The working tree's root, which is what repository-relative paths are relative to.
+    /// </summary>
     internal Task<ProcessResult> RepositoryRootAsync(CancellationToken cancellationToken = default) =>
         RunAsync(cancellationToken, "rev-parse", "--show-toplevel");
 

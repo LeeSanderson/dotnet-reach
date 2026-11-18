@@ -5,22 +5,34 @@ using Reach.Selection;
 
 namespace Reach.Rendering;
 
-/// <summary>How a selection reached the runner.</summary>
+/// <summary>
+/// How a selection reached the runner.
+/// </summary>
 internal enum Delivery
 {
-    /// <summary>On the command line.</summary>
+    /// <summary>
+    /// On the command line.
+    /// </summary>
     Inline,
 
-    /// <summary>In a response file Reach wrote, passed as an argument.</summary>
+    /// <summary>
+    /// In a response file Reach wrote, passed as an argument.
+    /// </summary>
     ResponseFile,
 
-    /// <summary>Across several invocations, because the host has no private channel.</summary>
+    /// <summary>
+    /// Across several invocations, because the host has no private channel.
+    /// </summary>
     Chunked,
 
-    /// <summary>Merged into the settings file the caller supplied.</summary>
+    /// <summary>
+    /// Merged into the settings file the caller supplied.
+    /// </summary>
     RunSettings,
 
-    /// <summary>Nothing was rendered.</summary>
+    /// <summary>
+    /// Nothing was rendered.
+    /// </summary>
     None,
 }
 
