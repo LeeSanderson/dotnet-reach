@@ -56,7 +56,7 @@ internal sealed class Renderer(
             .ToArray();
 
         var multiTargeted = siblings.Length > 1;
-        var instance = siblings.FirstOrDefault(candidate =>
+        var instance = Array.Find(siblings, candidate =>
             candidate.Expected.TargetFramework == project.TargetFramework);
 
         var selector = multiTargeted ? FrameworkSelector.Derive(instance?.Assembly.Framework) : null;

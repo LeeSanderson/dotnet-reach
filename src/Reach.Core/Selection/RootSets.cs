@@ -195,7 +195,7 @@ internal sealed class RootSets
 
         var root = directories[0];
 
-        while (!directories.All(directory => Paths.IsUnder(directory, root)))
+        while (!Array.TrueForAll(directories, directory => Paths.IsUnder(directory, root)))
         {
             var parent = Path.GetDirectoryName(root);
 

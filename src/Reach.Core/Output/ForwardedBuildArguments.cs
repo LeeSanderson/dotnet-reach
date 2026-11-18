@@ -50,7 +50,7 @@ internal static class ForwardedBuildArguments
     {
         foreach (var token in forwarded)
         {
-            var match = Owned.FirstOrDefault(owned => Matches(token, owned.Switch));
+            var match = Array.Find(Owned, owned => Matches(token, owned.Switch));
 
             if (match.Switch is not null)
             {
