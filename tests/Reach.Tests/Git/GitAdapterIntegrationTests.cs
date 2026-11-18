@@ -82,7 +82,7 @@ public class GitAdapterIntegrationTests
 
         Assert.Equal(
             ["M\tsrc/Committed.cs", "M\tsrc/Staged.cs", "M\tsrc/Unstaged.cs"],
-            result.Lines.Order(StringComparer.Ordinal));
+            result.Lines().Order(StringComparer.Ordinal));
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class GitAdapterIntegrationTests
         // similarity threshold decides, and the threshold's wrong setting under-selects.
         Assert.Equal(
             ["A\tsrc/After.cs", "D\tsrc/Before.cs"],
-            result.Lines.Order(StringComparer.Ordinal));
+            result.Lines().Order(StringComparer.Ordinal));
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class GitAdapterIntegrationTests
 
         // Without --exclude-standard every generated .cs under obj/ returns as untracked
         // and every project's assembly widens on every run.
-        Assert.Equal(["src/New.cs"], result.Lines);
+        Assert.Equal(["src/New.cs"], result.Lines());
     }
 
     [Fact]

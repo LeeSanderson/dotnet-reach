@@ -1,5 +1,6 @@
 using System.Reflection.Emit;
 using System.Reflection.Metadata;
+using System.Runtime.CompilerServices;
 
 namespace Reach.Graph;
 
@@ -30,6 +31,36 @@ internal static class ILInstructions
 {
     private const byte TwoBytePrefix = 0xFE;
 
+    private static readonly Dictionary<OperandType, OperandKind> Kinds = new()
+    {
+        [OperandType.InlineNone] = OperandKind.None,
+
+        [OperandType.ShortInlineBrTarget] = OperandKind.One,
+        [OperandType.ShortInlineI] = OperandKind.One,
+        [OperandType.ShortInlineVar] = OperandKind.One,
+
+        [OperandType.InlineVar] = OperandKind.Two,
+
+        [OperandType.InlineBrTarget] = OperandKind.Four,
+        [OperandType.InlineI] = OperandKind.Four,
+        [OperandType.ShortInlineR] = OperandKind.Four,
+
+        // Everything that names something in metadata. Reach records all of them and lets each
+        // phase filter: type initialization reads the field and type tokens, widening reads
+        // the constrained. prefix, and calls read the method ones.
+        [OperandType.InlineField] = OperandKind.Token,
+        [OperandType.InlineMethod] = OperandKind.Token,
+        [OperandType.InlineSig] = OperandKind.Token,
+        [OperandType.InlineString] = OperandKind.Token,
+        [OperandType.InlineTok] = OperandKind.Token,
+        [OperandType.InlineType] = OperandKind.Token,
+
+        [OperandType.InlineI8] = OperandKind.Eight,
+        [OperandType.InlineR] = OperandKind.Eight,
+
+        [OperandType.InlineSwitch] = OperandKind.Switch,
+    };
+
     private static readonly OperandKind[] SingleByte = new OperandKind[256];
     private static readonly OperandKind[] TwoByte = new OperandKind[256];
 
@@ -49,9 +80,9 @@ internal static class ILInstructions
             var value = OpCodeValues.ValueOf(opCode);
             var kind = KindOf(opCode.OperandType);
 
-            if (value > 0xFF)
+            if (value > byte.MaxValue)
             {
-                TwoByte[value & 0xFF] = kind;
+                TwoByte[value & byte.MaxValue] = kind;
             }
             else
             {
@@ -69,105 +100,93 @@ internal static class ILInstructions
         var found = new List<TokenInstruction>();
         var offset = 0;
 
-        while (offset < il.Length)
+        while (TryRead(il, ref offset, out var token))
         {
-            var start = offset;
-            var first = il[offset++];
-            ILOpCode opCode;
-            OperandKind kind;
-
-            if (first == TwoBytePrefix)
+            if (token is { } instruction)
             {
-                if (offset >= il.Length)
-                {
-                    break;
-                }
-
-                var second = il[offset++];
-                opCode = OpCodeValues.ToTwoByteOpCode(second);
-                kind = TwoByte[second];
+                found.Add(instruction);
             }
-            else
-            {
-                opCode = OpCodeValues.ToOpCode(first);
-                kind = SingleByte[first];
-            }
-
-            if (kind == OperandKind.Unknown)
-            {
-                break;
-            }
-
-            var size = kind switch
-            {
-                OperandKind.Switch => SwitchSize(il, offset),
-                OperandKind.Token => 4,
-                OperandKind.None => 0,
-                OperandKind.One => 1,
-                OperandKind.Two => 2,
-                OperandKind.Four => 4,
-                OperandKind.Eight => 8,
-                _ => -1,
-            };
-
-            if (size < 0 || offset + size > il.Length)
-            {
-                break;
-            }
-
-            if (kind == OperandKind.Token)
-            {
-                found.Add(new TokenInstruction(start, opCode, BitConverter.ToInt32(il[offset..(offset + 4)])));
-            }
-
-            offset += size;
         }
 
         return found;
     }
 
+    /// <summary>
+    /// Decodes the instruction at <paramref name="offset"/> and moves past it. False at the end
+    /// of the body, and at anything that cannot be decoded, which ends the walk.
+    /// </summary>
+    private static bool TryRead(ReadOnlySpan<byte> il, ref int offset, out TokenInstruction? token)
+    {
+        token = null;
+
+        if (offset >= il.Length)
+        {
+            return false;
+        }
+
+        var (opCode, kind, operand) = OpCodeAt(il, offset);
+
+        var size = kind switch
+        {
+            OperandKind.Unknown => -1,
+            OperandKind.Switch => SwitchSize(il, operand),
+            OperandKind.Token => sizeof(int),
+
+            // The fixed-size kinds are numbered by their operand size.
+            _ => Unsafe.BitCast<OperandKind, int>(kind),
+        };
+
+        if (size < 0 || operand + size > il.Length)
+        {
+            return false;
+        }
+
+        if (kind == OperandKind.Token)
+        {
+            token = new TokenInstruction(offset, opCode, BitConverter.ToInt32(il[operand..(operand + sizeof(int))]));
+        }
+
+        offset = operand + size;
+        return true;
+    }
+
+    /// <summary>
+    /// The opcode at <paramref name="offset"/>, its operand kind, and where its operand starts.
+    /// A two-byte prefix with nothing after it reads as unknown.
+    /// </summary>
+    private static (ILOpCode OpCode, OperandKind Kind, int Operand) OpCodeAt(ReadOnlySpan<byte> il, int offset)
+    {
+        var first = il[offset];
+
+        if (first != TwoBytePrefix)
+        {
+            return (OpCodeValues.ToOpCode(first), SingleByte[first], offset + 1);
+        }
+
+        if (offset + 1 >= il.Length)
+        {
+            return (default, OperandKind.Unknown, offset + 1);
+        }
+
+        var second = il[offset + 1];
+
+        return (OpCodeValues.ToTwoByteOpCode(second), TwoByte[second], offset + sizeof(ushort));
+    }
+
     private static int SwitchSize(ReadOnlySpan<byte> il, int offset)
     {
-        if (offset + 4 > il.Length)
+        if (offset + sizeof(int) > il.Length)
         {
             return -1;
         }
 
-        var count = BitConverter.ToUInt32(il[offset..(offset + 4)]);
+        var count = BitConverter.ToUInt32(il[offset..(offset + sizeof(int))]);
 
-        return count > int.MaxValue / 4 ? -1 : 4 + (int.CreateTruncating(count) * 4);
+        return count > int.MaxValue / sizeof(int) ? -1 : sizeof(int) + (int.CreateTruncating(count) * sizeof(int));
     }
 
-    private static OperandKind KindOf(OperandType operandType) => operandType switch
-    {
-        OperandType.InlineNone => OperandKind.None,
-
-        OperandType.ShortInlineBrTarget
-            or OperandType.ShortInlineI
-            or OperandType.ShortInlineVar => OperandKind.One,
-
-        OperandType.InlineVar => OperandKind.Two,
-
-        OperandType.InlineBrTarget
-            or OperandType.InlineI
-            or OperandType.ShortInlineR => OperandKind.Four,
-
-        // Everything that names something in metadata. Reach records all of them and lets each
-        // phase filter: type initialization reads the field and type tokens, widening reads
-        // the constrained. prefix, and calls read the method ones.
-        OperandType.InlineField
-            or OperandType.InlineMethod
-            or OperandType.InlineSig
-            or OperandType.InlineString
-            or OperandType.InlineTok
-            or OperandType.InlineType => OperandKind.Token,
-
-        OperandType.InlineI8 or OperandType.InlineR => OperandKind.Eight,
-
-        OperandType.InlineSwitch => OperandKind.Switch,
-
-        _ => OperandKind.Unknown,
-    };
+    private static OperandKind KindOf(OperandType operandType) =>
+        Kinds.GetValueOrDefault(operandType, OperandKind.Unknown);
 
     private enum OperandKind
     {

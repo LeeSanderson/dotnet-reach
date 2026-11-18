@@ -30,8 +30,8 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
     {
         var paths = await PathsAsync(baseline, cancellationToken).ConfigureAwait(false);
 
-        var baselineTypes = new Dictionary<string, List<(string Path, DeclaredType Type)>>(StringComparer.Ordinal);
-        var currentTypes = new Dictionary<string, List<(string Path, DeclaredType Type)>>(StringComparer.Ordinal);
+        var baselineTypes = new DeclarationsByTypeName();
+        var currentTypes = new DeclarationsByTypeName();
 
         var unmappable = new List<ChangedPath>();
         var notices = new List<Notice>();
@@ -131,12 +131,12 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
 
         var paths = new Dictionary<string, ChangedPath>(StringComparer.Ordinal);
 
-        foreach (var path in diff.Lines.Select(ChangedPath.FromNameStatus).OfType<ChangedPath>())
+        foreach (var path in diff.Lines().Select(ChangedPath.FromNameStatus).OfType<ChangedPath>())
         {
             paths[path.Path] = path;
         }
 
-        foreach (var path in untracked.Lines.Where(line => line.Length > 0))
+        foreach (var path in untracked.Lines().Where(line => line.Length > 0))
         {
             paths.TryAdd(path, new ChangedPath(path, ChangeStatus.Untracked));
         }
@@ -204,7 +204,7 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
     }
 
     private static bool Collect(
-        Dictionary<string, List<(string Path, DeclaredType Type)>> into,
+        DeclarationsByTypeName into,
         string path,
         string text)
     {
@@ -251,7 +251,7 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
         }
     }
 
-    private void Compare(
+    private static void Compare(
         string name,
         List<(string Path, DeclaredType Type)> before,
         List<(string Path, DeclaredType Type)> after,
@@ -293,6 +293,10 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
                     path,
                     member.IsCompileTimeConstant || previous.IsCompileTimeConstant,
                     member.Span));
+            }
+            else
+            {
+                // Present on both sides with the same declaration: unchanged.
             }
         }
 
@@ -380,4 +384,10 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
             + "forgotten `git add`.",
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["paths"] = untracked }));
     }
+
+    /// <summary>
+    /// Every declaration of each type name, with the file it is declared in.
+    /// </summary>
+    private sealed class DeclarationsByTypeName()
+        : Dictionary<string, List<(string Path, DeclaredType Type)>>(StringComparer.Ordinal);
 }

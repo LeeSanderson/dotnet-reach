@@ -28,30 +28,30 @@ public sealed partial class ExampleReportTests : IDisposable
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    private readonly FixtureSolution fixture;
-    private readonly string baseline;
+    private readonly FixtureSolution _fixture;
+    private readonly string _baseline;
 
-    public ExampleReportTests() => fixture = FixtureSolution.Build(out baseline);
+    public ExampleReportTests() => _fixture = FixtureSolution.Build(out _baseline);
 
     [Fact]
     public async Task The_committed_example_is_what_the_determinism_fixture_produces()
     {
-        var path = fixture.ReadFile("src/Contoso.Core/Invoice.cs");
+        var path = _fixture.ReadFile("src/Contoso.Core/Invoice.cs");
 
         // A miss would leave the fixture unchanged and the report a quiet no-changes.
         Assert.Contains("public static int Tax(int net) => net * StandardRate / Percent;", path);
 
-        fixture.WriteFile(
+        _fixture.WriteFile(
             "src/Contoso.Core/Invoice.cs",
             path.Replace(
                 "public static int Tax(int net) => net * StandardRate / Percent;",
                 "public static int Tax(int net) => (net * StandardRate / Percent) + 0;",
                 StringComparison.Ordinal));
 
-        fixture.Rebuild();
+        _fixture.Rebuild();
 
-        var report = await fixture.SelectAsync(baseline, TestContext.Current.CancellationToken);
-        var actual = Stabilise(ReportWriter.Serialise(report), fixture.Path);
+        var report = await _fixture.SelectAsync(_baseline, TestContext.Current.CancellationToken);
+        var actual = Stabilise(ReportWriter.Serialise(report), _fixture.Path);
 
         AssertExample(actual);
     }
@@ -146,5 +146,5 @@ public sealed partial class ExampleReportTests : IDisposable
         Assert.Equal(File.ReadAllText(path).ReplaceLineEndings("\n").TrimEnd(), actual.TrimEnd());
     }
 
-    public void Dispose() => fixture.Dispose();
+    public void Dispose() => _fixture.Dispose();
 }

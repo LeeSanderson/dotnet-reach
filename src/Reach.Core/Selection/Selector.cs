@@ -4,6 +4,7 @@ using Reach.Graph;
 using Reach.Join;
 using Reach.Projects;
 using Reach.Reporting;
+using static Reach.Buckets;
 
 namespace Reach.Selection;
 
@@ -40,9 +41,9 @@ internal static class Selector
             .SelectMany(project => project.Tests)
             .ToDictionary(test => test.Id);
 
-        var reachedBy = new Dictionary<MethodId, List<int>>();
+        var reachedBy = new ChangesByTest();
         var classOf = new Dictionary<MethodId, PathClass>();
-        var pathsOf = includePaths ? new Dictionary<MethodId, List<IReadOnlyList<MethodId>>>() : null;
+        var pathsOf = includePaths ? new PathsByTest() : null;
 
         foreach (var change in changes)
         {
@@ -92,11 +93,11 @@ internal static class Selector
 
     private static ProjectSelection Decide(
         EnumeratedProject project,
-        Dictionary<MethodId, List<int>> reachedBy,
+        ChangesByTest reachedBy,
         Dictionary<MethodId, PathClass> classOf,
         HashSet<MethodId> ownChanged,
         HashSet<MethodId> added,
-        Dictionary<MethodId, List<IReadOnlyList<MethodId>>>? pathsOf)
+        PathsByTest? pathsOf)
     {
         if (project.Framework is null)
         {
@@ -116,23 +117,8 @@ internal static class Selector
 
         foreach (var test in project.Tests)
         {
-            var rules = new List<SelectionRule>();
             var changes = reachedBy.GetValueOrDefault(test.Id) ?? [];
-
-            if (changes.Count > 0)
-            {
-                rules.Add(SelectionRule.ReverseReachable);
-            }
-
-            if (ownChanged.Contains(test.Id))
-            {
-                rules.Add(SelectionRule.OwnSourceChanged);
-            }
-
-            if (added.Contains(test.Id))
-            {
-                rules.Add(SelectionRule.NewSinceBaseline);
-            }
+            var rules = RulesFor(test.Id, changes, ownChanged, added);
 
             if (rules.Count == 0)
             {
@@ -156,6 +142,35 @@ internal static class Selector
             project.Tests.Count,
             project.Framework.Dialect,
             project.Tests);
+    }
+
+    /// <summary>
+    /// Every rule that selects <paramref name="test"/>. None means it is not selected.
+    /// </summary>
+    private static List<SelectionRule> RulesFor(
+        MethodId test,
+        List<int> changes,
+        HashSet<MethodId> ownChanged,
+        HashSet<MethodId> added)
+    {
+        var rules = new List<SelectionRule>();
+
+        if (changes.Count > 0)
+        {
+            rules.Add(SelectionRule.ReverseReachable);
+        }
+
+        if (ownChanged.Contains(test))
+        {
+            rules.Add(SelectionRule.OwnSourceChanged);
+        }
+
+        if (added.Contains(test))
+        {
+            rules.Add(SelectionRule.NewSinceBaseline);
+        }
+
+        return rules;
     }
 
     private static IReadOnlyList<EnumeratedProject> Enumerate(
@@ -250,28 +265,28 @@ internal static class Selector
         IReadOnlyDictionary<MethodId, TestMethod> tests,
         IReadOnlyDictionary<MethodId, PathClass> reached,
         IReadOnlySet<MethodId> ownRoots,
-        Dictionary<MethodId, List<IReadOnlyList<MethodId>>> into)
+        PathsByTest into)
     {
         var predecessors = ReverseWalk.Predecessors(graph, change.Roots);
 
-        foreach (var method in reached.Keys)
+        var reachedTests = reached.Keys
+            .Where(method => tests.ContainsKey(method) && !ownRoots.Contains(method));
+
+        foreach (var method in reachedTests)
         {
-            if (tests.ContainsKey(method) && !ownRoots.Contains(method))
-            {
-                Bucket(into, method).Add(ReverseWalk.PathFrom(predecessors, method));
-            }
+            Bucket(into, method).Add(ReverseWalk.PathFrom(predecessors, method));
         }
     }
 
-    private static List<T> Bucket<T>(Dictionary<MethodId, List<T>> index, MethodId key)
-    {
-        if (!index.TryGetValue(key, out var bucket))
-        {
-            index[key] = bucket = [];
-        }
+    /// <summary>
+    /// Per test, the index of every change that reached it.
+    /// </summary>
+    private sealed class ChangesByTest : Dictionary<MethodId, List<int>>;
 
-        return bucket;
-    }
+    /// <summary>
+    /// Per test, the hop-by-hop path from every change that reached it.
+    /// </summary>
+    private sealed class PathsByTest : Dictionary<MethodId, List<IReadOnlyList<MethodId>>>;
 
     private sealed record EnumeratedProject(
         ProjectFile Project,

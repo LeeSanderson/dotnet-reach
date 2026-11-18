@@ -5,40 +5,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Reach.Changes;
 
 /// <summary>
-/// One type as one revision of one file declares it: a hash of its header, and a hash per
-/// member.
-/// </summary>
-/// <param name="Name">The type's fully-qualified name, with its arity.</param>
-/// <param name="Header">
-/// Modifiers, attributes, base list and type parameters. Its own unit, because a change there
-/// is whole-type widening — a test class gaining an attribute that makes its methods
-/// discoverable is invisible to any member-level comparison.
-/// </param>
-/// <param name="Members">Each member the type declares, by key.</param>
-internal sealed record DeclaredType(
-    string Name,
-    string Header,
-    IReadOnlyDictionary<MemberKey, DeclaredMember> Members);
-
-/// <summary>
-/// One member as one revision of one file declares it.
-/// </summary>
-/// <param name="Key">The member's key within its type.</param>
-/// <param name="Declaration">The declaration's canonical text, which is what two revisions compare.</param>
-/// <param name="IsCompileTimeConstant">
-/// True for a <c>const</c>, an enum member, or a declaration carrying a parameter default.
-/// </param>
-/// <param name="Span">
-/// Where the declaration sits in its file, one-based, as debug symbols spell it. The join
-/// matches a source declaration to the IL methods whose sequence points fall inside it.
-/// </param>
-internal sealed record DeclaredMember(
-    MemberKey Key,
-    string Declaration,
-    bool IsCompileTimeConstant,
-    DeclarationSpan Span);
-
-/// <summary>
 /// Reads one revision of one C# file into the types it declares. The only place in Reach that
 /// touches Roslyn.
 /// </summary>
@@ -75,17 +41,11 @@ internal static class SourceRevision
         foreach (var declaration in root.DescendantNodes().OfType<BaseTypeDeclarationSyntax>())
         {
             var name = QualifiedName(declaration);
+            var read = Read(declaration, name);
 
             // A partial type declared twice in one file is one type: the members merge and the
             // headers concatenate in source order, which is deterministic for a given file.
-            if (types.TryGetValue(name, out var existing))
-            {
-                types[name] = Merge(existing, Read(declaration, name));
-            }
-            else
-            {
-                types[name] = Read(declaration, name);
-            }
+            types[name] = types.TryGetValue(name, out var existing) ? Merge(existing, read) : read;
         }
 
         return types;
@@ -291,6 +251,11 @@ internal static class SourceRevision
                 }
 
                 break;
+
+            default:
+                // Nested types are walked as types in their own right, and anything else (an
+                // incomplete member the parser recovered, for one) declares nothing to key on.
+                break;
         }
     }
 
@@ -333,18 +298,15 @@ internal static class SourceRevision
 
     private static string Mode(ParameterSyntax parameter)
     {
-        foreach (var modifier in parameter.Modifiers)
-        {
-            if (modifier.IsKind(SyntaxKind.RefKeyword)
-                || modifier.IsKind(SyntaxKind.OutKeyword)
-                || modifier.IsKind(SyntaxKind.InKeyword))
-            {
-                return modifier.Text + " ";
-            }
-        }
+        var mode = parameter.Modifiers.FirstOrDefault(IsPassingMode);
 
-        return string.Empty;
+        return mode.IsKind(SyntaxKind.None) ? string.Empty : mode.Text + " ";
     }
+
+    private static bool IsPassingMode(SyntaxToken modifier) =>
+        modifier.IsKind(SyntaxKind.RefKeyword)
+        || modifier.IsKind(SyntaxKind.OutKeyword)
+        || modifier.IsKind(SyntaxKind.InKeyword);
 
     private static bool HasDefault(BaseParameterListSyntax? parameters) =>
         parameters is not null && parameters.Parameters.Any(parameter => parameter.Default is not null);
@@ -359,15 +321,16 @@ internal static class SourceRevision
 
         for (SyntaxNode? node = declaration; node is not null; node = node.Parent)
         {
-            switch (node)
+            var segment = node switch
             {
-                case TypeDeclarationSyntax type:
-                    nested.Insert(0, type.Identifier.Text + Arity(type.TypeParameterList));
-                    break;
+                TypeDeclarationSyntax type => type.Identifier.Text + Arity(type.TypeParameterList),
+                EnumDeclarationSyntax @enum => @enum.Identifier.Text,
+                _ => null,
+            };
 
-                case EnumDeclarationSyntax @enum:
-                    nested.Insert(0, @enum.Identifier.Text);
-                    break;
+            if (segment is not null)
+            {
+                nested.Insert(0, segment);
             }
         }
 
@@ -386,7 +349,7 @@ internal static class SourceRevision
     {
         var parts = new List<string>();
 
-        for (SyntaxNode? node = declaration; node is not null; node = node.Parent)
+        for (var node = declaration; node is not null; node = node.Parent)
         {
             if (node is BaseNamespaceDeclarationSyntax @namespace)
             {
@@ -397,3 +360,37 @@ internal static class SourceRevision
         return string.Join('.', parts);
     }
 }
+
+/// <summary>
+/// One type as one revision of one file declares it: a hash of its header, and a hash per
+/// member.
+/// </summary>
+/// <param name="Name">The type's fully-qualified name, with its arity.</param>
+/// <param name="Header">
+/// Modifiers, attributes, base list and type parameters. Its own unit, because a change there
+/// is whole-type widening — a test class gaining an attribute that makes its methods
+/// discoverable is invisible to any member-level comparison.
+/// </param>
+/// <param name="Members">Each member the type declares, by key.</param>
+internal sealed record DeclaredType(
+    string Name,
+    string Header,
+    IReadOnlyDictionary<MemberKey, DeclaredMember> Members);
+
+/// <summary>
+/// One member as one revision of one file declares it.
+/// </summary>
+/// <param name="Key">The member's key within its type.</param>
+/// <param name="Declaration">The declaration's canonical text, which is what two revisions compare.</param>
+/// <param name="IsCompileTimeConstant">
+/// True for a <c>const</c>, an enum member, or a declaration carrying a parameter default.
+/// </param>
+/// <param name="Span">
+/// Where the declaration sits in its file, one-based, as debug symbols spell it. The join
+/// matches a source declaration to the IL methods whose sequence points fall inside it.
+/// </param>
+internal sealed record DeclaredMember(
+    MemberKey Key,
+    string Declaration,
+    bool IsCompileTimeConstant,
+    DeclarationSpan Span);

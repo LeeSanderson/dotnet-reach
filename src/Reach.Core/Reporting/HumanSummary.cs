@@ -13,6 +13,11 @@ namespace Reach.Reporting;
 /// </remarks>
 public static class HumanSummary
 {
+    /// <summary>
+    /// How much of a baseline SHA the summary shows; the report carries it in full.
+    /// </summary>
+    private const int ShortShaLength = 10;
+
     public static string Write(Report report, string? reportPath, string? reachDirectory)
     {
         var text = new StringBuilder();
@@ -157,7 +162,7 @@ public static class HumanSummary
         }
     }
 
-    private static string Short(string sha) => sha.Length > 10 ? sha[..10] : sha;
+    private static string Short(string sha) => sha.Length > ShortShaLength ? sha[..ShortShaLength] : sha;
 
     private static string Name(string path) => Path.GetFileNameWithoutExtension(path);
 }

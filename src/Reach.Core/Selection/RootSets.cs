@@ -3,18 +3,9 @@ using Reach.Changes;
 using Reach.Graph;
 using Reach.Join;
 using Reach.Projects;
+using static Reach.Buckets;
 
 namespace Reach.Selection;
-
-/// <summary>
-/// One change, and every method the walk should start from for it.
-/// </summary>
-/// <remarks>
-/// Whether the roots <em>are</em> the changed declaration is not carried separately: it is
-/// exactly <c>Entry.Tier == ChangeTier.Member</c>, and two fields that must agree forever is one
-/// more than the fact needs.
-/// </remarks>
-internal sealed record Change(ChangeEntry Entry, IReadOnlyList<MethodId> Roots);
 
 /// <summary>
 /// Turns a changed set into the changes the walk runs over, expanding each widening into the
@@ -27,15 +18,15 @@ internal sealed record Change(ChangeEntry Entry, IReadOnlyList<MethodId> Roots);
 /// </remarks>
 internal sealed class RootSets
 {
-    private readonly Dictionary<string, List<MethodId>> byAssembly = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, List<MethodId>> byType = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<MethodId>> _byAssembly = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<MethodId>> _byType = new(StringComparer.Ordinal);
 
     internal RootSets(IEnumerable<GraphAssembly> assemblies)
     {
         foreach (var assembly in assemblies)
         {
             var reader = assembly.Reader;
-            var methods = Bucket(byAssembly, assembly.Name);
+            var methods = Bucket(_byAssembly, assembly.Name);
 
             foreach (var handle in reader.MethodDefinitions)
             {
@@ -45,7 +36,7 @@ internal sealed class RootSets
                     reader.GetMethodDefinition(handle).GetDeclaringType());
 
                 methods.Add(id);
-                Bucket(byType, declaringType).Add(id);
+                Bucket(_byType, declaringType).Add(id);
             }
         }
     }
@@ -54,7 +45,7 @@ internal sealed class RootSets
     /// Every method of an assembly, by its simple name. Several instances contribute together.
     /// </summary>
     internal IReadOnlyList<MethodId> InAssembly(string name) =>
-        byAssembly.GetValueOrDefault(name) ?? [];
+        _byAssembly.GetValueOrDefault(name) ?? [];
 
     /// <summary>
     /// Every method of a type, including the compiler-generated members nested inside it — a
@@ -63,9 +54,9 @@ internal sealed class RootSets
     /// </summary>
     internal IReadOnlyList<MethodId> InType(string name)
     {
-        var found = new List<MethodId>(byType.GetValueOrDefault(name) ?? []);
+        var found = new List<MethodId>(_byType.GetValueOrDefault(name) ?? []);
 
-        foreach (var (candidate, methods) in byType)
+        foreach (var (candidate, methods) in _byType)
         {
             if (candidate.Length > name.Length
                 && candidate.StartsWith(name, StringComparison.Ordinal)
@@ -204,7 +195,7 @@ internal sealed class RootSets
 
         var root = directories[0];
 
-        while (!directories.All(directory => Paths.IsUnder(directory, root)))
+        while (!Array.TrueForAll(directories, directory => Paths.IsUnder(directory, root)))
         {
             var parent = Path.GetDirectoryName(root);
 
@@ -218,14 +209,14 @@ internal sealed class RootSets
 
         return root;
     }
-
-    private static List<T> Bucket<T>(Dictionary<string, List<T>> index, string key)
-    {
-        if (!index.TryGetValue(key, out var bucket))
-        {
-            index[key] = bucket = [];
-        }
-
-        return bucket;
-    }
 }
+
+/// <summary>
+/// One change, and every method the walk should start from for it.
+/// </summary>
+/// <remarks>
+/// Whether the roots <em>are</em> the changed declaration is not carried separately: it is
+/// exactly <c>Entry.Tier == ChangeTier.Member</c>, and two fields that must agree forever is one
+/// more than the fact needs.
+/// </remarks>
+internal sealed record Change(ChangeEntry Entry, IReadOnlyList<MethodId> Roots);

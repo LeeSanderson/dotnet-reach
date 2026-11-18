@@ -6,11 +6,11 @@ namespace Reach.Projects;
 /// </summary>
 internal sealed class ProjectGraph
 {
-    private readonly Dictionary<string, ProjectFile> byPath;
+    private readonly Dictionary<string, ProjectFile> _byPath;
 
-    private ProjectGraph(Dictionary<string, ProjectFile> byPath) => this.byPath = byPath;
+    private ProjectGraph(Dictionary<string, ProjectFile> byPath) => _byPath = byPath;
 
-    internal IReadOnlyCollection<ProjectFile> Projects => byPath.Values;
+    internal IReadOnlyCollection<ProjectFile> Projects => _byPath.Values;
 
     /// <summary>
     /// Reads the roots and everything they reach, transitively. A reference is followed even
@@ -42,7 +42,7 @@ internal sealed class ProjectGraph
     }
 
     internal ProjectFile? Find(string path) =>
-        byPath.GetValueOrDefault(Paths.Normalise(path));
+        _byPath.GetValueOrDefault(Paths.Normalise(path));
 
     /// <summary>
     /// <paramref name="project"/> and everything it transitively references, each once.
@@ -82,7 +82,7 @@ internal sealed class ProjectGraph
     /// </summary>
     internal IReadOnlyList<ProjectReference> ReferencesTo(ProjectFile project) =>
     [
-        .. byPath.Values
+        .. _byPath.Values
             .SelectMany(candidate => candidate.References)
             .Where(reference => Paths.Same(Paths.Normalise(reference.Path), project.Path))
     ];

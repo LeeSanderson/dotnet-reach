@@ -71,6 +71,24 @@ public enum ChangeTier
 }
 
 /// <summary>
+/// The whole selection, plus the forward change list and anything it had to disclose.
+/// </summary>
+public sealed record SelectionResult(
+    IReadOnlyList<ProjectSelection> Projects,
+    IReadOnlyList<ChangeEntry> Changes,
+    IReadOnlyList<Notice> Notices)
+{
+    internal int SelectedCount => Projects.Sum(project => project.Selected.Count);
+
+    /// <summary>
+    /// A selection was made, nothing was selected, or there was nothing to analyse. The fourth
+    /// outcome — failure — never reaches here.
+    /// </summary>
+    internal bool AnythingSelected =>
+        Projects.Any(project => project.Mode != SelectionMode.Skip);
+}
+
+/// <summary>
 /// One change, with the tier that routed it and the count of tests it reached.
 /// </summary>
 /// <remarks>
@@ -130,21 +148,3 @@ public sealed record ProjectSelection(
     int? Total,
     string? Dialect,
     IReadOnlyList<TestMethod> AllTests);
-
-/// <summary>
-/// The whole selection, plus the forward change list and anything it had to disclose.
-/// </summary>
-public sealed record SelectionResult(
-    IReadOnlyList<ProjectSelection> Projects,
-    IReadOnlyList<ChangeEntry> Changes,
-    IReadOnlyList<Notice> Notices)
-{
-    internal int SelectedCount => Projects.Sum(project => project.Selected.Count);
-
-    /// <summary>
-    /// A selection was made, nothing was selected, or there was nothing to analyse. The fourth
-    /// outcome — failure — never reaches here.
-    /// </summary>
-    internal bool AnythingSelected =>
-        Projects.Any(project => project.Mode != SelectionMode.Skip);
-}

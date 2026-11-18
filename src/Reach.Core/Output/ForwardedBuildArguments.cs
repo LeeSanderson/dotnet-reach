@@ -50,7 +50,7 @@ public static class ForwardedBuildArguments
     {
         foreach (var token in forwarded)
         {
-            var match = Owned.FirstOrDefault(owned => Matches(token, owned.Switch));
+            var match = Array.Find(Owned, owned => Matches(token, owned.Switch));
 
             if (match.Switch is not null)
             {
@@ -68,7 +68,5 @@ public static class ForwardedBuildArguments
     /// </summary>
     private static bool Matches(string token, string owned) =>
         token.Equals(owned, StringComparison.Ordinal)
-        || (token.StartsWith(owned, StringComparison.Ordinal)
-            && token.Length > owned.Length
-            && (token[owned.Length] == '=' || token[owned.Length] == ':'));
+        || (token.StartsWith(owned, StringComparison.Ordinal) && token.AsSpan(owned.Length) is ['=' or ':', ..]);
 }

@@ -17,7 +17,7 @@ namespace Reach.Tests.Fixtures;
 /// </remarks>
 internal sealed class Graphs : IDisposable
 {
-    private readonly List<PEReader> readers = [];
+    private readonly List<PEReader> _readers = [];
 
     internal CallGraphResult Result
     {
@@ -42,7 +42,7 @@ internal sealed class Graphs : IDisposable
             compiled.Add(assembly);
 
             var reader = new PEReader(ImmutableArray.Create(assembly.Image));
-            graphs.readers.Add(reader);
+            graphs._readers.Add(reader);
 
             built.Add(new GraphAssembly(
                 built.Count,
@@ -77,7 +77,7 @@ internal sealed class Graphs : IDisposable
         foreach (var (name, assembly) in new[] { ("Core", onDisk), ("App", app) })
         {
             var reader = new PEReader(ImmutableArray.Create(assembly.Image));
-            graphs.readers.Add(reader);
+            graphs._readers.Add(reader);
 
             built.Add(new GraphAssembly(
                 built.Count,
@@ -182,7 +182,7 @@ internal sealed class Graphs : IDisposable
 
     public void Dispose()
     {
-        foreach (var reader in readers)
+        foreach (var reader in _readers)
         {
             reader.Dispose();
         }

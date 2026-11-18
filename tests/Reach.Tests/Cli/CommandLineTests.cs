@@ -13,24 +13,24 @@ public sealed class CommandLineTests : IDisposable
 {
     private const string TestPackage = "xunit.v3";
 
-    private readonly Dictionary<string, string?> environment = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string?> _environment = new(StringComparer.Ordinal);
 
-    private readonly StringWriter standardOutput = new();
-    private readonly StringWriter standardError = new();
+    private readonly StringWriter _standardOutput = new();
+    private readonly StringWriter _standardError = new();
 
-    private Task<int> Run(string workingDirectory, params string[] arguments) =>
+    private Task<int> RunAsync(string workingDirectory, params string[] arguments) =>
         ReachCli.RunAsync(
             arguments,
             workingDirectory,
-            standardOutput,
-            standardError,
-            name => environment.GetValueOrDefault(name),
+            _standardOutput,
+            _standardError,
+            name => _environment.GetValueOrDefault(name),
             outputIsRedirected: false,
             TestContext.Current.CancellationToken);
 
-    private string Out => standardOutput.ToString();
+    private string Out => _standardOutput.ToString();
 
-    private string Error => standardError.ToString();
+    private string Error => _standardError.ToString();
 
     private static int Numeric(ExitCode code) => Convert.ToInt32(code, CultureInfo.InvariantCulture);
 
@@ -41,7 +41,7 @@ public sealed class CommandLineTests : IDisposable
     {
         using var tree = ProjectTree.Create();
 
-        var exitCode = await Run(tree.Root);
+        var exitCode = await RunAsync(tree.Root);
 
         // The default mode invokes dotnet build, so the one invocation a newcomer is
         // guaranteed to try must not trigger a multi-minute build and write files into their
@@ -56,7 +56,7 @@ public sealed class CommandLineTests : IDisposable
     {
         using var tree = ProjectTree.Create();
 
-        var exitCode = await Run(tree.Root, "--help");
+        var exitCode = await RunAsync(tree.Root, "--help");
 
         Assert.Equal(Numeric(ExitCode.Success), exitCode);
         Assert.Contains("select", Out);
@@ -67,7 +67,7 @@ public sealed class CommandLineTests : IDisposable
     {
         using var tree = ProjectTree.Create();
 
-        Assert.Equal(Numeric(ExitCode.UsageError), await Run(tree.Root, "select", "--bogus"));
+        Assert.Equal(Numeric(ExitCode.UsageError), await RunAsync(tree.Root, "select", "--bogus"));
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public sealed class CommandLineTests : IDisposable
     {
         using var tree = ProjectTree.Create();
 
-        Assert.Equal(Numeric(ExitCode.UsageError), await Run(tree.Root, "select", "-v", "loud"));
+        Assert.Equal(Numeric(ExitCode.UsageError), await RunAsync(tree.Root, "select", "-v", "loud"));
     }
 
     // ---- The -- boundary ----------------------------------------------------------------
@@ -92,7 +92,7 @@ public sealed class CommandLineTests : IDisposable
     {
         using var tree = ProjectTree.Create();
 
-        var exitCode = await Run(tree.Root, "select", "--", forwarded, "somewhere");
+        var exitCode = await RunAsync(tree.Root, "select", "--", forwarded, "somewhere");
 
         // A forwarded output switch changes the layout through a channel Reach never read.
         Assert.Equal(Numeric(ExitCode.UsageError), exitCode);
@@ -106,7 +106,7 @@ public sealed class CommandLineTests : IDisposable
 
         Assert.Equal(
             Numeric(ExitCode.UsageError),
-            await Run(tree.Root, "select", "--", "--output=somewhere"));
+            await RunAsync(tree.Root, "select", "--", "--output=somewhere"));
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public sealed class CommandLineTests : IDisposable
     {
         using var tree = ProjectTree.Create();
 
-        var exitCode = await Run(tree.Root, "select", "--", "-o", "somewhere");
+        var exitCode = await RunAsync(tree.Root, "select", "--", "-o", "somewhere");
 
         // Exit 1 is the one case that writes no report.
         Assert.Equal(Numeric(ExitCode.UsageError), exitCode);
@@ -159,7 +159,7 @@ public sealed class CommandLineTests : IDisposable
     {
         using var tree = SolutionWithTests();
 
-        await Run(tree.Root, "select", "--base", "main");
+        await RunAsync(tree.Root, "select", "--base", "main");
 
         var gitignore = Path.Combine(tree.Root, ReachDirectory.DefaultName, ".gitignore");
 
@@ -190,7 +190,7 @@ public sealed class CommandLineTests : IDisposable
     {
         using var tree = SolutionWithTests();
 
-        await Run(tree.Root, "select", "--base", "main", "--report-dir", "build/reach-output");
+        await RunAsync(tree.Root, "select", "--base", "main", "--report-dir", "build/reach-output");
 
         var relocated = Path.Combine(tree.Root, "build", "reach-output");
 
@@ -239,11 +239,11 @@ public sealed class CommandLineTests : IDisposable
         using var tree = ProjectTree.Create();
 
         var destination = ReportDestination.Resolve("-", ReachDirectory.For(tree.Root, null), tree.Root);
-        var streams = Streams.For(destination, standardOutput, standardError, colour: false);
+        var streams = Streams.For(destination, _standardOutput, _standardError, colour: false);
 
         Assert.True(destination.ToStandardOutput);
-        Assert.Same(standardOutput, streams.Report);
-        Assert.Same(standardError, streams.Summary);
+        Assert.Same(_standardOutput, streams.Report);
+        Assert.Same(_standardError, streams.Summary);
     }
 
     [Fact]
@@ -252,18 +252,18 @@ public sealed class CommandLineTests : IDisposable
         using var tree = ProjectTree.Create();
 
         var destination = ReportDestination.Resolve(null, ReachDirectory.For(tree.Root, null), tree.Root);
-        var streams = Streams.For(destination, standardOutput, standardError, colour: false);
+        var streams = Streams.For(destination, _standardOutput, _standardError, colour: false);
 
-        Assert.Same(standardOutput, streams.Summary);
-        Assert.Same(standardError, streams.Notices);
+        Assert.Same(_standardOutput, streams.Summary);
+        Assert.Same(_standardError, streams.Notices);
         Assert.Null(streams.Report);
     }
 
     [Fact]
     public void No_color_and_NO_COLOR_and_a_redirected_stdout_each_suppress_colour()
     {
-        string? Empty(string name) => null;
-        string? NoColor(string name) => name == "NO_COLOR" ? "1" : null;
+        static string? Empty(string name) => null;
+        static string? NoColor(string name) => name == "NO_COLOR" ? "1" : null;
 
         Assert.True(ColourSupport.Enabled(noColorOption: false, Empty, outputIsRedirected: false));
 
@@ -353,7 +353,7 @@ public sealed class CommandLineTests : IDisposable
 
         tree.AddProject("Worker", targetFrameworks: "net10.0");
 
-        var exitCode = await Run(tree.Root, "select", "src/Worker/Worker.csproj");
+        var exitCode = await RunAsync(tree.Root, "select", "src/Worker/Worker.csproj");
 
         Assert.Equal(Numeric(ExitCode.UsageError), exitCode);
         Assert.Contains("Worker.csproj", Out + Error);
@@ -366,7 +366,7 @@ public sealed class CommandLineTests : IDisposable
 
         // No --base, no CI variables, and the temporary directory is no git repository at
         // all, so the shallow probe fails and resolution stops.
-        var exitCode = await Run(tree.Root, "select");
+        var exitCode = await RunAsync(tree.Root, "select");
 
         Assert.Equal(Numeric(ExitCode.BaselineUnresolvable), exitCode);
     }
@@ -376,9 +376,9 @@ public sealed class CommandLineTests : IDisposable
     {
         using var tree = SolutionWithTests();
 
-        environment["GITHUB_ACTIONS"] = "true";
+        _environment["GITHUB_ACTIONS"] = "true";
 
-        Assert.Equal(Numeric(ExitCode.BaselineUnresolvable), await Run(tree.Root, "select"));
+        Assert.Equal(Numeric(ExitCode.BaselineUnresolvable), await RunAsync(tree.Root, "select"));
         Assert.Contains("fetch-depth: 0", Out + Error);
     }
 
@@ -387,7 +387,7 @@ public sealed class CommandLineTests : IDisposable
     {
         using var repository = SolutionRepository();
 
-        var exitCode = await Run(repository.Path, "select", "--base", "main", "--no-build");
+        var exitCode = await RunAsync(repository.Path, "select", "--base", "main", "--no-build");
 
         // Absence is unambiguous when the tree was searched rather than a path predicted.
         Assert.Equal(Numeric(ExitCode.AssemblyDiscoveryFailed), exitCode);
@@ -419,7 +419,7 @@ public sealed class CommandLineTests : IDisposable
                 .WriteTo(Path.Combine(repository.Path, "src", project, "bin", "Debug", "net10.0"));
         }
 
-        var exitCode = await Run(repository.Path, "select", "--base", "main", "--no-build");
+        var exitCode = await RunAsync(repository.Path, "select", "--base", "main", "--no-build");
 
         Assert.Equal(Numeric(ExitCode.Success), exitCode);
 
@@ -471,7 +471,7 @@ public sealed class CommandLineTests : IDisposable
 
     public void Dispose()
     {
-        standardOutput.Dispose();
-        standardError.Dispose();
+        _standardOutput.Dispose();
+        _standardError.Dispose();
     }
 }

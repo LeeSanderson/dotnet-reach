@@ -15,6 +15,28 @@ namespace Reach.Graph;
 /// </remarks>
 internal sealed class SignatureNames : ISignatureTypeProvider<string, object?>
 {
+    private static readonly Dictionary<PrimitiveTypeCode, string> PrimitiveNames = new()
+    {
+        [PrimitiveTypeCode.Boolean] = "System.Boolean",
+        [PrimitiveTypeCode.Byte] = "System.Byte",
+        [PrimitiveTypeCode.Char] = "System.Char",
+        [PrimitiveTypeCode.Double] = "System.Double",
+        [PrimitiveTypeCode.Int16] = "System.Int16",
+        [PrimitiveTypeCode.Int32] = "System.Int32",
+        [PrimitiveTypeCode.Int64] = "System.Int64",
+        [PrimitiveTypeCode.IntPtr] = "System.IntPtr",
+        [PrimitiveTypeCode.Object] = "System.Object",
+        [PrimitiveTypeCode.SByte] = "System.SByte",
+        [PrimitiveTypeCode.Single] = "System.Single",
+        [PrimitiveTypeCode.String] = "System.String",
+        [PrimitiveTypeCode.TypedReference] = "System.TypedReference",
+        [PrimitiveTypeCode.UInt16] = "System.UInt16",
+        [PrimitiveTypeCode.UInt32] = "System.UInt32",
+        [PrimitiveTypeCode.UInt64] = "System.UInt64",
+        [PrimitiveTypeCode.UIntPtr] = "System.UIntPtr",
+        [PrimitiveTypeCode.Void] = "System.Void",
+    };
+
     /// <summary>
     /// The first type handle the decoder reached. A member reference against a generic type
     /// instance names its parent by a <c>TypeSpecification</c>, which carries no assembly of
@@ -22,28 +44,7 @@ internal sealed class SignatureNames : ISignatureTypeProvider<string, object?>
     /// </summary>
     internal EntityHandle FirstType { get; private set; }
 
-    public string GetPrimitiveType(PrimitiveTypeCode typeCode) => typeCode switch
-    {
-        PrimitiveTypeCode.Boolean => "System.Boolean",
-        PrimitiveTypeCode.Byte => "System.Byte",
-        PrimitiveTypeCode.Char => "System.Char",
-        PrimitiveTypeCode.Double => "System.Double",
-        PrimitiveTypeCode.Int16 => "System.Int16",
-        PrimitiveTypeCode.Int32 => "System.Int32",
-        PrimitiveTypeCode.Int64 => "System.Int64",
-        PrimitiveTypeCode.IntPtr => "System.IntPtr",
-        PrimitiveTypeCode.Object => "System.Object",
-        PrimitiveTypeCode.SByte => "System.SByte",
-        PrimitiveTypeCode.Single => "System.Single",
-        PrimitiveTypeCode.String => "System.String",
-        PrimitiveTypeCode.TypedReference => "System.TypedReference",
-        PrimitiveTypeCode.UInt16 => "System.UInt16",
-        PrimitiveTypeCode.UInt32 => "System.UInt32",
-        PrimitiveTypeCode.UInt64 => "System.UInt64",
-        PrimitiveTypeCode.UIntPtr => "System.UIntPtr",
-        PrimitiveTypeCode.Void => "System.Void",
-        _ => "?",
-    };
+    public string GetPrimitiveType(PrimitiveTypeCode typeCode) => PrimitiveNames.GetValueOrDefault(typeCode, "?");
 
     public string GetTypeFromDefinition(MetadataReader reader, TypeDefinitionHandle handle, byte rawTypeKind)
     {
@@ -95,12 +96,6 @@ internal sealed class SignatureNames : ISignatureTypeProvider<string, object?>
 
     public string GetFunctionPointerType(MethodSignature<string> signature) =>
         "delegate*<" + string.Join(",", signature.ParameterTypes.Append(signature.ReturnType)) + ">";
-
-    public string GetTypeFromSerializedName(string name) => name;
-
-    public PrimitiveTypeCode GetUnderlyingEnumType(string type) => PrimitiveTypeCode.Int32;
-
-    public bool IsSystemType(string type) => type == "System.Type";
 
     private void Remember(EntityHandle handle)
     {
@@ -214,6 +209,10 @@ internal static class MetadataNames
             else if (typeName[index] == '<' && --depth == 0)
             {
                 return index == 0 ? typeName : typeName[..index];
+            }
+            else
+            {
+                // Part of a type argument, or a '<' closing a nested one.
             }
         }
 

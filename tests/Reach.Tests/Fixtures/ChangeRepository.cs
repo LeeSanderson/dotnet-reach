@@ -15,11 +15,11 @@ namespace Reach.Tests.Fixtures;
 /// </remarks>
 internal sealed class ChangeRepository : IDisposable
 {
-    private readonly TempRepository repository;
+    private readonly TempRepository _repository;
 
-    private ChangeRepository(TempRepository repository) => this.repository = repository;
+    private ChangeRepository(TempRepository repository) => _repository = repository;
 
-    internal string Path => repository.Path;
+    internal string Path => _repository.Path;
 
     internal static ChangeRepository Create()
     {
@@ -62,7 +62,7 @@ internal sealed class ChangeRepository : IDisposable
     }
 
     internal void Write(string relativePath, string source) =>
-        repository.WriteFile(relativePath, source);
+        _repository.WriteFile(relativePath, source);
 
     internal void Delete(string relativePath) =>
         File.Delete(System.IO.Path.Combine(Path, relativePath));
@@ -74,14 +74,14 @@ internal sealed class ChangeRepository : IDisposable
         File.Move(System.IO.Path.Combine(Path, from), target);
     }
 
-    internal string Commit(string message = "change") => repository.Commit(message);
+    internal string Commit(string message = "change") => _repository.Commit(message);
 
-    internal void Git(params string[] arguments) => repository.Git(arguments);
+    internal void Git(params string[] arguments) => _repository.Git(arguments);
 
     /// <summary>
     /// Commits everything so far and returns the SHA to measure changes against.
     /// </summary>
-    internal string CommitBaseline() => repository.Commit("baseline");
+    internal string CommitBaseline() => _repository.Commit("baseline");
 
     internal async Task<ChangedSet> ChangesAsync(string baseline, CancellationToken cancellationToken)
     {
@@ -97,5 +97,5 @@ internal sealed class ChangeRepository : IDisposable
             .BuildAsync(baseline, cancellationToken);
     }
 
-    public void Dispose() => repository.Dispose();
+    public void Dispose() => _repository.Dispose();
 }

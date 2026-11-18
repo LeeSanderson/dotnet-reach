@@ -15,6 +15,11 @@ public sealed record TargetFrameworkMoniker(string Identifier, Version Version, 
     private const string NetStandard = ".NETStandard";
 
     /// <summary>
+    /// The stamped form names only major and minor: <c>Version=v10.0</c>.
+    /// </summary>
+    private const int StampedVersionFields = 2;
+
+    /// <summary>
     /// Parses a declared moniker — <c>net10.0</c>, <c>net10.0-windows</c>, <c>netstandard2.0</c>, <c>net472</c>.
     /// </summary>
     internal static TargetFrameworkMoniker? Parse(string declared)
@@ -94,22 +99,30 @@ public sealed record TargetFrameworkMoniker(string Identifier, Version Version, 
 
     public override string ToString() =>
         Platform is null
-            ? $"{Identifier},Version=v{Version.ToString(2)}"
-            : $"{Identifier},Version=v{Version.ToString(2)} ({Platform})";
+            ? $"{Identifier},Version=v{Version.ToString(StampedVersionFields)}"
+            : $"{Identifier},Version=v{Version.ToString(StampedVersionFields)} ({Platform})";
 
-    private static TargetFrameworkMoniker? Build(string identifier, string version, string? platform) =>
-        Normalise(version) is { } parsed
-            ? new TargetFrameworkMoniker(identifier, parsed, string.IsNullOrEmpty(platform) ? null : platform)
+    private static TargetFrameworkMoniker? Build(string identifier, string version, string? platform)
+    {
+        var namedPlatform = string.IsNullOrEmpty(platform) ? null : platform;
+
+        return Normalise(version) is { } parsed
+            ? new TargetFrameworkMoniker(identifier, parsed, namedPlatform)
             : null;
+    }
 
     /// <summary>
     /// <c>10.0</c>, <c>v10.0</c> and <c>10.0.0.0</c> are one version. Without this the
     /// declared moniker and the attribute would never compare equal.
     /// </summary>
-    private static Version? Normalise(string version) =>
-        Version.TryParse(version.Contains('.', StringComparison.Ordinal) ? version : version + ".0", out var parsed)
+    private static Version? Normalise(string version)
+    {
+        var dotted = version.Contains('.', StringComparison.Ordinal) ? version : version + ".0";
+
+        return Version.TryParse(dotted, out var parsed)
             ? new Version(parsed.Major, parsed.Minor, Math.Max(parsed.Build, 0), Math.Max(parsed.Revision, 0))
             : null;
+    }
 
     /// <summary>
     /// <c>windows7.0</c> and <c>windows</c> are the same platform.

@@ -15,13 +15,13 @@ namespace Reach.Assemblies;
 /// </remarks>
 internal sealed class SourceVisibility
 {
-    private readonly string repositoryRoot;
-    private readonly HashSet<string> visible;
+    private readonly string _repositoryRoot;
+    private readonly HashSet<string> _visible;
 
     private SourceVisibility(string repositoryRoot, HashSet<string> visible)
     {
-        this.repositoryRoot = repositoryRoot;
-        this.visible = visible;
+        _repositoryRoot = repositoryRoot;
+        _visible = visible;
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ internal sealed class SourceVisibility
 
         var visible = new HashSet<string>(Paths.Comparer);
 
-        foreach (var path in tracked.Lines.Concat(untracked.Lines))
+        foreach (var path in tracked.Lines().Concat(untracked.Lines()))
         {
             visible.Add(Paths.Normalise(Path.Combine(repositoryRoot, path)));
         }
@@ -58,13 +58,13 @@ internal sealed class SourceVisibility
     /// </summary>
     internal bool IsInvisible(string path)
     {
-        if (repositoryRoot.Length == 0)
+        if (_repositoryRoot.Length == 0)
         {
             return false;
         }
 
         var normalised = Paths.Normalise(path);
 
-        return Paths.IsUnder(normalised, repositoryRoot) && !visible.Contains(normalised);
+        return Paths.IsUnder(normalised, _repositoryRoot) && !_visible.Contains(normalised);
     }
 }

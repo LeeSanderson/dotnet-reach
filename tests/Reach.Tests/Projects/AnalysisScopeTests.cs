@@ -12,7 +12,7 @@ public class AnalysisScopeTests
 {
     private const string TestPackage = "xunit.v3";
 
-    private static Task<AnalysisScopeResult> Resolve(string target)
+    private static Task<AnalysisScopeResult> ResolveAsync(string target)
     {
         var discovery = TargetDiscovery.Discover(target);
 
@@ -31,8 +31,8 @@ public class AnalysisScopeTests
         var core = tree.AddProject("Core", targetFrameworks: "net10.0");
         var tests = tree.AddProject("Tests", [core], [TestPackage], "net10.0");
 
-        var fromSlnx = await Resolve(tree.AddSlnx("Via-slnx", core, tests));
-        var fromSln = await Resolve(tree.AddSln("Via-sln", core, tests));
+        var fromSlnx = await ResolveAsync(tree.AddSlnx("Via-slnx", core, tests));
+        var fromSln = await ResolveAsync(tree.AddSln("Via-sln", core, tests));
 
         Assert.Equal(NamesIn(fromSlnx.Scope!.Projects), NamesIn(fromSln.Scope!.Projects));
         Assert.Equal(["Core", "Tests"], NamesIn(fromSlnx.Scope.Projects));
@@ -56,7 +56,7 @@ public class AnalysisScopeTests
         var top = tree.AddProject("Top", [left, right], targetFrameworks: "net10.0");
         var tests = tree.AddProject("Tests", [top], [TestPackage], "net10.0");
 
-        var result = await Resolve(tree.AddSlnx("Diamond", bottom, left, right, top, tests));
+        var result = await ResolveAsync(tree.AddSlnx("Diamond", bottom, left, right, top, tests));
 
         Assert.Equal(["Bottom", "Left", "Right", "Tests", "Top"], NamesIn(result.Scope!.Projects));
         Assert.Single(result.Scope.Projects, project => project.Name == "Bottom");
@@ -76,7 +76,7 @@ public class AnalysisScopeTests
         var composition = tree.AddProject("Composition", [caller, implementation], targetFrameworks: "net10.0");
         var tests = tree.AddProject("Tests", [composition], [TestPackage], "net10.0");
 
-        var result = await Resolve(
+        var result = await ResolveAsync(
             tree.AddSlnx("Wiring", contracts, implementation, caller, composition, tests));
 
         Assert.Equal(
@@ -103,7 +103,7 @@ public class AnalysisScopeTests
             ]);
         var tests = tree.AddProject("Tests", [core], [TestPackage], "net10.0");
 
-        var result = await Resolve(tree.AddSlnx("WithGenerator", generator, core, tests));
+        var result = await ResolveAsync(tree.AddSlnx("WithGenerator", generator, core, tests));
 
         // Such a reference expresses build order rather than runtime executability, so
         // including it in the closure errs wide — the safe direction.
@@ -124,7 +124,7 @@ public class AnalysisScopeTests
         var core = tree.AddProject("Core", targetFrameworks: "net8.0;net10.0");
         var tests = tree.AddProject("Tests", [core], [TestPackage], "net10.0");
 
-        var result = await Resolve(tree.AddSlnx("Multi", core, tests));
+        var result = await ResolveAsync(tree.AddSlnx("Multi", core, tests));
 
         Assert.Equal(
             ["net10.0", "net8.0"],
@@ -153,7 +153,7 @@ public class AnalysisScopeTests
             </Project>
             """);
 
-        var result = await Resolve(tree.AddSlnx("Named", core, tests));
+        var result = await ResolveAsync(tree.AddSlnx("Named", core, tests));
 
         var instance = Assert.Single(
             result.Scope!.ExpectedAssemblies,
@@ -181,7 +181,7 @@ public class AnalysisScopeTests
             </Project>
             """);
 
-        var result = await Resolve(tree.AddSlnx("Inherited", core, tests));
+        var result = await ResolveAsync(tree.AddSlnx("Inherited", core, tests));
 
         Assert.All(
             result.Scope!.ExpectedAssemblies,
@@ -195,7 +195,7 @@ public class AnalysisScopeTests
 
         var worker = tree.AddProject("Worker", targetFrameworks: "net10.0");
 
-        var result = await Resolve(worker);
+        var result = await ResolveAsync(worker);
 
         // A mis-invocation, not nothing-selected: "no tests affected" would be a lie a
         // pipeline believes.
@@ -212,7 +212,7 @@ public class AnalysisScopeTests
         var a = tree.AddProject("A", targetFrameworks: "net10.0");
         var b = tree.AddProject("B", [a], targetFrameworks: "net10.0");
 
-        var result = await Resolve(tree.AddSlnx("NoTests", a, b));
+        var result = await ResolveAsync(tree.AddSlnx("NoTests", a, b));
 
         Assert.False(result.Resolved);
     }
@@ -228,7 +228,7 @@ public class AnalysisScopeTests
         // A solution exists, but does not list the project Reach was pointed at.
         tree.AddSlnx("Partial", core);
 
-        var result = await Resolve(tests);
+        var result = await ResolveAsync(tests);
 
         Assert.True(result.Resolved, result.Message);
         Assert.Contains(result.Notices, notice => notice.Code == NoticeCodes.ProjectOutsideEverySolution);
@@ -245,7 +245,7 @@ public class AnalysisScopeTests
 
         tree.AddSlnx("Whole", core, tests);
 
-        var result = await Resolve(tests);
+        var result = await ResolveAsync(tests);
 
         Assert.True(result.Resolved, result.Message);
         Assert.Empty(result.Notices);
@@ -264,7 +264,7 @@ public class AnalysisScopeTests
         var tests = tree.AddProject("Tests", [core], [TestPackage], "net10.0");
 
         // The solution supplies the expected project list, never the closure.
-        var result = await Resolve(tree.AddSlnx("Partial", core, tests));
+        var result = await ResolveAsync(tree.AddSlnx("Partial", core, tests));
 
         Assert.Contains(result.Scope!.Projects, project => project.Name == "Outside");
     }
@@ -278,7 +278,7 @@ public class AnalysisScopeTests
         var unreachable = tree.AddProject("Unreachable", targetFrameworks: "net10.0");
         var tests = tree.AddProject("Tests", [core], [TestPackage], "net10.0");
 
-        var result = await Resolve(tree.AddSlnx("Some", core, unreachable, tests));
+        var result = await ResolveAsync(tree.AddSlnx("Some", core, unreachable, tests));
 
         // Code outside every test closure cannot execute in any test process.
         Assert.Equal(["Core", "Tests"], NamesIn(result.Scope!.Projects));

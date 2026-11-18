@@ -4,6 +4,45 @@ using Reach.Reporting;
 namespace Reach.Changes;
 
 /// <summary>
+/// The members a change added, altered or removed, plus everything that had to widen because
+/// it could not be attributed to a member.
+/// </summary>
+/// <param name="Members">The members a change added, altered or removed.</param>
+/// <param name="TypeWidenings">Types whose every member goes into the changed set.</param>
+/// <param name="AssemblyWidenings">Assemblies whose every method goes into the changed set.</param>
+/// <param name="Paths">Every path the change touched.</param>
+/// <param name="UnmappablePaths">
+/// Paths no member could be attributed to — a project file, a resource, a deleted source file
+/// that declared no type. Routed by the tier ladder, which always widens.
+/// </param>
+/// <param name="Notices">What the run should tell the user about how the set was built.</param>
+public sealed record ChangedSet(
+    IReadOnlyList<ChangedMember> Members,
+    IReadOnlyList<TypeWidening> TypeWidenings,
+    IReadOnlyList<AssemblyWidening> AssemblyWidenings,
+    IReadOnlyList<ChangedPath> Paths,
+    IReadOnlyList<ChangedPath> UnmappablePaths,
+    IReadOnlyList<Notice> Notices)
+{
+    internal static ChangedSet Empty { get; } = new([], [], [], [], [], []);
+
+    /// <summary>
+    /// Nothing changed at all — a different piece of news from an empty selection.
+    /// </summary>
+    internal bool IsEmpty =>
+        Members.Count == 0
+        && TypeWidenings.Count == 0
+        && AssemblyWidenings.Count == 0
+        && UnmappablePaths.Count == 0;
+
+    /// <summary>
+    /// Members that were removed. The one trigger recompilation widening cares about.
+    /// </summary>
+    internal IEnumerable<ChangedMember> RemovedMembers =>
+        Members.Where(member => member.Change == MemberChange.Removed);
+}
+
+/// <summary>
 /// Which side of the comparison a member appeared on.
 /// </summary>
 public enum MemberChange
@@ -50,8 +89,8 @@ public readonly record struct DeclarationSpan(int StartLine, int StartColumn, in
     /// Whether a point sits inside this span, comparing line and column together.
     /// </summary>
     internal bool Contains(int line, int column) =>
-        (line > StartLine || (line == StartLine && column >= StartColumn))
-        && (line < EndLine || (line == EndLine && column <= EndColumn));
+        (line, column).CompareTo((StartLine, StartColumn)) >= 0
+        && (line, column).CompareTo((EndLine, EndColumn)) <= 0;
 }
 
 /// <summary>
@@ -109,42 +148,3 @@ public sealed record AssemblyWidening(
     WideningReason Reason,
     string Path,
     ProjectFile? Project);
-
-/// <summary>
-/// The members a change added, altered or removed, plus everything that had to widen because
-/// it could not be attributed to a member.
-/// </summary>
-/// <param name="Members">The members a change added, altered or removed.</param>
-/// <param name="TypeWidenings">Types whose every member goes into the changed set.</param>
-/// <param name="AssemblyWidenings">Assemblies whose every method goes into the changed set.</param>
-/// <param name="Paths">Every path the change touched.</param>
-/// <param name="UnmappablePaths">
-/// Paths no member could be attributed to — a project file, a resource, a deleted source file
-/// that declared no type. Routed by the tier ladder, which always widens.
-/// </param>
-/// <param name="Notices">What the run should tell the user about how the set was built.</param>
-public sealed record ChangedSet(
-    IReadOnlyList<ChangedMember> Members,
-    IReadOnlyList<TypeWidening> TypeWidenings,
-    IReadOnlyList<AssemblyWidening> AssemblyWidenings,
-    IReadOnlyList<ChangedPath> Paths,
-    IReadOnlyList<ChangedPath> UnmappablePaths,
-    IReadOnlyList<Notice> Notices)
-{
-    internal static ChangedSet Empty { get; } = new([], [], [], [], [], []);
-
-    /// <summary>
-    /// Nothing changed at all — a different piece of news from an empty selection.
-    /// </summary>
-    internal bool IsEmpty =>
-        Members.Count == 0
-        && TypeWidenings.Count == 0
-        && AssemblyWidenings.Count == 0
-        && UnmappablePaths.Count == 0;
-
-    /// <summary>
-    /// Members that were removed. The one trigger recompilation widening cares about.
-    /// </summary>
-    internal IEnumerable<ChangedMember> RemovedMembers =>
-        Members.Where(member => member.Change == MemberChange.Removed);
-}

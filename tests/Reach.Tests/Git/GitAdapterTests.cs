@@ -11,14 +11,14 @@ namespace Reach.Tests.Git;
 /// </summary>
 public class GitAdapterTests
 {
-    private readonly ScriptedProcessRunner runner = new();
+    private readonly ScriptedProcessRunner _runner = new();
 
-    private GitAdapter Adapter => new(runner, "/work");
+    private GitAdapter Adapter => new(_runner, "/work");
 
     [Fact]
     public async Task Resolves_a_merge_base_against_HEAD()
     {
-        runner.Succeeds("abc123\n", "merge-base");
+        _runner.Succeeds("abc123\n", "merge-base");
 
         var result = await Adapter.MergeBaseAsync("origin/main", TestContext.Current.CancellationToken);
 
@@ -29,7 +29,7 @@ public class GitAdapterTests
     [Fact]
     public async Task Resolves_a_reference_to_a_sha()
     {
-        runner.Succeeds("deadbeef\n", "rev-parse");
+        _runner.Succeeds("deadbeef\n", "rev-parse");
 
         await Adapter.RevParseAsync("HEAD~1", TestContext.Current.CancellationToken);
 
@@ -39,7 +39,7 @@ public class GitAdapterTests
     [Fact]
     public async Task Detects_a_shallow_clone()
     {
-        runner.Succeeds("true\n", "--is-shallow-repository");
+        _runner.Succeeds("true\n", "--is-shallow-repository");
 
         var result = await Adapter.IsShallowCloneAsync(TestContext.Current.CancellationToken);
 
@@ -50,18 +50,18 @@ public class GitAdapterTests
     [Fact]
     public async Task Asks_for_the_changed_set_with_renames_switched_off()
     {
-        runner.Succeeds("M\tsrc/A.cs\nA\tsrc/B.cs\n", "diff");
+        _runner.Succeeds("M\tsrc/A.cs\nA\tsrc/B.cs\n", "diff");
 
         var result = await Adapter.ChangedPathsAsync("abc123", TestContext.Current.CancellationToken);
 
-        Assert.Equal(["M\tsrc/A.cs", "A\tsrc/B.cs"], result.Lines);
+        Assert.Equal(["M\tsrc/A.cs", "A\tsrc/B.cs"], result.Lines());
         AssertArgv("git", "-c", "core.quotePath=false", "diff", "--no-renames", "--name-status", "abc123");
     }
 
     [Fact]
     public async Task Asks_for_untracked_files_excluding_ignored_ones()
     {
-        runner.Succeeds("src/New.cs\n", "ls-files");
+        _runner.Succeeds("src/New.cs\n", "ls-files");
 
         await Adapter.UntrackedPathsAsync(TestContext.Current.CancellationToken);
 
@@ -71,7 +71,7 @@ public class GitAdapterTests
     [Fact]
     public async Task Reads_a_file_at_the_baseline()
     {
-        runner.Succeeds("class A;\n", "show");
+        _runner.Succeeds("class A;\n", "show");
 
         await Adapter.FileAtBaselineAsync("abc123", "src/A.cs", TestContext.Current.CancellationToken);
 
@@ -81,7 +81,7 @@ public class GitAdapterTests
     [Fact]
     public async Task Resolves_the_repository_root()
     {
-        runner.Succeeds("/work\n", "--show-toplevel");
+        _runner.Succeeds("/work\n", "--show-toplevel");
 
         await Adapter.RepositoryRootAsync(TestContext.Current.CancellationToken);
 
@@ -91,7 +91,7 @@ public class GitAdapterTests
     [Fact]
     public async Task A_failure_reaches_the_caller_as_a_result()
     {
-        runner.Fails(128, "fatal: not a git repository\n", "merge-base");
+        _runner.Fails(128, "fatal: not a git repository\n", "merge-base");
 
         var result = await Adapter.MergeBaseAsync("origin/main", TestContext.Current.CancellationToken);
 
@@ -103,16 +103,16 @@ public class GitAdapterTests
     [Fact]
     public async Task Every_command_runs_in_the_directory_it_was_given()
     {
-        runner.Succeeds("", "rev-parse");
+        _runner.Succeeds("", "rev-parse");
 
         await Adapter.RevParseAsync("HEAD", TestContext.Current.CancellationToken);
 
-        Assert.Equal("/work", Assert.Single(runner.Requests).WorkingDirectory);
+        Assert.Equal("/work", Assert.Single(_runner.Requests).WorkingDirectory);
     }
 
     private void AssertArgv(string executable, params string[] arguments)
     {
-        var request = Assert.Single(runner.Requests);
+        var request = Assert.Single(_runner.Requests);
 
         Assert.Equal(executable, request.Executable);
         Assert.Equal(arguments, request.Arguments);

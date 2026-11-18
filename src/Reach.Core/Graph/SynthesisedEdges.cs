@@ -87,12 +87,12 @@ internal static class SynthesisedEdges
 
             // A generated member's kernel lives on the type that declared the closure, which is
             // the display class's own declaring type.
-            foreach (var kernel in MethodsNamed(assembly, DeclaringTypeOf(declaringType), kernelName))
+            var kernels = MethodsNamed(assembly, DeclaringTypeOf(declaringType), kernelName)
+                .Where(kernel => kernel != generated);
+
+            foreach (var kernel in kernels)
             {
-                if (kernel != generated)
-                {
-                    yield return new Edge(kernel, generated, EdgeProvenance.Containment);
-                }
+                yield return new Edge(kernel, generated, EdgeProvenance.Containment);
             }
         }
     }
@@ -118,16 +118,7 @@ internal static class SynthesisedEdges
 
         foreach (var instruction in instructions)
         {
-            var type = instruction.OpCode switch
-            {
-                ILOpCode.Newobj or ILOpCode.Call or ILOpCode.Callvirt or ILOpCode.Ldftn =>
-                    DeclaringTypeOfMember(assembly, instruction.Token),
-
-                ILOpCode.Ldsfld or ILOpCode.Ldsflda or ILOpCode.Stsfld =>
-                    DeclaringTypeOfField(assembly, instruction.Token),
-
-                _ => null,
-            };
+            var type = TriggeredType(assembly, instruction);
 
             if (type is null || !triggered.Add(type))
             {
@@ -140,6 +131,21 @@ internal static class SynthesisedEdges
             }
         }
     }
+
+    /// <summary>
+    /// The type whose initialization <paramref name="instruction"/> triggers, if it triggers one.
+    /// </summary>
+    private static string? TriggeredType(GraphAssembly assembly, TokenInstruction instruction) =>
+        instruction.OpCode switch
+        {
+            ILOpCode.Newobj or ILOpCode.Call or ILOpCode.Callvirt or ILOpCode.Ldftn =>
+                DeclaringTypeOfMember(assembly, instruction.Token),
+
+            ILOpCode.Ldsfld or ILOpCode.Ldsflda or ILOpCode.Stsfld =>
+                DeclaringTypeOfField(assembly, instruction.Token),
+
+            _ => null,
+        };
 
     /// <summary>
     /// The generated types an attribute on <paramref name="method"/> names.
@@ -329,13 +335,16 @@ internal static class SynthesisedEdges
         }
     }
 
-    private static string? TypeNameOf(MetadataReader reader, EntityHandle handle) => handle.IsNil ? null : handle.Kind switch
-    {
-        HandleKind.TypeDefinition => MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)handle),
-        HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)handle),
-        HandleKind.TypeSpecification => MetadataNames.WithoutInstantiation(
-            reader.GetTypeSpecification((TypeSpecificationHandle)handle)
-                .DecodeSignature(new SignatureNames(), genericContext: null)),
-        _ => null,
-    };
+    private static string? TypeNameOf(MetadataReader reader, EntityHandle handle) =>
+        handle.IsNil
+            ? null
+            : handle.Kind switch
+            {
+                HandleKind.TypeDefinition => MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)handle),
+                HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)handle),
+                HandleKind.TypeSpecification => MetadataNames.WithoutInstantiation(
+                    reader.GetTypeSpecification((TypeSpecificationHandle)handle)
+                        .DecodeSignature(new SignatureNames(), genericContext: null)),
+                _ => null,
+            };
 }

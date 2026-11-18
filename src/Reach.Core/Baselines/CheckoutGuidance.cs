@@ -92,5 +92,5 @@ internal static class CheckoutGuidance
     }
 
     private static bool IsSet(EnvironmentLookup environment, params string[] names) =>
-        names.Any(name => !string.IsNullOrEmpty(environment(name)));
+        Array.Exists(names, name => !string.IsNullOrEmpty(environment(name)));
 }

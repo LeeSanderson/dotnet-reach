@@ -33,8 +33,32 @@ namespace Reach.Graph;
 /// </remarks>
 internal static class ReceiverTypes
 {
+    private const byte TwoBytePrefix = 0xFE;
+
+    /// <summary>
+    /// The per-opcode tables hold the one-byte opcodes, then the two-byte ones by second byte.
+    /// </summary>
+    private const int OneByteOpCodes = byte.MaxValue + 1;
+
     private static readonly int[] Pops = new int[512];
     private static readonly int[] Pushes = new int[512];
+
+    private static readonly HashSet<StackBehaviour> SlotlessBehaviours =
+        [StackBehaviour.Pop0, StackBehaviour.Push0, StackBehaviour.Varpop, StackBehaviour.Varpush];
+
+    /// <summary>
+    /// Every instruction whose operand is a branch target: the conditional and unconditional
+    /// branches and <c>leave</c>, long and short. Read from <see cref="OpCodes"/>, like the
+    /// other tables here, rather than typed out.
+    /// </summary>
+    private static readonly HashSet<ILOpCode> Branches =
+    [
+        .. typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Select(field => field.GetValue(null))
+            .OfType<OpCode>()
+            .Where(opCode => opCode.OperandType is OperandType.InlineBrTarget or OperandType.ShortInlineBrTarget)
+            .Select(opCode => (ILOpCode)opCode.Value),
+    ];
 
     static ReceiverTypes()
     {
@@ -73,7 +97,8 @@ internal static class ReceiverTypes
         var stack = new List<string?>();
         var offset = 0;
 
-        while (offset < il.Length)
+        // An instruction Read cannot decode is a nop with a negative next offset: the walk ends.
+        while (offset >= 0 && offset < il.Length)
         {
             if (boundaries.Contains(offset))
             {
@@ -82,17 +107,11 @@ internal static class ReceiverTypes
                 stack.Clear();
             }
 
-            var start = offset;
             var (opCode, operand, next) = Read(il, offset);
 
-            if (next < 0)
-            {
-                break;
-            }
+            Apply(reader, names, arguments, locals, stack, inferred, offset, opCode, operand);
 
             offset = next;
-
-            Apply(reader, names, arguments, locals, stack, inferred, start, opCode, operand);
         }
 
         return inferred;
@@ -126,17 +145,12 @@ internal static class ReceiverTypes
                 return;
 
             // Rung 2: a signature type.
+            // The short forms are numbered consecutively, so the slot is the distance from _0.
             case ILOpCode.Ldarg_0:
-                stack.Add(At(arguments, 0));
-                return;
             case ILOpCode.Ldarg_1:
-                stack.Add(At(arguments, 1));
-                return;
             case ILOpCode.Ldarg_2:
-                stack.Add(At(arguments, 2));
-                return;
             case ILOpCode.Ldarg_3:
-                stack.Add(At(arguments, 3));
+                stack.Add(At(arguments, opCode - ILOpCode.Ldarg_0));
                 return;
             case ILOpCode.Ldarg:
             case ILOpCode.Ldarg_s:
@@ -144,16 +158,10 @@ internal static class ReceiverTypes
                 return;
 
             case ILOpCode.Ldloc_0:
-                stack.Add(At(locals, 0));
-                return;
             case ILOpCode.Ldloc_1:
-                stack.Add(At(locals, 1));
-                return;
             case ILOpCode.Ldloc_2:
-                stack.Add(At(locals, 2));
-                return;
             case ILOpCode.Ldloc_3:
-                stack.Add(At(locals, 3));
+                stack.Add(At(locals, opCode - ILOpCode.Ldloc_0));
                 return;
             case ILOpCode.Ldloc:
             case ILOpCode.Ldloc_s:
@@ -236,15 +244,10 @@ internal static class ReceiverTypes
         var boundaries = new HashSet<int>();
         var offset = 0;
 
-        while (offset < il.Length)
+        // An instruction Read cannot decode is a nop with a negative next offset: the walk ends.
+        while (offset >= 0 && offset < il.Length)
         {
-            var start = offset;
             var (opCode, operand, next) = Read(il, offset);
-
-            if (next < 0)
-            {
-                break;
-            }
 
             if (IsBranch(opCode))
             {
@@ -252,12 +255,19 @@ internal static class ReceiverTypes
             }
             else if (opCode == ILOpCode.Switch)
             {
-                var count = BitConverter.ToInt32(il[(start + 1)..(start + 5)]);
+                // One opcode byte, a four-byte count, then that many four-byte targets.
+                var targets = offset + 1 + sizeof(int);
+                var count = BitConverter.ToInt32(il[(offset + 1)..targets]);
 
                 for (var index = 0; index < count; index++)
                 {
-                    boundaries.Add(next + BitConverter.ToInt32(il[(start + 5 + (index * 4))..(start + 9 + (index * 4))]));
+                    var target = targets + (index * sizeof(int));
+                    boundaries.Add(next + BitConverter.ToInt32(il[target..(target + sizeof(int))]));
                 }
+            }
+            else
+            {
+                // Anything else falls through to the next instruction, which is no boundary.
             }
 
             offset = next;
@@ -277,38 +287,22 @@ internal static class ReceiverTypes
         return boundaries;
     }
 
-    private static bool IsBranch(ILOpCode opCode) => opCode switch
-    {
-        ILOpCode.Br or ILOpCode.Br_s
-            or ILOpCode.Brtrue or ILOpCode.Brtrue_s
-            or ILOpCode.Brfalse or ILOpCode.Brfalse_s
-            or ILOpCode.Beq or ILOpCode.Beq_s
-            or ILOpCode.Bge or ILOpCode.Bge_s
-            or ILOpCode.Bge_un or ILOpCode.Bge_un_s
-            or ILOpCode.Bgt or ILOpCode.Bgt_s
-            or ILOpCode.Bgt_un or ILOpCode.Bgt_un_s
-            or ILOpCode.Ble or ILOpCode.Ble_s
-            or ILOpCode.Ble_un or ILOpCode.Ble_un_s
-            or ILOpCode.Blt or ILOpCode.Blt_s
-            or ILOpCode.Blt_un or ILOpCode.Blt_un_s
-            or ILOpCode.Bne_un or ILOpCode.Bne_un_s
-            or ILOpCode.Leave or ILOpCode.Leave_s => true,
-        _ => false,
-    };
+    private static bool IsBranch(ILOpCode opCode) => Branches.Contains(opCode);
 
     /// <summary>
     /// Decodes one instruction: its opcode, its operand as an integer, and where the next one starts.
+    /// One it cannot decode reads as a <c>nop</c> with a negative next offset.
     /// </summary>
     private static (ILOpCode OpCode, int Operand, int Next) Read(ReadOnlySpan<byte> il, int offset)
     {
         var first = il[offset++];
         ILOpCode opCode;
 
-        if (first == 0xFE)
+        if (first == TwoBytePrefix)
         {
             if (offset >= il.Length)
             {
-                return (default, 0, -1);
+                return (ILOpCode.Nop, 0, -1);
             }
 
             opCode = OpCodeValues.ToTwoByteOpCode(il[offset++]);
@@ -322,7 +316,7 @@ internal static class ReceiverTypes
 
         if (size < 0 || offset + size > il.Length)
         {
-            return (default, 0, -1);
+            return (ILOpCode.Nop, 0, -1);
         }
 
         var operand = size switch
@@ -346,14 +340,14 @@ internal static class ReceiverTypes
     {
         if (opCode == ILOpCode.Switch)
         {
-            if (offset + 4 > il.Length)
+            if (offset + sizeof(int) > il.Length)
             {
                 return -1;
             }
 
-            var count = BitConverter.ToUInt32(il[offset..(offset + 4)]);
+            var count = BitConverter.ToUInt32(il[offset..(offset + sizeof(int))]);
 
-            return count > int.MaxValue / 4 ? -1 : 4 + (int.CreateTruncating(count) * 4);
+            return count > int.MaxValue / sizeof(int) ? -1 : sizeof(int) + (int.CreateTruncating(count) * sizeof(int));
         }
 
         return Sizes.TryGetValue(OpCodeValues.ValueOf(opCode), out var size) ? size : -1;
@@ -372,38 +366,34 @@ internal static class ReceiverTypes
                 continue;
             }
 
-            sizes[OpCodeValues.ValueOf(opCode)] = opCode.OperandType switch
-            {
-                OperandType.InlineNone => 0,
-                OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => 1,
-                OperandType.InlineVar => 2,
-                OperandType.InlineI8 or OperandType.InlineR => 8,
-                OperandType.InlineSwitch => 0,
-                _ => 4,
-            };
+            sizes[OpCodeValues.ValueOf(opCode)] = SizeOf(opCode.OperandType);
         }
 
         return sizes;
     }
 
-    private static int Index(ushort value) => value > 0xFF ? 256 + (value & 0xFF) : value;
-
-    private static int Count(StackBehaviour behaviour) => behaviour switch
+    /// <summary>
+    /// The operand's width in bytes. A switch's is variable and worked out where it is read.
+    /// </summary>
+    private static int SizeOf(OperandType operandType) => operandType switch
     {
-        StackBehaviour.Pop0 or StackBehaviour.Push0 => 0,
-        StackBehaviour.Pop1 or StackBehaviour.Popi or StackBehaviour.Popref
-            or StackBehaviour.Push1 or StackBehaviour.Pushi or StackBehaviour.Pushi8
-            or StackBehaviour.Pushr4 or StackBehaviour.Pushr8 or StackBehaviour.Pushref => 1,
-        StackBehaviour.Pop1_pop1 or StackBehaviour.Popi_pop1 or StackBehaviour.Popi_popi
-            or StackBehaviour.Popi_popi8 or StackBehaviour.Popi_popr4 or StackBehaviour.Popi_popr8
-            or StackBehaviour.Popref_pop1 or StackBehaviour.Popref_popi
-            or StackBehaviour.Push1_push1 => 2,
-        StackBehaviour.Popi_popi_popi or StackBehaviour.Popref_popi_popi
-            or StackBehaviour.Popref_popi_popi8 or StackBehaviour.Popref_popi_popr4
-            or StackBehaviour.Popref_popi_popr8 or StackBehaviour.Popref_popi_popref
-            or StackBehaviour.Popref_popi_pop1 => 3,
-        _ => 0,
+        OperandType.InlineNone or OperandType.InlineSwitch => 0,
+        OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => sizeof(byte),
+        OperandType.InlineVar => sizeof(short),
+        OperandType.InlineI8 or OperandType.InlineR => sizeof(long),
+        _ => sizeof(int),
     };
+
+    private static int Index(ushort value) =>
+        value > byte.MaxValue ? OneByteOpCodes + (value & byte.MaxValue) : value;
+
+    /// <summary>
+    /// How many slots a behaviour pops or pushes: one per underscore-separated part of its name,
+    /// so <c>Popref_popi_pop1</c> pops three. The variable behaviours count as none; the call
+    /// cases work theirs out from the signature.
+    /// </summary>
+    private static int Count(StackBehaviour behaviour) =>
+        SlotlessBehaviours.Contains(behaviour) ? 0 : behaviour.ToString().Split('_').Length;
 
     private static void Pop(List<string?> stack, int count)
     {

@@ -36,9 +36,10 @@ public class MeasurementTests
         IReadOnlyList<string> all,
         int? total,
         SelectionMode mode = SelectionMode.Filtered,
-        PathClass pathClass = PathClass.Compiled,
-        int changesPerTest = 1)
+        Reached? reached = null)
     {
+        var reach = reached ?? new Reached(PathClass.Compiled, ChangesPerTest: 1);
+
         var tests = all
             .Select(name => new TestMethod(
                 Reach.Graph.MethodId.Definition(0, name.GetHashCode(StringComparison.Ordinal)),
@@ -56,8 +57,8 @@ public class MeasurementTests
                     .Select(test => new SelectedTest(
                         test,
                         [SelectionRule.ReverseReachable],
-                        [.. Enumerable.Range(0, changesPerTest)],
-                        pathClass))
+                        [.. Enumerable.Range(0, reach.ChangesPerTest)],
+                        reach.Class))
             ],
             total,
             dialect,
@@ -162,8 +163,7 @@ public class MeasurementTests
             ["N.C.A"],
             ["N.C.A", "N.C.B"],
             total: 2,
-            pathClass: PathClass.Widened,
-            changesPerTest: 3));
+            reached: new Reached(PathClass.Widened, ChangesPerTest: 3)));
 
         // Pairs, not tests: one change reaching a test only through widening is the unit.
         Assert.Equal(3, measurement.WidenedPairs);
@@ -178,12 +178,16 @@ public class MeasurementTests
             ["N.C.A"],
             ["N.C.A"],
             total: 1,
-            pathClass: PathClass.Compiled,
-            changesPerTest: 3));
+            reached: new Reached(PathClass.Compiled, ChangesPerTest: 3)));
 
         // A test with both a compiled and a widened path reads compiled, so the cheap number
         // *understates* widening's contribution — a registered measurement limitation, with a
         // second traversal as the upgrade path.
         Assert.Equal(0, measurement.WidenedPairs);
     }
+
+    /// <summary>
+    /// How each selected test was reached: the path class, and by how many changes.
+    /// </summary>
+    private sealed record Reached(PathClass Class, int ChangesPerTest);
 }

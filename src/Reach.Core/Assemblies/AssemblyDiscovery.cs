@@ -3,27 +3,6 @@ using Reach.Projects;
 namespace Reach.Assemblies;
 
 /// <summary>
-/// One project compiled for one target framework, matched to the file that holds it.
-/// </summary>
-public sealed record AssemblyInstance(ExpectedAssemblyInstance Expected, ScannedAssembly Assembly)
-{
-    internal string Name => Expected.Project.AssemblyName;
-}
-
-/// <summary>
-/// What discovery concluded. Absence is unambiguous here in a way it is not for a predicted
-/// path: the tree was searched.
-/// </summary>
-internal sealed record AssemblyDiscoveryResult(
-    IReadOnlyList<AssemblyInstance> Instances,
-    string Message)
-{
-    internal bool Succeeded => Message.Length == 0;
-
-    internal ExitCode ExitCode => Succeeded ? ExitCode.Success : ExitCode.AssemblyDiscoveryFailed;
-}
-
-/// <summary>
 /// Matches the scan's results to the expected assembly-instance set.
 /// </summary>
 internal static class AssemblyDiscovery
@@ -139,4 +118,25 @@ internal static class AssemblyDiscovery
         return $"More than one build of {expected} was found, and Reach will not choose between "
             + $"them:\n{listed}\n\n{hints.Suggestion()}";
     }
+}
+
+/// <summary>
+/// One project compiled for one target framework, matched to the file that holds it.
+/// </summary>
+public sealed record AssemblyInstance(ExpectedAssemblyInstance Expected, ScannedAssembly Assembly)
+{
+    internal string Name => Expected.Project.AssemblyName;
+}
+
+/// <summary>
+/// What discovery concluded. Absence is unambiguous here in a way it is not for a predicted
+/// path: the tree was searched.
+/// </summary>
+internal sealed record AssemblyDiscoveryResult(
+    IReadOnlyList<AssemblyInstance> Instances,
+    string Message)
+{
+    internal bool Succeeded => Message.Length == 0;
+
+    internal ExitCode ExitCode => Succeeded ? ExitCode.Success : ExitCode.AssemblyDiscoveryFailed;
 }

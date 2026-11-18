@@ -10,12 +10,20 @@ namespace Reach.Reporting;
 /// Segregated into the envelope's one clearly-marked object, so that excluding a single key
 /// makes two reports comparable.
 /// </remarks>
-public sealed class PhaseTimings
+public sealed class PhaseTimings(TimeProvider clock)
 {
-    private readonly Dictionary<string, long> phases = new(StringComparer.Ordinal);
-    private readonly Stopwatch total = Stopwatch.StartNew();
+    private readonly Dictionary<string, long> _phases = new(StringComparer.Ordinal);
+    private readonly Stopwatch _total = Stopwatch.StartNew();
 
-    internal DateTimeOffset StartedUtc { get; } = DateTimeOffset.UtcNow;
+    /// <summary>
+    /// Starts timing against the system clock.
+    /// </summary>
+    public PhaseTimings()
+        : this(TimeProvider.System)
+    {
+    }
+
+    internal DateTimeOffset StartedUtc { get; } = clock.GetUtcNow();
 
     /// <summary>
     /// Times <paramref name="work"/> and records it under <paramref name="phase"/>.
@@ -49,13 +57,13 @@ public sealed class PhaseTimings
     }
 
     internal void Record(string phase, TimeSpan elapsed) =>
-        phases[phase] = phases.GetValueOrDefault(phase) + (elapsed.Ticks / TimeSpan.TicksPerMillisecond);
+        _phases[phase] = _phases.GetValueOrDefault(phase) + (elapsed.Ticks / TimeSpan.TicksPerMillisecond);
 
     internal ReportTimings ToReport() =>
         new()
         {
             StartedUtc = StartedUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
-            TotalMs = total.Elapsed.Ticks / TimeSpan.TicksPerMillisecond,
-            Phases = new SortedDictionary<string, long>(phases, StringComparer.Ordinal),
+            TotalMs = _total.Elapsed.Ticks / TimeSpan.TicksPerMillisecond,
+            Phases = new SortedDictionary<string, long>(_phases, StringComparer.Ordinal),
         };
 }

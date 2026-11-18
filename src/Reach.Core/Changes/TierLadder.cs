@@ -5,25 +5,6 @@ using Reach.Reporting;
 namespace Reach.Changes;
 
 /// <summary>
-/// Which rule routed an unmappable change, and which way it errs.
-/// </summary>
-/// <param name="Row">The rule table's own numbering, so a report line can be looked up.</param>
-/// <param name="Description">What the rule matches, in words for the report.</param>
-/// <param name="ErrsUnder">True when the rule can under-select; every other rule errs over.</param>
-internal sealed record RoutingRule(int Row, string Description, bool ErrsUnder = false);
-
-/// <summary>
-/// One unmappable change, routed.
-/// </summary>
-/// <param name="Path">The change.</param>
-/// <param name="Rule">The rule that routed it.</param>
-/// <param name="Projects">The in-scope projects whose assemblies widen. Empty is a valid answer.</param>
-internal sealed record RoutedChange(
-    ChangedPath Path,
-    RoutingRule Rule,
-    IReadOnlyList<ProjectFile> Projects);
-
-/// <summary>
 /// Routes every change that does not map to a member, without letting the table degenerate into
 /// "select everything".
 /// </summary>
@@ -90,12 +71,22 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
 
     private static readonly string[] SolutionExtensions = [".sln", ".slnx", ".slnf"];
 
+    private static readonly string[] ProjectExtensions = [".csproj", ".fsproj", ".vbproj"];
+
+    private static readonly string[] ContentExtensions =
+        [".json", ".resx", ".xml", ".config", ".txt", ".yaml", ".yml"];
+
+    /// <summary>
+    /// Every name and extension above matches regardless of case.
+    /// </summary>
+    private static readonly StringComparer NameComparer = StringComparer.OrdinalIgnoreCase;
+
     internal RoutedChange Route(ChangedPath path)
     {
-        var name = System.IO.Path.GetFileName(path.Path).ToLowerInvariant();
-        var extension = System.IO.Path.GetExtension(path.Path).ToLowerInvariant();
+        var name = System.IO.Path.GetFileName(path.Path);
+        var extension = System.IO.Path.GetExtension(path.Path);
 
-        if (extension is ".csproj" or ".fsproj" or ".vbproj")
+        if (ProjectExtensions.Contains(extension, NameComparer))
         {
             var project = ProjectAt(path.Path);
 
@@ -110,13 +101,13 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
             return new RoutedChange(path, Project, project is null ? [] : [project]);
         }
 
-        if (SolutionExtensions.Contains(extension, StringComparer.Ordinal)
-            || SolutionWideNames.Contains(name, StringComparer.Ordinal))
+        if (SolutionExtensions.Contains(extension, NameComparer)
+            || SolutionWideNames.Contains(name, NameComparer))
         {
             return new RoutedChange(path, SolutionWide, scope.Projects);
         }
 
-        if (DirectoryScopedNames.Contains(name, StringComparer.Ordinal))
+        if (DirectoryScopedNames.Contains(name, NameComparer))
         {
             return new RoutedChange(path, DirectoryScoped, AtOrBelow(DirectoryOf(path.Path)));
         }
@@ -220,8 +211,7 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
             .FirstOrDefault();
     }
 
-    private static bool IsContent(string extension) =>
-        extension is ".json" or ".resx" or ".xml" or ".config" or ".txt" or ".yaml" or ".yml";
+    private static bool IsContent(string extension) => ContentExtensions.Contains(extension, NameComparer);
 
     private string DirectoryOf(string repositoryRelativePath) =>
         System.IO.Path.GetDirectoryName(Absolute(repositoryRelativePath)) ?? repositoryRoot;
@@ -229,3 +219,22 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
     private string Absolute(string repositoryRelativePath) =>
         Paths.Normalise(System.IO.Path.Combine(repositoryRoot, repositoryRelativePath));
 }
+
+/// <summary>
+/// Which rule routed an unmappable change, and which way it errs.
+/// </summary>
+/// <param name="Row">The rule table's own numbering, so a report line can be looked up.</param>
+/// <param name="Description">What the rule matches, in words for the report.</param>
+/// <param name="ErrsUnder">True when the rule can under-select; every other rule errs over.</param>
+internal sealed record RoutingRule(int Row, string Description, bool ErrsUnder = false);
+
+/// <summary>
+/// One unmappable change, routed.
+/// </summary>
+/// <param name="Path">The change.</param>
+/// <param name="Rule">The rule that routed it.</param>
+/// <param name="Projects">The in-scope projects whose assemblies widen. Empty is a valid answer.</param>
+internal sealed record RoutedChange(
+    ChangedPath Path,
+    RoutingRule Rule,
+    IReadOnlyList<ProjectFile> Projects);

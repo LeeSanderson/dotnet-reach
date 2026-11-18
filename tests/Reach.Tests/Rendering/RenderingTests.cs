@@ -72,17 +72,23 @@ public class RenderingTests
     private static int UnescapedCount(string text, char character)
     {
         var count = 0;
+        var index = 0;
 
-        for (var index = 0; index < text.Length; index++)
+        while (index < text.Length)
         {
             if (text[index] == '\\')
             {
-                index++;
+                // The escaped character goes with its backslash.
+                index += 2;
+                continue;
             }
-            else if (text[index] == character)
+
+            if (text[index] == character)
             {
                 count++;
             }
+
+            index++;
         }
 
         return count;
