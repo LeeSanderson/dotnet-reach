@@ -6,52 +6,6 @@ using Reach.Selection;
 namespace Reach.Rendering;
 
 /// <summary>
-/// How a selection reached the runner.
-/// </summary>
-internal enum Delivery
-{
-    /// <summary>
-    /// On the command line.
-    /// </summary>
-    Inline,
-
-    /// <summary>
-    /// In a response file Reach wrote, passed as an argument.
-    /// </summary>
-    ResponseFile,
-
-    /// <summary>
-    /// Across several invocations, because the host has no private channel.
-    /// </summary>
-    Chunked,
-
-    /// <summary>
-    /// Merged into the settings file the caller supplied.
-    /// </summary>
-    RunSettings,
-
-    /// <summary>
-    /// Nothing was rendered.
-    /// </summary>
-    None,
-}
-
-/// <param name="WillRun">
-/// What the rendered filter actually matches, which deliberately disagrees with the selection
-/// where the dialect renders with <c>~</c>.
-/// </param>
-internal sealed record RenderedEntry(
-    ProjectSelection Selection,
-    SelectionMode Mode,
-    Delivery Delivery,
-    int WillRun,
-    IReadOnlyList<IReadOnlyList<string>> Invocations);
-
-internal sealed record RenderedSelection(
-    IReadOnlyList<RenderedEntry> Entries,
-    IReadOnlyList<Notice> Notices);
-
-/// <summary>
 /// Turns the canonical selection into argument vectors a pipeline can execute.
 /// </summary>
 /// <remarks>
@@ -377,3 +331,49 @@ internal sealed class Renderer(
                 ? null
                 : new Dictionary<string, object?>(StringComparer.Ordinal) { ["projects"] = projects }));
 }
+
+/// <summary>
+/// How a selection reached the runner.
+/// </summary>
+internal enum Delivery
+{
+    /// <summary>
+    /// On the command line.
+    /// </summary>
+    Inline,
+
+    /// <summary>
+    /// In a response file Reach wrote, passed as an argument.
+    /// </summary>
+    ResponseFile,
+
+    /// <summary>
+    /// Across several invocations, because the host has no private channel.
+    /// </summary>
+    Chunked,
+
+    /// <summary>
+    /// Merged into the settings file the caller supplied.
+    /// </summary>
+    RunSettings,
+
+    /// <summary>
+    /// Nothing was rendered.
+    /// </summary>
+    None,
+}
+
+/// <param name="WillRun">
+/// What the rendered filter actually matches, which deliberately disagrees with the selection
+/// where the dialect renders with <c>~</c>.
+/// </param>
+internal sealed record RenderedEntry(
+    ProjectSelection Selection,
+    SelectionMode Mode,
+    Delivery Delivery,
+    int WillRun,
+    IReadOnlyList<IReadOnlyList<string>> Invocations);
+
+internal sealed record RenderedSelection(
+    IReadOnlyList<RenderedEntry> Entries,
+    IReadOnlyList<Notice> Notices);

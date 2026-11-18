@@ -3,30 +3,6 @@ using System.Reflection.Metadata;
 namespace Reach.Selection;
 
 /// <summary>
-/// One row of the recognition table: which assembly a test project references, which versions
-/// of it this row covers, and which attributes mark a test method.
-/// </summary>
-/// <param name="Dialect">
-/// The filter expression grammar this combination renders into. Gated on package version as
-/// well as framework, because <c>xunit.v3</c> 4.0.0 changed the filter surface.
-/// </param>
-internal sealed record TestFramework(
-    string Name,
-    string Assembly,
-    Version Minimum,
-    Version Exclusive,
-    IReadOnlyList<string> TestAttributes,
-    string Dialect)
-{
-    internal bool Covers(string assembly, Version version) =>
-        string.Equals(Assembly, assembly, StringComparison.OrdinalIgnoreCase)
-        && version >= Minimum
-        && version < Exclusive;
-
-    public override string ToString() => $"{Name} ({Dialect})";
-}
-
-/// <summary>
 /// <strong>Test recognition is data, not code.</strong> Adding a framework touches no graph
 /// code and no walk code — it is a row here. This is the one place the seam genuinely varies,
 /// and a table is cheaper than four adapters.
@@ -113,4 +89,28 @@ internal static class TestFrameworks
 
         return null;
     }
+}
+
+/// <summary>
+/// One row of the recognition table: which assembly a test project references, which versions
+/// of it this row covers, and which attributes mark a test method.
+/// </summary>
+/// <param name="Dialect">
+/// The filter expression grammar this combination renders into. Gated on package version as
+/// well as framework, because <c>xunit.v3</c> 4.0.0 changed the filter surface.
+/// </param>
+internal sealed record TestFramework(
+    string Name,
+    string Assembly,
+    Version Minimum,
+    Version Exclusive,
+    IReadOnlyList<string> TestAttributes,
+    string Dialect)
+{
+    internal bool Covers(string assembly, Version version) =>
+        string.Equals(Assembly, assembly, StringComparison.OrdinalIgnoreCase)
+        && version >= Minimum
+        && version < Exclusive;
+
+    public override string ToString() => $"{Name} ({Dialect})";
 }

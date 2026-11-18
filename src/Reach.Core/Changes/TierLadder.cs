@@ -5,21 +5,6 @@ using Reach.Reporting;
 namespace Reach.Changes;
 
 /// <summary>
-/// Which rule routed an unmappable change, and which way it errs.
-/// </summary>
-/// <param name="Row">The rule table's own numbering, so a report line can be looked up.</param>
-internal sealed record RoutingRule(int Row, string Description, bool ErrsUnder = false);
-
-/// <summary>
-/// One unmappable change, routed.
-/// </summary>
-/// <param name="Projects">The in-scope projects whose assemblies widen. Empty is a valid answer.</param>
-internal sealed record RoutedChange(
-    ChangedPath Path,
-    RoutingRule Rule,
-    IReadOnlyList<ProjectFile> Projects);
-
-/// <summary>
 /// Routes every change that does not map to a member, without letting the table degenerate into
 /// "select everything".
 /// </summary>
@@ -225,3 +210,18 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
     private string Absolute(string repositoryRelativePath) =>
         Paths.Normalise(System.IO.Path.Combine(repositoryRoot, repositoryRelativePath));
 }
+
+/// <summary>
+/// Which rule routed an unmappable change, and which way it errs.
+/// </summary>
+/// <param name="Row">The rule table's own numbering, so a report line can be looked up.</param>
+internal sealed record RoutingRule(int Row, string Description, bool ErrsUnder = false);
+
+/// <summary>
+/// One unmappable change, routed.
+/// </summary>
+/// <param name="Projects">The in-scope projects whose assemblies widen. Empty is a valid answer.</param>
+internal sealed record RoutedChange(
+    ChangedPath Path,
+    RoutingRule Rule,
+    IReadOnlyList<ProjectFile> Projects);

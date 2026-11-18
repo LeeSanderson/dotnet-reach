@@ -4,18 +4,6 @@ using Reach.Projects;
 namespace Reach.Build;
 
 /// <summary>
-/// What the build did, and the exact command that did it.
-/// </summary>
-/// <param name="Request">
-/// Null when <c>--no-build</c> meant no build was run. Recorded otherwise so a surprising run
-/// stays reproducible from the report envelope alone.
-/// </param>
-internal sealed record BuildOutcome(bool Succeeded, string Output, ProcessRequest? Request)
-{
-    internal static BuildOutcome Skipped { get; } = new(true, string.Empty, null);
-}
-
-/// <summary>
 /// The second adapter at the one port.
 /// </summary>
 /// <remarks>
@@ -70,4 +58,16 @@ internal sealed class BuildAdapter(IProcessRunner runner)
             arguments.Add(value);
         }
     }
+}
+
+/// <summary>
+/// What the build did, and the exact command that did it.
+/// </summary>
+/// <param name="Request">
+/// Null when <c>--no-build</c> meant no build was run. Recorded otherwise so a surprising run
+/// stays reproducible from the report envelope alone.
+/// </param>
+internal sealed record BuildOutcome(bool Succeeded, string Output, ProcessRequest? Request)
+{
+    internal static BuildOutcome Skipped { get; } = new(true, string.Empty, null);
 }

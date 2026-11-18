@@ -10,42 +10,6 @@ using Microsoft.CodeAnalysis.Text;
 namespace Reach.Tests.Fixtures;
 
 /// <summary>
-/// One assembly compiled from a source string, with its portable PDB.
-/// </summary>
-/// <param name="Symbols">Empty when the symbols were embedded in <paramref name="Image"/>.</param>
-internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbols)
-{
-    /// <summary>
-    /// Writes the assembly and, unless they are embedded, its symbols.
-    /// </summary>
-    internal string WriteTo(string directory)
-    {
-        Directory.CreateDirectory(directory);
-
-        var path = Path.Combine(directory, Name + ".dll");
-
-        File.WriteAllBytes(path, Image);
-
-        if (Symbols.Length > 0)
-        {
-            File.WriteAllBytes(Path.ChangeExtension(path, ".pdb"), Symbols);
-        }
-
-        return path;
-    }
-
-    /// <summary>
-    /// Opens the image the way production code does, without writing anything to disk.
-    /// </summary>
-    internal T Read<T>(Func<MetadataReader, T> read)
-    {
-        using var peReader = new PEReader(ImmutableArray.Create(Image));
-
-        return read(peReader.GetMetadataReader());
-    }
-}
-
-/// <summary>
 /// Compiles C# to real IL in memory. This is what "anything testable in memory is tested in
 /// memory" buys: an in-memory compilation and a file on disk produce the same
 /// <see cref="MetadataReader"/>, so there is nothing to fake and every IL shape is a source
@@ -169,5 +133,41 @@ internal static class Compiled
             [assembly: System.Runtime.Versioning.TargetFramework("{targetFramework}")]
             {platform}
             """;
+    }
+}
+
+/// <summary>
+/// One assembly compiled from a source string, with its portable PDB.
+/// </summary>
+/// <param name="Symbols">Empty when the symbols were embedded in <paramref name="Image"/>.</param>
+internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbols)
+{
+    /// <summary>
+    /// Writes the assembly and, unless they are embedded, its symbols.
+    /// </summary>
+    internal string WriteTo(string directory)
+    {
+        Directory.CreateDirectory(directory);
+
+        var path = Path.Combine(directory, Name + ".dll");
+
+        File.WriteAllBytes(path, Image);
+
+        if (Symbols.Length > 0)
+        {
+            File.WriteAllBytes(Path.ChangeExtension(path, ".pdb"), Symbols);
+        }
+
+        return path;
+    }
+
+    /// <summary>
+    /// Opens the image the way production code does, without writing anything to disk.
+    /// </summary>
+    internal T Read<T>(Func<MetadataReader, T> read)
+    {
+        using var peReader = new PEReader(ImmutableArray.Create(Image));
+
+        return read(peReader.GetMetadataReader());
     }
 }

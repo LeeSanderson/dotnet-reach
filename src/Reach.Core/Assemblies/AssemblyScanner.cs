@@ -4,24 +4,6 @@ using System.Reflection.PortableExecutable;
 namespace Reach.Assemblies;
 
 /// <summary>
-/// One candidate file, opened and read.
-/// </summary>
-/// <param name="IsFirstParty">
-/// True when the debug symbols point at source inside the working tree. Symbols sitting
-/// <em>beside</em> an assembly prove nothing — <c>.pdb</c> is an
-/// <c>AllowedReferenceRelatedFileExtension</c>, so dependencies' symbols are copied into
-/// consuming projects' output — so this resolves the document paths recorded <em>inside</em>
-/// the symbols and never checks whether a file exists beside the assembly.
-/// </param>
-internal sealed record ScannedAssembly(
-    string Path,
-    string SimpleName,
-    Guid ModuleVersionId,
-    TargetFrameworkMoniker? Framework,
-    bool IsFirstParty,
-    IReadOnlyList<SourceDocument> Documents);
-
-/// <summary>
 /// Finds assemblies on disk by looking, never by predicting.
 /// </summary>
 /// <remarks>
@@ -198,3 +180,21 @@ internal static class AssemblyScanner
         }
     }
 }
+
+/// <summary>
+/// One candidate file, opened and read.
+/// </summary>
+/// <param name="IsFirstParty">
+/// True when the debug symbols point at source inside the working tree. Symbols sitting
+/// <em>beside</em> an assembly prove nothing — <c>.pdb</c> is an
+/// <c>AllowedReferenceRelatedFileExtension</c>, so dependencies' symbols are copied into
+/// consuming projects' output — so this resolves the document paths recorded <em>inside</em>
+/// the symbols and never checks whether a file exists beside the assembly.
+/// </param>
+internal sealed record ScannedAssembly(
+    string Path,
+    string SimpleName,
+    Guid ModuleVersionId,
+    TargetFrameworkMoniker? Framework,
+    bool IsFirstParty,
+    IReadOnlyList<SourceDocument> Documents);

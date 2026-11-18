@@ -7,16 +7,6 @@ using Reach.Projects;
 namespace Reach.Selection;
 
 /// <summary>
-/// One change, and every method the walk should start from for it.
-/// </summary>
-/// <remarks>
-/// Whether the roots <em>are</em> the changed declaration is not carried separately: it is
-/// exactly <c>Entry.Tier == ChangeTier.Member</c>, and two fields that must agree forever is one
-/// more than the fact needs.
-/// </remarks>
-internal sealed record Change(ChangeEntry Entry, IReadOnlyList<MethodId> Roots);
-
-/// <summary>
 /// Turns a changed set into the changes the walk runs over, expanding each widening into the
 /// methods it covers.
 /// </summary>
@@ -229,3 +219,13 @@ internal sealed class RootSets
         return bucket;
     }
 }
+
+/// <summary>
+/// One change, and every method the walk should start from for it.
+/// </summary>
+/// <remarks>
+/// Whether the roots <em>are</em> the changed declaration is not carried separately: it is
+/// exactly <c>Entry.Tier == ChangeTier.Member</c>, and two fields that must agree forever is one
+/// more than the fact needs.
+/// </remarks>
+internal sealed record Change(ChangeEntry Entry, IReadOnlyList<MethodId> Roots);

@@ -5,30 +5,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Reach.Changes;
 
 /// <summary>
-/// One type as one revision of one file declares it: a hash of its header, and a hash per
-/// member.
-/// </summary>
-/// <param name="Header">
-/// Modifiers, attributes, base list and type parameters. Its own unit, because a change there
-/// is whole-type widening — a test class gaining an attribute that makes its methods
-/// discoverable is invisible to any member-level comparison.
-/// </param>
-internal sealed record DeclaredType(
-    string Name,
-    string Header,
-    IReadOnlyDictionary<MemberKey, DeclaredMember> Members);
-
-/// <param name="Span">
-/// Where the declaration sits in its file, one-based, as debug symbols spell it. The join
-/// matches a source declaration to the IL methods whose sequence points fall inside it.
-/// </param>
-internal sealed record DeclaredMember(
-    MemberKey Key,
-    string Declaration,
-    bool IsCompileTimeConstant,
-    DeclarationSpan Span);
-
-/// <summary>
 /// Reads one revision of one C# file into the types it declares. The only place in Reach that
 /// touches Roslyn.
 /// </summary>
@@ -387,3 +363,27 @@ internal static class SourceRevision
         return string.Join('.', parts);
     }
 }
+
+/// <summary>
+/// One type as one revision of one file declares it: a hash of its header, and a hash per
+/// member.
+/// </summary>
+/// <param name="Header">
+/// Modifiers, attributes, base list and type parameters. Its own unit, because a change there
+/// is whole-type widening — a test class gaining an attribute that makes its methods
+/// discoverable is invisible to any member-level comparison.
+/// </param>
+internal sealed record DeclaredType(
+    string Name,
+    string Header,
+    IReadOnlyDictionary<MemberKey, DeclaredMember> Members);
+
+/// <param name="Span">
+/// Where the declaration sits in its file, one-based, as debug symbols spell it. The join
+/// matches a source declaration to the IL methods whose sequence points fall inside it.
+/// </param>
+internal sealed record DeclaredMember(
+    MemberKey Key,
+    string Declaration,
+    bool IsCompileTimeConstant,
+    DeclarationSpan Span);

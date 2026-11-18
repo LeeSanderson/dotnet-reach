@@ -6,22 +6,6 @@ using Reach.Reporting;
 namespace Reach.Graph;
 
 /// <summary>
-/// The graph, plus everything the pass had to disclose while building it.
-/// </summary>
-/// <param name="HierarchyConstructions">
-/// How many type hierarchy indexes this run built. One of M1's two committed algorithmic
-/// constraints is that it is exactly one, and this is what makes that a test rather than a
-/// review comment.
-/// </param>
-internal sealed record CallGraphResult(
-    CallGraph Graph,
-    IReadOnlyList<GraphAssembly> Assemblies,
-    ExternalAnchors Externals,
-    IReadOnlyList<Notice> Notices,
-    TimeSpan Elapsed,
-    int HierarchyConstructions);
-
-/// <summary>
 /// One pass over the analysis scope's assemblies, producing nodes and compiled edges.
 /// </summary>
 /// <remarks>
@@ -624,3 +608,19 @@ internal sealed class CallGraphBuilder
         }
     }
 }
+
+/// <summary>
+/// The graph, plus everything the pass had to disclose while building it.
+/// </summary>
+/// <param name="HierarchyConstructions">
+/// How many type hierarchy indexes this run built. One of M1's two committed algorithmic
+/// constraints is that it is exactly one, and this is what makes that a test rather than a
+/// review comment.
+/// </param>
+internal sealed record CallGraphResult(
+    CallGraph Graph,
+    IReadOnlyList<GraphAssembly> Assemblies,
+    ExternalAnchors Externals,
+    IReadOnlyList<Notice> Notices,
+    TimeSpan Elapsed,
+    int HierarchyConstructions);

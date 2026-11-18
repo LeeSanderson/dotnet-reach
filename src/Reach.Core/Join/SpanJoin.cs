@@ -6,19 +6,6 @@ using Reach.Graph;
 namespace Reach.Join;
 
 /// <summary>
-/// What one changed declaration reached in the call graph.
-/// </summary>
-/// <param name="Joined">
-/// False when nothing matched. A declaration that fails to join falls through to whole-assembly
-/// widening for its project — over-selection, and it is what makes a phantom member from a
-/// misparse survivable rather than a silent hole.
-/// </param>
-internal sealed record JoinResult(ChangedMember Member, IReadOnlyList<MethodId> Methods)
-{
-    internal bool Joined => Methods.Count > 0;
-}
-
-/// <summary>
 /// Turns a changed declaration in source into method identities in the call graph, by matching
 /// the declaration's source span against the sequence points debug symbols record.
 /// </summary>
@@ -196,4 +183,17 @@ internal sealed class SpanJoin
         private static bool Before(int line, int column, int otherLine, int otherColumn) =>
             line < otherLine || (line == otherLine && column < otherColumn);
     }
+}
+
+/// <summary>
+/// What one changed declaration reached in the call graph.
+/// </summary>
+/// <param name="Joined">
+/// False when nothing matched. A declaration that fails to join falls through to whole-assembly
+/// widening for its project — over-selection, and it is what makes a phantom member from a
+/// misparse survivable rather than a silent hole.
+/// </param>
+internal sealed record JoinResult(ChangedMember Member, IReadOnlyList<MethodId> Methods)
+{
+    internal bool Joined => Methods.Count > 0;
 }

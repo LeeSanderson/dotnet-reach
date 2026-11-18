@@ -5,18 +5,6 @@ using Reach.Graph;
 namespace Reach.Selection;
 
 /// <summary>
-/// The unit of selection. Individual cases of a parameterised test are never selected
-/// independently of the method that declares them.
-/// </summary>
-/// <param name="DeclaringType">Fully qualified, as a filter expression will need it.</param>
-internal sealed record TestMethod(MethodId Id, string DeclaringType, string Name)
-{
-    internal string FullyQualifiedName => DeclaringType + "." + Name;
-
-    public override string ToString() => FullyQualifiedName;
-}
-
-/// <summary>
 /// Every test method in one test assembly instance — not only the selected ones, because the
 /// totals, the rendered-match computation and the over-selection measurement all read the
 /// whole list.
@@ -124,4 +112,16 @@ internal static class TestMethods
             _ => null,
         };
     }
+}
+
+/// <summary>
+/// The unit of selection. Individual cases of a parameterised test are never selected
+/// independently of the method that declares them.
+/// </summary>
+/// <param name="DeclaringType">Fully qualified, as a filter expression will need it.</param>
+internal sealed record TestMethod(MethodId Id, string DeclaringType, string Name)
+{
+    internal string FullyQualifiedName => DeclaringType + "." + Name;
+
+    public override string ToString() => FullyQualifiedName;
 }
