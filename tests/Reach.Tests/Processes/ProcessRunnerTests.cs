@@ -52,7 +52,7 @@ public class ProcessRunnerTests
             TestContext.Current.CancellationToken);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Equal(lines, result.Lines.Count);
+        Assert.Equal(lines, result.Lines().Count);
         Assert.Equal(lines, result.StandardError.Split('\n').Count(line => line.Contains("err ")));
 
         // The point of the assertion: both streams carried far more than a pipe buffer, so
@@ -110,7 +110,7 @@ public class ProcessRunnerTests
             TestContext.Current.CancellationToken);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Equal([spaced, nonAscii], result.Lines.Order(StringComparer.Ordinal));
+        Assert.Equal([spaced, nonAscii], result.Lines().Order(StringComparer.Ordinal));
     }
 
     private static int Beats(string path)

@@ -16,7 +16,7 @@ internal sealed record ProcessResult(int ExitCode, string StandardOutput, string
     /// <summary>
     /// Standard output split into lines, with the trailing empty line removed.
     /// </summary>
-    internal IReadOnlyList<string> Lines =>
+    internal IReadOnlyList<string> Lines() =>
         StandardOutput.Split('\n')
             .Select(line => line.TrimEnd('\r'))
             .Where(line => line.Length > 0)

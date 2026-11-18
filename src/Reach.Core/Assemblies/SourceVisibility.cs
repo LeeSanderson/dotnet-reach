@@ -44,7 +44,7 @@ internal sealed class SourceVisibility
 
         var visible = new HashSet<string>(Paths.Comparer);
 
-        foreach (var path in tracked.Lines.Concat(untracked.Lines))
+        foreach (var path in tracked.Lines().Concat(untracked.Lines()))
         {
             visible.Add(Paths.Normalise(Path.Combine(repositoryRoot, path)));
         }

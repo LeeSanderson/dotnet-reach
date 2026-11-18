@@ -54,7 +54,7 @@ public class GitAdapterTests
 
         var result = await Adapter.ChangedPathsAsync("abc123", TestContext.Current.CancellationToken);
 
-        Assert.Equal(["M\tsrc/A.cs", "A\tsrc/B.cs"], result.Lines);
+        Assert.Equal(["M\tsrc/A.cs", "A\tsrc/B.cs"], result.Lines());
         AssertArgv("git", "-c", "core.quotePath=false", "diff", "--no-renames", "--name-status", "abc123");
     }
 

@@ -131,12 +131,12 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
 
         var paths = new Dictionary<string, ChangedPath>(StringComparer.Ordinal);
 
-        foreach (var path in diff.Lines.Select(ChangedPath.FromNameStatus).OfType<ChangedPath>())
+        foreach (var path in diff.Lines().Select(ChangedPath.FromNameStatus).OfType<ChangedPath>())
         {
             paths[path.Path] = path;
         }
 
-        foreach (var path in untracked.Lines.Where(line => line.Length > 0))
+        foreach (var path in untracked.Lines().Where(line => line.Length > 0))
         {
             paths.TryAdd(path, new ChangedPath(path, ChangeStatus.Untracked));
         }

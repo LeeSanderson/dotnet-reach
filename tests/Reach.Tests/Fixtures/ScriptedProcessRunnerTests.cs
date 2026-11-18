@@ -35,7 +35,7 @@ public class ScriptedProcessRunnerTests
         var result = await RunAsync("diff", "--name-status", "abc123");
 
         Assert.True(result.Succeeded);
-        Assert.Empty(result.Lines);
+        Assert.Empty(result.Lines());
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class ScriptedProcessRunnerTests
 
         var result = await RunAsync("ls-files", "--others");
 
-        Assert.Equal(["one", "two", "three"], result.Lines);
+        Assert.Equal(["one", "two", "three"], result.Lines());
     }
 
     [Fact]
