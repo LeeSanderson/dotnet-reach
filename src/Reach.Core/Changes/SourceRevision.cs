@@ -41,17 +41,11 @@ internal static class SourceRevision
         foreach (var declaration in root.DescendantNodes().OfType<BaseTypeDeclarationSyntax>())
         {
             var name = QualifiedName(declaration);
+            var read = Read(declaration, name);
 
             // A partial type declared twice in one file is one type: the members merge and the
             // headers concatenate in source order, which is deterministic for a given file.
-            if (types.TryGetValue(name, out var existing))
-            {
-                types[name] = Merge(existing, Read(declaration, name));
-            }
-            else
-            {
-                types[name] = Read(declaration, name);
-            }
+            types[name] = types.TryGetValue(name, out var existing) ? Merge(existing, read) : read;
         }
 
         return types;
