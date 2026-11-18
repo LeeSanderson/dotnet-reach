@@ -251,13 +251,23 @@ public sealed class AcceptanceTests : IDisposable
     /// --no-build is a correspondence failure by design, which is a different assertion from
     /// every one in this file.
     /// </summary>
+    /// <remarks>
+    /// <paramref name="find"/> and <paramref name="replace"/> are written with <c>\n</c>; they are
+    /// translated to the line ending the fixture file was checked out with, so the edit matches
+    /// on a CRLF checkout as well as an LF one.
+    /// </remarks>
     private void Touch(string relativePath, string find, string replace)
     {
         var contents = fixture.ReadFile(relativePath);
+        var newline = contents.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
 
-        Assert.Contains(find, contents);
+        var matched = find.ReplaceLineEndings(newline);
 
-        fixture.WriteFile(relativePath, contents.Replace(find, replace, StringComparison.Ordinal));
+        Assert.Contains(matched, contents);
+
+        fixture.WriteFile(
+            relativePath,
+            contents.Replace(matched, replace.ReplaceLineEndings(newline), StringComparison.Ordinal));
         fixture.Rebuild();
     }
 
