@@ -5,7 +5,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Reach.Changes;
 
 /// <summary>
-/// Reads one revision of one C# file into the types it declares. The only place in Reach that
+/// Reads one revision of one C# file into the types it declares. With
+/// <see cref="MemberDeclarations"/>, which reads each member, the only place in Reach that
 /// touches Roslyn.
 /// </summary>
 /// <remarks>
@@ -118,9 +119,9 @@ internal static class SourceRevision
                 continue;
             }
 
-            foreach (var (key, node, isConstant) in Describe(member))
+            foreach (var declared in MemberDeclarations.Read(member))
             {
-                yield return (key, new DeclaredMember(key, Canonicaliser.Of([node]), isConstant, SpanOf(node)));
+                yield return (declared.Key, declared);
             }
         }
     }
@@ -139,177 +140,6 @@ internal static class SourceRevision
             EnumDeclarationSyntax @enum => @enum.Members,
             _ => [],
         };
-
-    private static IEnumerable<(MemberKey Key, SyntaxNode Node, bool IsConstant)> Describe(
-        MemberDeclarationSyntax member)
-    {
-        switch (member)
-        {
-            case MethodDeclarationSyntax method:
-                yield return (
-                    new MemberKey(
-                        MemberKind.Method,
-                        method.Identifier.Text,
-                        method.TypeParameterList?.Parameters.Count ?? 0,
-                        ParameterTypes(method.ParameterList)),
-                    method,
-                    HasDefault(method.ParameterList));
-                break;
-
-            case ConstructorDeclarationSyntax constructor:
-                yield return (
-                    new MemberKey(MemberKind.Constructor, ".ctor", 0, ParameterTypes(constructor.ParameterList)),
-                    constructor,
-                    HasDefault(constructor.ParameterList));
-                break;
-
-            case DestructorDeclarationSyntax destructor:
-                yield return (new MemberKey(MemberKind.Destructor, "Finalize", 0, []), destructor, false);
-                break;
-
-            case OperatorDeclarationSyntax @operator:
-                yield return (
-                    new MemberKey(
-                        MemberKind.Operator,
-                        "op" + @operator.OperatorToken.Text,
-                        0,
-                        ParameterTypes(@operator.ParameterList)),
-                    @operator,
-                    false);
-                break;
-
-            case ConversionOperatorDeclarationSyntax conversion:
-                yield return (
-                    new MemberKey(
-                        MemberKind.ConversionOperator,
-                        "op_" + conversion.ImplicitOrExplicitKeyword.Text + "_" + conversion.Type.ToString(),
-                        0,
-                        ParameterTypes(conversion.ParameterList)),
-                    conversion,
-                    false);
-                break;
-
-            case IndexerDeclarationSyntax indexer:
-                yield return (
-                    new MemberKey(MemberKind.Indexer, "this[]", 0, ParameterTypes(indexer.ParameterList)),
-                    indexer,
-                    HasDefault(indexer.ParameterList));
-                break;
-
-            case PropertyDeclarationSyntax property:
-                yield return (
-                    new MemberKey(MemberKind.Property, property.Identifier.Text, 0, []),
-                    property,
-                    false);
-                break;
-
-            case EventDeclarationSyntax @event:
-                yield return (new MemberKey(MemberKind.Event, @event.Identifier.Text, 0, []), @event, false);
-                break;
-
-            case DelegateDeclarationSyntax @delegate:
-                yield return (
-                    new MemberKey(
-                        MemberKind.Delegate,
-                        @delegate.Identifier.Text,
-                        @delegate.TypeParameterList?.Parameters.Count ?? 0,
-                        ParameterTypes(@delegate.ParameterList)),
-                    @delegate,
-                    HasDefault(@delegate.ParameterList));
-                break;
-
-            case EnumMemberDeclarationSyntax enumMember:
-                // An enum member's value is a compile-time constant and is baked into every
-                // consumer that names it.
-                yield return (
-                    new MemberKey(MemberKind.EnumMember, enumMember.Identifier.Text, 0, []),
-                    enumMember,
-                    true);
-                break;
-
-            case EventFieldDeclarationSyntax eventField:
-                foreach (var variable in eventField.Declaration.Variables)
-                {
-                    yield return (
-                        new MemberKey(MemberKind.Event, variable.Identifier.Text, 0, []),
-                        eventField,
-                        false);
-                }
-
-                break;
-
-            case FieldDeclarationSyntax field:
-                // `int a = 1, b = 2;` is two members, and one of them can change alone.
-                var isConst = field.Modifiers.Any(SyntaxKind.ConstKeyword);
-
-                foreach (var variable in field.Declaration.Variables)
-                {
-                    yield return (
-                        new MemberKey(MemberKind.Field, variable.Identifier.Text, 0, []),
-                        variable,
-                        isConst);
-                }
-
-                break;
-
-            default:
-                // Nested types are walked as types in their own right, and anything else (an
-                // incomplete member the parser recovered, for one) declares nothing to key on.
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Roslyn counts lines and columns from zero; debug symbols count from one. Converted here
-    /// so the join compares two things measured the same way.
-    /// </summary>
-    private static DeclarationSpan SpanOf(SyntaxNode node)
-    {
-        var span = node.GetLocation().GetLineSpan();
-
-        return new DeclarationSpan(
-            span.StartLinePosition.Line + 1,
-            span.StartLinePosition.Character + 1,
-            span.EndLinePosition.Line + 1,
-            span.EndLinePosition.Character + 1);
-    }
-
-    /// <summary>
-    /// The parameter's type <em>and</em> its passing mode. <c>ref</c>, <c>out</c> and <c>in</c>
-    /// sit on the parameter rather than on the type, so without them <c>M(int)</c> and
-    /// <c>M(ref int)</c> are one key — and one of two genuinely different overloads becomes
-    /// invisible to change detection.
-    /// </summary>
-    private static IReadOnlyList<string> ParameterTypes(BaseParameterListSyntax? parameters) =>
-        parameters is null
-            ? []
-            : [.. parameters.Parameters.Select(parameter => Mode(parameter) + TypeOf(parameter))];
-
-    /// <summary>
-    /// As written, with runs of whitespace collapsed — <em>not</em> through the canonicaliser.
-    /// A member key is a display form as well as a key: it reaches the report's forward change
-    /// list, and the canonicaliser's U+0001 token separator has no business in a product
-    /// surface.
-    /// </summary>
-    private static string TypeOf(ParameterSyntax parameter) =>
-        parameter.Type is null
-            ? string.Empty
-            : string.Join(' ', parameter.Type.ToString().Split(Array.Empty<char>(), StringSplitOptions.RemoveEmptyEntries));
-
-    private static string Mode(ParameterSyntax parameter)
-    {
-        var mode = parameter.Modifiers.FirstOrDefault(IsPassingMode);
-
-        return mode.IsKind(SyntaxKind.None) ? string.Empty : mode.Text + " ";
-    }
-
-    private static bool IsPassingMode(SyntaxToken modifier) =>
-        modifier.IsKind(SyntaxKind.RefKeyword)
-        || modifier.IsKind(SyntaxKind.OutKeyword)
-        || modifier.IsKind(SyntaxKind.InKeyword);
-
-    private static bool HasDefault(BaseParameterListSyntax? parameters) =>
-        parameters is not null && parameters.Parameters.Any(parameter => parameter.Default is not null);
 
     /// <summary>
     /// The metadata spelling of the type's name: namespaces joined with <c>.</c>, nesting with
