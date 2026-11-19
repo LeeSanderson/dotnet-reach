@@ -101,8 +101,9 @@ public sealed record ReportMeasurement(
     }
 
     /// <summary>
-    /// Midpoints round away from zero, as the <c>P0</c> specifier this replaces did.
+    /// Midpoints round to even, as ADR-0016 prescribes and as the <c>P0</c> specifier this
+    /// replaces did on .NET 10: one of eight is <c>12%</c>, not <c>13%</c>.
     /// </summary>
     private static double Percent(double ratio) =>
-        Math.Round(ratio * PercentPerUnit, MidpointRounding.AwayFromZero);
+        Math.Round(ratio * PercentPerUnit, MidpointRounding.ToEven);
 }
