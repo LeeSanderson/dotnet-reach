@@ -10,7 +10,13 @@
 
 **Status:** ready-for-agent
 
-- [ ] The measurement test for "the summary line carries both numbers" passes on Linux, unchanged
-- [ ] The human-summary test for "the summary never lists the selected tests" passes on Linux, unchanged
-- [ ] The summary line is identical under the en-US, de-DE and invariant cultures
-- [ ] Build and format gates remain clean
+- [x] The measurement test for "the summary line carries both numbers" passes on Linux, unchanged
+- [x] The human-summary test for "the summary never lists the selected tests" passes on Linux, unchanged
+- [x] The summary line is identical under the en-US, de-DE and invariant cultures
+- [x] Build and format gates remain clean
+
+## Comments
+
+- `ReportMeasurement.Describe` now builds the line with `string.Create(CultureInfo.InvariantCulture, ...)`; the percentage is `Math.Round(ratio * 100, MidpointRounding.AwayFromZero)` (the rounding `P0` used) followed by a literal `%`.
+- New theory `MeasurementTests.The_summary_line_is_the_same_under_every_culture` sets `CurrentCulture` to en-US, de-DE and invariant and expects `selected 1,234 of 2,468 tests (50%) · ...` each time.
+- Verified in `mcr.microsoft.com/dotnet/sdk:10.0` against a clone of the branch: `dotnet build -warnaserror` clean, `dotnet format --verify-no-changes` clean, and the two named tests plus the new theory pass with the process locale set to `C`, `en_US.UTF-8` and `de_DE.UTF-8`. Full suite passes on Windows (527/527).
