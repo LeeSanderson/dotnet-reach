@@ -83,15 +83,25 @@ internal sealed class ChangeRepository : IDisposable
     /// </summary>
     internal string CommitBaseline() => _repository.Commit("baseline");
 
-    internal async Task<ChangedSet> ChangesAsync(string baseline, CancellationToken cancellationToken)
+    internal Task<ChangedSet> ChangesAsync(string baseline, CancellationToken cancellationToken) =>
+        ChangesAsync(baseline, "Solution.slnx", cancellationToken);
+
+    /// <summary>
+    /// The changed set for a run on <paramref name="target"/>, with git running in the target's
+    /// directory as the pipeline runs it.
+    /// </summary>
+    internal async Task<ChangedSet> ChangesAsync(
+        string baseline,
+        string target,
+        CancellationToken cancellationToken)
     {
-        var discovery = TargetDiscovery.Discover(System.IO.Path.Combine(Path, "Solution.slnx"));
+        var discovery = TargetDiscovery.Discover(System.IO.Path.Combine(Path, target));
         Assert.True(discovery.Discovered, discovery.Message);
 
         var scope = await AnalysisScopeResolver.ResolveAsync(discovery.Target!, cancellationToken);
         Assert.True(scope.Resolved, scope.Message);
 
-        var git = new GitAdapter(new ProcessRunner(), Path);
+        var git = new GitAdapter(new ProcessRunner(), discovery.Target!.Directory);
 
         return await new ChangedSetBuilder(git, Path, scope.Scope!)
             .BuildAsync(baseline, cancellationToken);

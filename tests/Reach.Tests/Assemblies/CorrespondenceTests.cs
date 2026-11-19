@@ -271,6 +271,29 @@ public class CorrespondenceTests
     }
 
     [Fact]
+    public async Task Tracked_files_stay_visible_when_git_runs_from_the_target_project_directory()
+    {
+        using var repository = TempRepository.Create();
+
+        repository.WriteFile("src/Core/Widget.cs", "namespace N; public class Widget { }");
+        repository.WriteFile("tests/Tests/WidgetTests.cs", "namespace N; public class WidgetTests { }");
+        repository.Commit("baseline");
+        repository.WriteFile("src/Core/Untracked.cs", "namespace N; public class Untracked { }");
+
+        // The pipeline runs git in the target's directory, which for a test project is a
+        // subdirectory of the repository. git ls-files lists only that subtree, spelled
+        // relative to it, unless asked for the whole repository by its full names.
+        var visibility = await SourceVisibility.ReadAsync(
+            new GitAdapter(new ProcessRunner(), repository.Combine("tests", "Tests")),
+            repository.Path,
+            Token);
+
+        Assert.False(visibility.IsInvisible(repository.Combine("src", "Core", "Widget.cs")));
+        Assert.False(visibility.IsInvisible(repository.Combine("tests", "Tests", "WidgetTests.cs")));
+        Assert.False(visibility.IsInvisible(repository.Combine("src", "Core", "Untracked.cs")));
+    }
+
+    [Fact]
     public void An_unknown_visibility_reports_nothing_as_invisible()
     {
         Assert.False(SourceVisibility.Unknown.IsInvisible("/anywhere/at/all.cs"));
