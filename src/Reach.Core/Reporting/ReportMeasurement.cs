@@ -1,3 +1,4 @@
+using System.Globalization;
 using Reach.Rendering;
 using Reach.Selection;
 
@@ -40,6 +41,11 @@ public sealed record ReportMeasurement(
     private const int RatioDecimals = 4;
 
     /// <summary>
+    /// A ratio of one is a hundred percent.
+    /// </summary>
+    private const int PercentPerUnit = 100;
+
+    /// <summary>
     /// Null when nothing was enumerable, which is reported as <c>unknown</c> rather than as a
     /// zero denominator.
     /// </summary>
@@ -75,16 +81,28 @@ public sealed record ReportMeasurement(
 
     /// <summary>
     /// The line a person reads. Two numbers, never one — no estimated denominator and no
-    /// silent zero.
+    /// silent zero. Culture-invariant, so every host reads the same line; the percentage is a
+    /// rounded whole number and a literal <c>%</c>, because even the invariant culture's
+    /// <c>P0</c> pattern inserts a space.
     /// </summary>
     internal string Describe()
     {
         var head = Ratio is { } ratio
-            ? $"selected {WillRun:N0} of {Total:N0} tests ({ratio:P0})"
-            : $"selected {WillRun:N0} tests of an unknown total";
+            ? string.Create(
+                CultureInfo.InvariantCulture,
+                $"selected {WillRun:N0} of {Total:N0} tests ({Percent(ratio)}%)")
+            : string.Create(CultureInfo.InvariantCulture, $"selected {WillRun:N0} tests of an unknown total");
 
         return ProjectsRunInFull == 0
             ? head
-            : $"{head} · {ProjectsRunInFull} project(s) on unrecognised frameworks run in full";
+            : string.Create(
+                CultureInfo.InvariantCulture,
+                $"{head} · {ProjectsRunInFull} project(s) on unrecognised frameworks run in full");
     }
+
+    /// <summary>
+    /// Midpoints round away from zero, as the <c>P0</c> specifier this replaces did.
+    /// </summary>
+    private static double Percent(double ratio) =>
+        Math.Round(ratio * PercentPerUnit, MidpointRounding.AwayFromZero);
 }

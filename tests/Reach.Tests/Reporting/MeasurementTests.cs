@@ -1,3 +1,4 @@
+using System.Globalization;
 using Reach.Assemblies;
 using Reach.Output;
 using Reach.Projects;
@@ -140,6 +141,34 @@ public class MeasurementTests
         Assert.Equal(
             "selected 1 of 2 tests (50%) · 1 project(s) on unrecognised frameworks run in full",
             measurement.Describe());
+    }
+
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("de-DE")]
+    [InlineData("")]
+    public void The_summary_line_is_the_same_under_every_culture(string culture)
+    {
+        var measurement = new ReportMeasurement(
+            Selected: 1234,
+            WillRun: 1234,
+            Total: 2468,
+            ProjectsRunInFull: 1,
+            WidenedPairs: 0);
+        var previous = CultureInfo.CurrentCulture;
+
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+
+            Assert.Equal(
+                "selected 1,234 of 2,468 tests (50%) · 1 project(s) on unrecognised frameworks run in full",
+                measurement.Describe());
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
     }
 
     [Fact]
