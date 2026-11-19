@@ -45,4 +45,4 @@ Sources: `Microsoft.Managed.Core.targets` and `MapSourceRoots.cs` (dotnet/roslyn
 - Windows, normal build: 534/534, `-warnaserror` clean, `dotnet format --verify-no-changes` clean.
 - Windows, `GITHUB_ACTIONS=true CI=true` Release build: 534/534 with `--no-build`. `PortablePdbChecksumTests` now reads Reach.Core against the repository root, and the product does the mapping.
 - Dogfood (CI-condition Release build, `reach select -c Release --no-build --base HEAD~3`): every first-party assembly is recognised, correspondence is `verified`, and the run exits 0 with no `unmapped-deterministic-source-root` notice. One step still needs a hand-built `Contoso.Core` for net8.0, because of the inherited-`TargetFramework` problem that ticket 16 owns. Before this change, the same run reported every assembly as having source outside the working tree.
-- Not run: the Linux container leg.
+- Linux (`mcr.microsoft.com/dotnet/sdk:10.0`, fresh clone of the branch, `GITHUB_ACTIONS=true CI=true HUSKY=0`): `-warnaserror` build clean, format verification reported nothing, 534/534.
