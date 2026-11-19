@@ -96,10 +96,28 @@ internal static class AssemblyDiscovery
         return $"No assembly was found for {expected}. {detail}";
     }
 
-    private static string Describe(ScannedAssembly assembly) =>
-        assembly.IsFirstParty
-            ? $"built for {assembly.Framework?.ToString() ?? "an unreadable target framework"}"
+    private static string Describe(ScannedAssembly assembly)
+    {
+        if (assembly.IsFirstParty)
+        {
+            return $"built for {assembly.Framework?.ToString() ?? "an unreadable target framework"}";
+        }
+
+        var unmapped = assembly.Documents
+            .Select(document => document.UnmappedRoot)
+            .OfType<string>()
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        // The paths were rewritten, not foreign: saying "outside the working tree" here would
+        // send the reader looking in the wrong place.
+        return unmapped.Length > 0
+            ? $"its debug symbols record deterministic source paths ({string.Join(", ", unmapped)}) that "
+                + "Reach cannot map to the working tree, so it is not first-party. Only /_/, the repository "
+                + "root, is mapped; build with -p:DeterministicSourcePaths=false to record real paths"
             : "its debug symbols point at source outside the working tree, so it is not first-party";
+    }
 
     /// <summary>
     /// Guessing was rejected: newest-mtime silently picks a stale Release build over a fresh

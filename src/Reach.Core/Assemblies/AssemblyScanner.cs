@@ -81,7 +81,7 @@ internal static class AssemblyScanner
                 return null;
             }
 
-            var documents = DocumentsOf(peReader, file);
+            var documents = DocumentsOf(peReader, file, sourceRoot);
 
             return new ScannedAssembly(
                 Paths.Normalise(file),
@@ -111,7 +111,7 @@ internal static class AssemblyScanner
     /// <summary>
     /// Handles both a separate <c>.pdb</c> and an embedded one.
     /// </summary>
-    private static IReadOnlyList<SourceDocument> DocumentsOf(PEReader peReader, string file)
+    private static IReadOnlyList<SourceDocument> DocumentsOf(PEReader peReader, string file, string sourceRoot)
     {
         try
         {
@@ -127,7 +127,7 @@ internal static class AssemblyScanner
 
             using (provider)
             {
-                return PdbDocuments.Of(provider.GetMetadataReader());
+                return PdbDocuments.Of(provider.GetMetadataReader(), sourceRoot);
             }
         }
         catch (BadImageFormatException)

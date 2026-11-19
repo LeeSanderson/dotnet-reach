@@ -270,6 +270,34 @@ public class AssemblyDiscoveryTests
     }
 
     [Fact]
+    public async Task An_assembly_recorded_only_under_an_unmapped_deterministic_root_names_the_cause()
+    {
+        var (tree, scope) = await SolutionAsync();
+        using var _ = tree;
+
+        // The project's directory was a SourceRoot of its own, so the build recorded it as /_1/,
+        // which Reach does not guess at.
+        var project = tree.Combine("src", "Core");
+
+        Compiled
+            .Assembly(
+                "Core",
+                [(CoreSource, Path.Combine(project, "Core.cs"))],
+                pathMap: [(project + Path.DirectorySeparatorChar, "/_1/")])
+            .WriteTo(tree.Combine("src/Core/bin/Debug/net10.0"));
+
+        Emit(tree, "Tests", TestsSource, "src/Tests/bin/Debug/net10.0");
+
+        var result = Discover(tree, scope);
+
+        // Not "outside the working tree", which would send the reader looking in the wrong
+        // place: the paths were rewritten, and the message says which way to stop that.
+        Assert.False(result.Succeeded);
+        Assert.Contains("/_1/", result.Message);
+        Assert.Contains("DeterministicSourcePaths=false", result.Message);
+    }
+
+    [Fact]
     public async Task Output_under_obj_is_never_a_candidate()
     {
         var (tree, scope) = await SolutionAsync();

@@ -49,6 +49,7 @@ public static class NoticeCatalogue
             // Blind spots — may under-select. Every one of these needs a register entry, and
             // the parity test is what makes that true rather than aspirational.
             [NoticeCodes.IgnoredUntrackedAssembly] = NoticeKind.BlindSpot,
+            [NoticeCodes.UnmappedDeterministicSourceRoot] = NoticeKind.BlindSpot,
             [NoticeCodes.UnmappedFileNoProject] = NoticeKind.BlindSpot,
             [NoticeCodes.ParseFailed] = NoticeKind.BlindSpot,
             [NoticeCodes.CalliUnresolved] = NoticeKind.BlindSpot,

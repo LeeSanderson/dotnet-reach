@@ -67,13 +67,19 @@ internal static class Compiled
     /// Put the portable PDB inside the image, as <c>&lt;DebugType&gt;embedded&lt;/DebugType&gt;</c>
     /// does. Both shapes have to verify identically.
     /// </param>
+    /// <param name="pathMap">
+    /// Rewrites the paths the debug symbols record, as the compiler's <c>-pathmap</c> does. A CI
+    /// build passes one (<c>DeterministicSourcePaths</c>) that records the repository root as
+    /// <c>/_/</c>. Each prefix is a directory ending in a separator; the first that matches wins.
+    /// </param>
     internal static CompiledAssembly Assembly(
         string name,
         IEnumerable<(string Source, string DocumentPath)> files,
         string targetFramework = ".NETCoreApp,Version=v10.0",
         string? targetPlatform = null,
         IEnumerable<CompiledAssembly>? references = null,
-        bool embedSymbols = false)
+        bool embedSymbols = false,
+        IEnumerable<(string Prefix, string Replacement)>? pathMap = null)
     {
         var options = new CSharpParseOptions(LanguageVersion.Preview);
 
@@ -111,7 +117,15 @@ internal static class Compiled
                 specificDiagnosticOptions: new Dictionary<string, ReportDiagnostic>
                 {
                     ["CS0436"] = ReportDiagnostic.Suppress,
-                }));
+                },
+                // The compiler applies -pathmap through the source resolver. Only set when asked
+                // for, so every other fixture records its document path exactly as given.
+                sourceReferenceResolver: pathMap is null
+                    ? null
+                    : new SourceFileResolver(
+                        [],
+                        baseDirectory: null,
+                        [.. pathMap.Select(entry => KeyValuePair.Create(entry.Prefix, entry.Replacement))])));
 
         using var image = new MemoryStream();
         using var symbols = new MemoryStream();

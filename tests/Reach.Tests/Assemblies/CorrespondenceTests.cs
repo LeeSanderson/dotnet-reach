@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using System.Reflection.Metadata;
 using Reach.Assemblies;
 using Reach.Git;
 using Reach.Processes;
@@ -303,5 +305,99 @@ public class CorrespondenceTests
         // A path-comparison bug here is silent under-selection rather than a crash, which is
         // why CI runs both operating systems.
         Assert.Equal(CorrespondenceVerdict.Verified, result.Verdict);
+    }
+
+    // ---- Deterministic source paths ------------------------------------------------------------
+
+    [Fact]
+    public void A_ci_build_that_records_the_repository_root_as_a_deterministic_prefix_verifies()
+    {
+        using var directory = TempDirectory.Create("reach-deterministic");
+
+        var documentPath = directory.Combine("src", "Widget.cs");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(documentPath)!);
+        File.WriteAllText(documentPath, Source);
+
+        // What ContinuousIntegrationBuild does: the SDK maps the git top-level to /_/.
+        var compiled = Compiled.Assembly(
+            "Core",
+            [(Source, documentPath)],
+            pathMap: [(directory.Path + Path.DirectorySeparatorChar, "/_/")]);
+
+        Assert.Contains("/_/src/Widget.cs", RecordedDocuments(compiled));
+
+        var scanned = AssemblyScanner.Read(compiled.WriteTo(directory.Combine("bin")), directory.Path);
+
+        Assert.NotNull(scanned);
+        Assert.True(scanned.IsFirstParty);
+        Assert.Contains(scanned.Documents, document => Paths.Same(document.Path, documentPath));
+
+        var project = ProjectFileReader.Read(WriteProject(directory));
+        var result = Correspondence.Verify(
+            [new AssemblyInstance(new ExpectedAssemblyInstance(project, "net10.0"), scanned)],
+            SourceVisibility.Unknown);
+
+        Assert.Equal(CorrespondenceVerdict.Verified, result.Verdict);
+        Assert.Empty(result.Notices);
+    }
+
+    [Fact]
+    public void A_further_deterministic_root_is_not_guessed_at_and_says_so()
+    {
+        using var directory = TempDirectory.Create("reach-deterministic");
+
+        var widget = directory.Combine("src", "Widget.cs");
+        var helper = directory.Combine("lib", "Helper.cs");
+        const string helperSource = "namespace N; public static class Helper { public static int One() => 1; }";
+
+        Directory.CreateDirectory(Path.GetDirectoryName(widget)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(helper)!);
+        File.WriteAllText(widget, Source);
+        File.WriteAllText(helper, helperSource);
+
+        // A second top-level SourceRoot the build added itself. Nothing in the symbols says
+        // which directory /_1/ was, and it is not a submodule: those nest under /_/.
+        var compiled = Compiled.Assembly(
+            "Core",
+            [(Source, widget), (helperSource, helper)],
+            pathMap:
+            [
+                (directory.Combine("lib") + Path.DirectorySeparatorChar, "/_1/"),
+                (directory.Path + Path.DirectorySeparatorChar, "/_/"),
+            ]);
+
+        Assert.Contains("/_1/Helper.cs", RecordedDocuments(compiled));
+
+        var scanned = AssemblyScanner.Read(compiled.WriteTo(directory.Combine("bin")), directory.Path);
+
+        Assert.NotNull(scanned);
+        Assert.True(scanned.IsFirstParty);
+        Assert.DoesNotContain(scanned.Documents, document => Paths.Same(document.Path, helper));
+
+        var project = ProjectFileReader.Read(WriteProject(directory));
+        var result = Correspondence.Verify(
+            [new AssemblyInstance(new ExpectedAssemblyInstance(project, "net10.0"), scanned)],
+            SourceVisibility.Unknown);
+
+        // A change to Helper.cs could not be traced, so the run says so rather than guessing
+        // a directory and hoping the checksum agrees.
+        var notice = Assert.Single(result.Notices);
+        Assert.Equal(NoticeCodes.UnmappedDeterministicSourceRoot, notice.Code);
+        Assert.Equal(NoticeKind.BlindSpot, notice.Kind);
+        Assert.Contains("/_1/", notice.Message);
+        Assert.Contains("DeterministicSourcePaths", notice.Message);
+        Assert.Equal(CorrespondenceVerdict.Verified, result.Verdict);
+    }
+
+    /// <summary>
+    /// The document names exactly as the symbols record them, read independently of Reach.
+    /// </summary>
+    private static string[] RecordedDocuments(CompiledAssembly compiled)
+    {
+        using var provider = MetadataReaderProvider.FromPortablePdbImage(ImmutableArray.Create(compiled.Symbols));
+        var reader = provider.GetMetadataReader();
+
+        return [.. reader.Documents.Select(handle => reader.GetString(reader.GetDocument(handle).Name))];
     }
 }

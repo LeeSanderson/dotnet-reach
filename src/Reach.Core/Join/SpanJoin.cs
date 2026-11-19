@@ -38,7 +38,7 @@ internal sealed class SpanJoin
     internal SpanJoin(IEnumerable<GraphAssembly> assemblies, string repositoryRoot)
     {
         _repositoryRoot = Paths.Normalise(repositoryRoot);
-        _byDocument = Index(assemblies);
+        _byDocument = Index(assemblies, _repositoryRoot);
     }
 
     /// <summary>
@@ -79,7 +79,9 @@ internal sealed class SpanJoin
     /// no sequence points at all — abstract, <c>extern</c>, a <c>partial</c> declaration with
     /// no implementation — appears nowhere, which is how it falls through to widening.
     /// </summary>
-    private static Dictionary<string, List<MethodExtent>> Index(IEnumerable<GraphAssembly> assemblies)
+    private static Dictionary<string, List<MethodExtent>> Index(
+        IEnumerable<GraphAssembly> assemblies,
+        string repositoryRoot)
     {
         var index = new Dictionary<string, List<MethodExtent>>(Paths.Comparer);
 
@@ -105,7 +107,7 @@ internal sealed class SpanJoin
                     assembly.Ordinal,
                     MetadataTokens.GetToken(handle.ToDefinitionHandle()));
 
-                foreach (var (document, extent) in ExtentsOf(symbols, information, method))
+                foreach (var (document, extent) in ExtentsOf(symbols, information, method, repositoryRoot))
                 {
                     if (!index.TryGetValue(document, out var methods))
                     {
@@ -127,7 +129,8 @@ internal sealed class SpanJoin
     private static IEnumerable<(string Document, MethodExtent Extent)> ExtentsOf(
         MetadataReader symbols,
         MethodDebugInformation information,
-        MethodId method)
+        MethodId method,
+        string repositoryRoot)
     {
         var extents = new Dictionary<string, MethodExtent>(Paths.Comparer);
 
@@ -139,7 +142,7 @@ internal sealed class SpanJoin
                 continue;
             }
 
-            var document = PdbDocuments.PathOf(symbols, point.Document);
+            var document = PdbDocuments.PathOf(symbols, point.Document, repositoryRoot).Path;
 
             extents[document] = extents.TryGetValue(document, out var existing)
                 ? existing.Extend(point)
