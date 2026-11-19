@@ -144,6 +144,12 @@ The unit of selection. Individual cases of a parameterised test are never select
 independently of the method that declares them.
 _Avoid_: test case, test, fact, theory
 
+**Test lifecycle**:
+What a test framework runs around a test method besides the method itself: its class's
+constructors and disposal, its setup and teardown, and the fixtures it is given. A test
+method reaches it through synthesised edges (ADR-0019).
+_Avoid_: test setup, fixture code
+
 **Whole-project selection**:
 Selecting every test in a project because Reach cannot analyse it — an unrecognised test
 framework, an unparseable project graph, a package with no model. The standard response
