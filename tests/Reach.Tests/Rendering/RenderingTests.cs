@@ -120,17 +120,15 @@ public class RenderingTests
     [Fact]
     public void The_chunker_partitions_the_set_with_nothing_dropped_or_duplicated()
     {
-        var names = Enumerable.Range(0, 200)
-            .Select(index => $"Contoso.Billing.Tests.InvoiceTests.Calculates_the_total_case_{index:D3}")
-            .ToArray();
+        var names = LongSelection.OverflowingTheCeiling();
 
         var chunks = Chunker.Split("xunit-v3-4", names, overhead: 200);
 
-        Assert.True(chunks.Count > 1, "200 tests should not fit on one command line");
+        Assert.True(chunks.Count > 1, "a selection longer than the ceiling should not fit on one command line");
 
         var flattened = chunks.SelectMany(chunk => chunk).ToArray();
 
-        Assert.Equal(names.Length, flattened.Length);
+        Assert.Equal(names.Count, flattened.Length);
         Assert.Equal(names.Order(StringComparer.Ordinal), flattened.Order(StringComparer.Ordinal));
         Assert.All(chunks, chunk => Assert.NotEmpty(chunk));
     }
@@ -138,9 +136,7 @@ public class RenderingTests
     [Fact]
     public void Every_chunk_fits_under_the_ceiling()
     {
-        var names = Enumerable.Range(0, 200)
-            .Select(index => $"Contoso.Billing.Tests.InvoiceTests.Calculates_the_total_case_{index:D3}")
-            .ToArray();
+        var names = LongSelection.OverflowingTheCeiling();
 
         foreach (var chunk in Chunker.Split("xunit-v3-4", names, overhead: 200))
         {
