@@ -107,8 +107,11 @@ Tooling, not the package:
     runs `dotnet format` on that. The temporary file has the index's LF endings, so it raises
     ENDOFLINE on every line. Because it sits inside the project, it also raises SA1649 (file name)
     and SA1653 (a second declaration of the same type). The package's `.editorconfig` is not the
-    cause; the repository sets `end_of_line` itself (ADR-0017). The workaround is to stage whole
-    files. This is a Husky.Net issue (its staged-file temp copy), not a package one.
+    cause; the repository sets `end_of_line` itself (ADR-0017). This is a Husky.Net issue (its
+    staged-file temp copy), not a package one. Husky.Net 0.9.1 has no option to turn the copy
+    off. **Fixed in the hook** (branch `cs/hook-partial-staging`; see the last `## Comments`), so
+    staging whole files is no longer needed. Still worth reporting upstream: the temp copy should
+    keep the working tree's line endings and sit outside the project.
 
 ### Verification
 
@@ -138,3 +141,19 @@ These are local runs. The CI legs themselves run on the PR (ticket 13).
 ## Comments
 
 - Ticket 04 temporarily narrowed the Husky pre-commit hook (`.husky/task-runner.json`) to `dotnet format whitespace` and `dotnet format style` (with `--exclude-diagnostics IDE1006`), both with `--verify-no-changes`, because the full check fails on every unfixable diagnostic while the build is red. This ticket must restore the single full `dotnet format --verify-no-changes --include ${staged}` task.
+- **Partly staged files (maintainer: "Fix the hook now").** The `format-staged` task no longer uses
+  Husky.Net's built-in `${staged}`, which is what makes the temporary `<hash>_File.cs` copy of a
+  partly staged file. Husky.Net 0.9.1 has no setting to turn that copy off (`filteringRule` only
+  changes which list `include` is matched against). Instead `.husky/task-runner.json` defines a
+  custom variable, `${staged-paths}`, from `git diff --cached --name-only --diff-filter=d`: the
+  staged paths without deleted files, and with no temp copy. The task still keeps `**/*.cs`,
+  `pathMode: relative` and `dotnet format --verify-no-changes --include`.
+  - **What it checks:** the working-tree version of each staged C# file, not the staged version.
+    For a partly staged file the unstaged edits are checked too: a bad unstaged hunk blocks the
+    commit, and a bad staged hunk that is already fixed in the working tree gets through. CI's
+    `dotnet format --verify-no-changes` over the whole solution still catches that last case.
+  - **Verified** with `dotnet husky run --group pre-commit` (and the commit that made the change
+    went through the hook): a fully staged good file passes; a partly staged file (one good hunk
+    staged, another edit unstaged) passes; a staged whitespace violation fails with `WHITESPACE`
+    on `RepositoryRoot.cs`, which proves the paths reach `dotnet format`.
+  - CI is unaffected: it sets `HUSKY=0`.
