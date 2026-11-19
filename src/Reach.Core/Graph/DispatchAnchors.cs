@@ -131,7 +131,7 @@ internal sealed class DispatchAnchors(TypeHierarchy hierarchy)
                     }
 
                     var signature = reference.DecodeMethodSignature(names, genericContext: null);
-                    var (declaringType, _) = CallSiteResolver.ParentOf(reader, reference.Parent, names);
+                    var (declaringType, _) = MetadataNames.ParentOf(reader, reference.Parent, names);
 
                     return declaringType is null
                         ? null

@@ -57,44 +57,6 @@ internal sealed class CallSiteResolver
     private int NextOrdinal => _firstPartyCount + Externals.AssemblyCount;
 
     /// <summary>
-    /// The declaring type's canonical name, and the assembly it lives in.
-    /// </summary>
-    internal static (string? Type, string? Assembly) ParentOf(
-        MetadataReader reader,
-        EntityHandle parent,
-        SignatureNames names)
-    {
-        switch (parent.Kind)
-        {
-            case HandleKind.TypeReference:
-                var reference = (TypeReferenceHandle)parent;
-                return (MetadataNames.FullNameOf(reader, reference), MetadataNames.AssemblyOf(reader, reference));
-
-            case HandleKind.TypeDefinition:
-                return (MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)parent), null);
-
-            case HandleKind.TypeSpecification:
-                // A member reference against a generic instance carries the definition's own
-                // signature, so the instantiation is dropped and the definition is what to
-                // look the member up under.
-                var specification = reader
-                    .GetTypeSpecification((TypeSpecificationHandle)parent)
-                    .DecodeSignature(names, genericContext: null);
-
-                // The specification names no assembly of its own; the first type handle the
-                // decoder reached does.
-                var scope = names.FirstType.Kind == HandleKind.TypeReference
-                    ? MetadataNames.AssemblyOf(reader, (TypeReferenceHandle)names.FirstType)
-                    : null;
-
-                return (MetadataNames.WithoutInstantiation(specification), scope);
-
-            default:
-                return (null, null);
-        }
-    }
-
-    /// <summary>
     /// The methods a call site's token can reach. Several only for the residual ambiguity the
     /// design expects — varargs, <c>modopt</c>/<c>modreq</c>, function-pointer parameters —
     /// where edging to every candidate is the safe direction.
@@ -224,7 +186,7 @@ internal sealed class CallSiteResolver
 
         var names = new SignatureNames();
         var signature = reference.DecodeMethodSignature(names, genericContext: null);
-        var (declaringType, assemblyName) = ParentOf(reader, reference.Parent, names);
+        var (declaringType, assemblyName) = MetadataNames.ParentOf(reader, reference.Parent, names);
 
         if (declaringType is null)
         {
