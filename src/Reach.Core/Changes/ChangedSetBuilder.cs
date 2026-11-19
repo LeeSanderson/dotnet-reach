@@ -52,14 +52,14 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
             if (path.HasBaseline)
             {
                 var text = await BaselineTextAsync(baseline, path.Path, cancellationToken).ConfigureAwait(false);
-                declaredAnything |= Collect(baselineTypes, path.Path, text);
+                declaredAnything |= baselineTypes.Collect(path.Path, text);
                 Check(path, text, unparseable);
             }
 
             if (path.HasWorkingTree)
             {
                 var text = WorkingTreeText(path.Path);
-                declaredAnything |= Collect(currentTypes, path.Path, text);
+                declaredAnything |= currentTypes.Collect(path.Path, text);
                 Check(path, text, unparseable);
             }
 
@@ -72,34 +72,15 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
             }
         }
 
-        var members = new List<ChangedMember>();
-        var typeWidenings = new List<TypeWidening>();
-        var assemblyWidenings = new List<AssemblyWidening>();
+        var compared = DeclarationComparison.Compare(baselineTypes, currentTypes);
 
-        foreach (var name in baselineTypes.Keys.Concat(currentTypes.Keys).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
-        {
-            var before = baselineTypes.GetValueOrDefault(name);
-            var after = currentTypes.GetValueOrDefault(name);
-
-            if (before is null)
-            {
-                AddedType(after!, name, members);
-            }
-            else if (after is null)
-            {
-                // No identity in the current binaries at all, so there is nothing for the
-                // reverse walk to start from.
-                assemblyWidenings.Add(new AssemblyWidening(
-                    name,
-                    WideningReason.DeletedType,
-                    before[0].Path,
-                    ProjectContaining(before[0].Path)));
-            }
-            else
-            {
-                Compare(name, before, after, members, typeWidenings);
-            }
-        }
+        var assemblyWidenings = compared.DeletedTypes
+            .Select(deleted => new AssemblyWidening(
+                deleted.Name,
+                WideningReason.DeletedType,
+                deleted.Path,
+                ProjectContaining(deleted.Path)))
+            .ToList();
 
         NoteUntracked(paths, notices);
         NoteUnparseable(unparseable, notices);
@@ -115,7 +96,7 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
                 ProjectContaining(path)));
         }
 
-        return new ChangedSet(members, typeWidenings, assemblyWidenings, paths, unmappable, notices);
+        return new ChangedSet(compared.Members, compared.TypeWidenings, assemblyWidenings, paths, unmappable, notices);
     }
 
     /// <summary>
@@ -203,146 +184,6 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["paths"] = paths }));
     }
 
-    private static bool Collect(
-        DeclarationsByTypeName into,
-        string path,
-        string text)
-    {
-        if (text.Length == 0)
-        {
-            return false;
-        }
-
-        var declared = SourceRevision.DeclaredTypes(text);
-
-        foreach (var (name, type) in declared)
-        {
-            if (!into.TryGetValue(name, out var declarations))
-            {
-                into[name] = declarations = [];
-            }
-
-            declarations.Add((path, type));
-        }
-
-        return declared.Count > 0;
-    }
-
-    /// <summary>
-    /// An added type has no baseline, so every member it declares is a root.
-    /// </summary>
-    private static void AddedType(
-        List<(string Path, DeclaredType Type)> declarations,
-        string name,
-        List<ChangedMember> members)
-    {
-        foreach (var (path, type) in declarations)
-        {
-            foreach (var member in type.Members.Values)
-            {
-                members.Add(new ChangedMember(
-                    name,
-                    member.Key,
-                    MemberChange.Added,
-                    path,
-                    member.IsCompileTimeConstant,
-                    member.Span));
-            }
-        }
-    }
-
-    private static void Compare(
-        string name,
-        List<(string Path, DeclaredType Type)> before,
-        List<(string Path, DeclaredType Type)> after,
-        List<ChangedMember> members,
-        List<TypeWidening> typeWidenings)
-    {
-        var baselinePaths = before.Select(entry => entry.Path).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal);
-        var currentPaths = after.Select(entry => entry.Path).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal);
-        var path = after[0].Path;
-
-        // The file a type lives in decides which project compiles it, so a directory-only
-        // move can move the type between assemblies without changing a line of its source.
-        if (!baselinePaths.SequenceEqual(currentPaths, StringComparer.Ordinal))
-        {
-            typeWidenings.Add(new TypeWidening(name, WideningReason.TypeMoved, path));
-        }
-
-        if (!string.Equals(Header(before), Header(after), StringComparison.Ordinal))
-        {
-            typeWidenings.Add(new TypeWidening(name, WideningReason.TypeHeaderChanged, path));
-        }
-
-        var baselineMembers = Merge(before);
-        var currentMembers = Merge(after);
-
-        foreach (var (key, member) in currentMembers)
-        {
-            if (!baselineMembers.TryGetValue(key, out var previous))
-            {
-                members.Add(new ChangedMember(
-                    name, key, MemberChange.Added, path, member.IsCompileTimeConstant, member.Span));
-            }
-            else if (!string.Equals(previous.Declaration, member.Declaration, StringComparison.Ordinal))
-            {
-                members.Add(new ChangedMember(
-                    name,
-                    key,
-                    MemberChange.Modified,
-                    path,
-                    member.IsCompileTimeConstant || previous.IsCompileTimeConstant,
-                    member.Span));
-            }
-            else
-            {
-                // Present on both sides with the same declaration: unchanged.
-            }
-        }
-
-        var removed = baselineMembers.Where(entry => !currentMembers.ContainsKey(entry.Key)).ToArray();
-
-        foreach (var (key, member) in removed)
-        {
-            members.Add(new ChangedMember(
-                name, key, MemberChange.Removed, before[0].Path, member.IsCompileTimeConstant, member.Span));
-        }
-
-        if (removed.Length > 0)
-        {
-            // Unconditional. A deletion can rebind rather than remove a binding, and the
-            // absorption test that would prove most deletions inert is a proof in five
-            // clauses, each a place to be wrong in the under-selecting direction.
-            typeWidenings.Add(new TypeWidening(name, WideningReason.DeletedMember, path));
-        }
-    }
-
-    /// <summary>
-    /// Partial declarations in source order, which is deterministic for a fixed path order.
-    /// </summary>
-    private static string Header(List<(string Path, DeclaredType Type)> declarations) =>
-        string.Join(
-            '\u0001',
-            declarations
-                .OrderBy(entry => entry.Path, StringComparer.Ordinal)
-                .Select(entry => entry.Type.Header));
-
-    private static Dictionary<MemberKey, DeclaredMember> Merge(
-        List<(string Path, DeclaredType Type)> declarations)
-    {
-        var merged = new Dictionary<MemberKey, DeclaredMember>();
-
-        foreach (var (_, type) in declarations.OrderBy(entry => entry.Path, StringComparer.Ordinal))
-        {
-            foreach (var (key, member) in type.Members)
-            {
-                merged[key] = member;
-            }
-        }
-
-        return merged;
-    }
-
     /// <summary>
     /// The nearest ancestor project directory, which reproduces the SDK's default
     /// <c>**/*.cs</c> globbing without running MSBuild. Errs over — a path excluded by
@@ -384,10 +225,4 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
             + "forgotten `git add`.",
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["paths"] = untracked }));
     }
-
-    /// <summary>
-    /// Every declaration of each type name, with the file it is declared in.
-    /// </summary>
-    private sealed class DeclarationsByTypeName()
-        : Dictionary<string, List<(string Path, DeclaredType Type)>>(StringComparer.Ordinal);
 }
