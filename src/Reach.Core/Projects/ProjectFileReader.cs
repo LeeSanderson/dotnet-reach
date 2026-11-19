@@ -81,18 +81,22 @@ internal static class ProjectFileReader
             : declared;
     }
 
+    /// <summary>
+    /// The frameworks MSBuild actually builds. The SDK multi-targets only while
+    /// <c>TargetFramework</c> is empty, so a non-empty one — from the project or inherited —
+    /// beats any <c>TargetFrameworks</c>, and a project's own empty <c>TargetFramework</c>
+    /// clears an inherited one.
+    /// </summary>
     private static IReadOnlyList<string> TargetFrameworksOf(XElement? project, XElement? inherited)
     {
-        var many = Property(project, "TargetFrameworks") ?? Property(inherited, "TargetFrameworks");
+        var one = Split(Property(project, "TargetFramework") ?? Property(inherited, "TargetFramework") ?? "");
 
-        if (many is not null)
+        if (one.Length > 0)
         {
-            return Split(many);
+            return one;
         }
 
-        var one = Property(project, "TargetFramework") ?? Property(inherited, "TargetFramework");
-
-        return one is null ? [] : Split(one);
+        return Split(Property(project, "TargetFrameworks") ?? Property(inherited, "TargetFrameworks") ?? "");
     }
 
     private static string[] Split(string value) =>

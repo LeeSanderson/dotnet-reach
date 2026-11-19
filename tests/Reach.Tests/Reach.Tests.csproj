@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
     <!-- Microsoft.Testing.Platform enforces this with a bespoke MSBuild error. -->
     <OutputType>Exe</OutputType>
     <RootNamespace>Reach.Tests</RootNamespace>

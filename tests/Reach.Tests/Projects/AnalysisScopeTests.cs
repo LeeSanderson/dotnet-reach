@@ -142,7 +142,7 @@ public class AnalysisScopeTests
         var core = tree.AddProject("Core", targetFrameworks: "net10.0", assemblyName: "Contoso.Core");
         var tests = tree.AddProject("Tests", [core], [TestPackage], "net10.0");
 
-        // The framework arrives from Directory.Build.props, as it does in Reach's own tree.
+        // A framework can also arrive from Directory.Build.props.
         tree.WriteFile(
             "src/Directory.Build.props",
             """
@@ -182,6 +182,98 @@ public class AnalysisScopeTests
             """);
 
         var result = await ResolveAsync(tree.AddSlnx("Inherited", core, tests));
+
+        Assert.All(
+            result.Scope!.ExpectedAssemblies,
+            instance => Assert.Equal("net10.0", instance.TargetFramework));
+    }
+
+    [Fact]
+    public async Task An_inherited_TargetFramework_overrides_the_projects_own_TargetFrameworks()
+    {
+        using var tree = ProjectTree.Create();
+
+        // Reach's own tree, with the fixture in it: MSBuild multi-targets only while
+        // TargetFramework is empty, so the inherited single framework is all that is built.
+        var core = tree.AddProject("Core", targetFrameworks: "net8.0;net10.0");
+        var tests = tree.AddProject("Tests", [core], [TestPackage], "net10.0");
+
+        tree.WriteFile(
+            "src/Directory.Build.props",
+            """
+            <Project>
+              <PropertyGroup>
+                <TargetFramework>net10.0</TargetFramework>
+              </PropertyGroup>
+            </Project>
+            """);
+
+        var result = await ResolveAsync(tree.AddSlnx("Clobbered", core, tests));
+
+        var instance = Assert.Single(
+            result.Scope!.ExpectedAssemblies,
+            candidate => candidate.Project.Name == "Core");
+
+        Assert.Equal("net10.0", instance.TargetFramework);
+    }
+
+    [Fact]
+    public async Task A_project_clearing_an_inherited_TargetFramework_multi_targets()
+    {
+        using var tree = ProjectTree.Create();
+
+        // An empty TargetFramework turns multi-targeting back on.
+        var core = tree.WriteFile(
+            "src/Core/Core.csproj",
+            """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework></TargetFramework>
+                <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+              </PropertyGroup>
+            </Project>
+            """);
+        var tests = tree.AddProject("Tests", [core], [TestPackage], "net10.0");
+
+        tree.WriteFile(
+            "src/Directory.Build.props",
+            """
+            <Project>
+              <PropertyGroup>
+                <TargetFramework>net10.0</TargetFramework>
+              </PropertyGroup>
+            </Project>
+            """);
+
+        var result = await ResolveAsync(tree.AddSlnx("Cleared", core, tests));
+
+        Assert.Equal(
+            ["net10.0", "net8.0"],
+            result.Scope!.ExpectedAssemblies
+                .Where(instance => instance.Project.Name == "Core")
+                .Select(instance => instance.TargetFramework)
+                .Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_projects_own_TargetFramework_overrides_inherited_TargetFrameworks()
+    {
+        using var tree = ProjectTree.Create();
+
+        var core = tree.AddProject("Core", targetFrameworks: "net10.0");
+        var tests = tree.AddProject("Tests", [core], [TestPackage], "net10.0");
+
+        tree.WriteFile(
+            "src/Directory.Build.props",
+            """
+            <Project>
+              <PropertyGroup>
+                <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+              </PropertyGroup>
+            </Project>
+            """);
+
+        var result = await ResolveAsync(tree.AddSlnx("Narrowed", core, tests));
 
         Assert.All(
             result.Scope!.ExpectedAssemblies,
