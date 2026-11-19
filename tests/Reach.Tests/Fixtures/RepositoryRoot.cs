@@ -13,11 +13,19 @@ namespace Reach.Tests.Fixtures;
 /// </remarks>
 internal static class RepositoryRoot
 {
+    /// <summary>
+    /// The nearest directory above <paramref name="callerFile"/> that holds a <c>.git</c>.
+    /// </summary>
+    /// <param name="callerFile">The source file to start from; the compiler fills it in.</param>
+    /// <remarks>
+    /// <c>.git</c> is a directory in a clone but a file in a linked worktree. Looking only for
+    /// the directory would skip a worktree's own root and land on the main checkout above it.
+    /// </remarks>
     internal static string Of([CallerFilePath] string callerFile = "")
     {
         var directory = Path.GetDirectoryName(callerFile);
 
-        while (directory is not null && !Directory.Exists(Path.Combine(directory, ".git")))
+        while (directory is not null && !Path.Exists(Path.Combine(directory, ".git")))
         {
             directory = Path.GetDirectoryName(directory);
         }
