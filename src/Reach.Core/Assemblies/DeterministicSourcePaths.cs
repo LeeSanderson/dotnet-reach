@@ -37,7 +37,8 @@ internal static class DeterministicSourcePaths
         {
             return new DocumentPath(
                 Paths.Normalise(Path.Combine(roots.Repository, recorded[RepositoryPrefix.Length..])),
-                UnmappedRoot: null);
+                UnmappedRoot: null,
+                ReadAsRepositoryRoot: true);
         }
 
         if (RootOf(recorded) is not { } root)
@@ -125,4 +126,8 @@ internal sealed record SourceRoots(string Repository, string? Packages)
 /// </summary>
 /// <param name="Path">Absolute and normalised to this machine's separators.</param>
 /// <param name="UnmappedRoot">The deterministic root left unmapped, or null.</param>
-internal readonly record struct DocumentPath(string Path, string? UnmappedRoot);
+/// <param name="ReadAsRepositoryRoot">
+/// Recorded under <c>/_/</c> and read as the repository root: the convention a wrong
+/// <c>SourceRoot</c> breaks, so the one correspondence checks.
+/// </param>
+internal readonly record struct DocumentPath(string Path, string? UnmappedRoot, bool ReadAsRepositoryRoot = false);

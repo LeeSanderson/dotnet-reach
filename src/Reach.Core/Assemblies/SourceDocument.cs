@@ -22,6 +22,12 @@ public sealed record SourceDocument(string Path, Guid HashAlgorithm, byte[] Hash
     /// </summary>
     public string? UnmappedRoot { get; init; }
 
+    /// <summary>
+    /// Recorded under a deterministic build's <c>/_/</c> and read as the repository root. A
+    /// convention, not a recorded fact, so correspondence checks it held (ADR-0018).
+    /// </summary>
+    public bool ReadAsRepositoryRoot { get; init; }
+
     internal bool HasChecksum => Hash.Length > 0;
 }
 
@@ -53,6 +59,7 @@ internal static class PdbDocuments
                 document.Hash.IsNil ? [] : pdbReader.GetBlobBytes(document.Hash))
             {
                 UnmappedRoot = path.UnmappedRoot,
+                ReadAsRepositoryRoot = path.ReadAsRepositoryRoot,
             });
         }
 

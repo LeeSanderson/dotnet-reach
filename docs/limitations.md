@@ -172,10 +172,12 @@ The gaps that can cost you a regression. Listed worst first.
   under-selection, for package content restored to a packages folder configured some other way
   (`globalPackagesFolder`, `RestorePackagesPath`, fallback folders). Workaround: build with
   `-p:DeterministicSourcePaths=false`, which records real paths.
-- **Not detected**: `/_/` read as the wrong directory. This needs a build with source-control
-  queries off (`EnableSourceControlManagerQueries=false`) and a hand-written `SourceRoot` that
-  is not the repository root. If the mapped paths name no file, nothing is verified and joins
-  miss.
+- **`/_/` read as the wrong directory** (source-control queries off, and a hand-written
+  `SourceRoot` that is not the repository root) fails the run rather than under-selecting. If
+  none of an assembly's `/_/` files is in the repository, correspondence exits 5 and names the
+  cause. If a mapped path names a file with other content, the checksum fails. Not detected: a
+  wrong root where some mapped paths name files with *identical* content. Those files verify,
+  and the rest read as generated.
 
 ### Stale output under `--no-build`
 - **Shape**: an assembly whose own sources are unchanged — so
