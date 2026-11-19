@@ -11,9 +11,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] The CI workflow is green on `ubuntu-latest` and `windows-latest` for the PR's head commit
+- [x] The CI workflow is green on `ubuntu-latest` and `windows-latest` for the PR's head commit
 - [x] The dogfood workflow's result is checked and recorded under `## Comments`
-- [ ] The PR description links this spec and lists the suppressions and upstream issues recorded in ticket 09
+- [x] The PR description links this spec and lists the suppressions and upstream issues recorded in ticket 09
 
 ## Comments
 
@@ -90,3 +90,9 @@ from it, so the fixture's PDBs keep real paths.
      `RepositoryRoot` directly, not for its constructor path. Reach seems to have no edge from a
      test method to its class's instance constructor (or `Dispose`). I did not find this in
      `docs/limitations.md`.
+
+### Final CI on PR #1 (head `b610596`, tickets 01–19 merged)
+
+- CI run 44574563480: `build (ubuntu-latest)` and `build (windows-latest)` both pass: restore, `-warnaserror` build, format verification and test.
+- Dogfood run 44574562920: Build passes. "Run the whole suite" (now `tests/Reach.Tests`, ticket 15) passes. "Select" still fails with `dnx: command not found`, which predates this branch: `dotnet-reach` is not yet published, so `dnx dotnet-reach@0.1.0-alpha.1` cannot run. A local clean-clone run of the same selection from source, under CI conditions, exits 0 with first-party assemblies recognised and correspondence `verified` (after tickets 14, 16 and 18).
+- The PR description links the spec and lists the suppressions and upstream issues from ticket 09.
