@@ -150,8 +150,7 @@ public sealed class ReachPipeline(IProcessRunner processRunner)
         var selection = timings.Measure(
             "selection",
             () => Selector.Select(
-                graph.Graph,
-                open.Assemblies,
+                graph,
                 assemblies.Instances,
                 scope.Scope!,
                 changes,
