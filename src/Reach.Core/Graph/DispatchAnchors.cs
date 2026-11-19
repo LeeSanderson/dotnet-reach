@@ -18,7 +18,7 @@ internal sealed class DispatchAnchors(TypeHierarchy hierarchy)
     /// <summary>
     /// Dispatch declarations some call site actually reached, and the member key each one names.
     /// </summary>
-    private readonly Dictionary<MethodId, (string Type, string Member)> _dispatchTargets = [];
+    private readonly Dictionary<MethodId, DispatchMember> _dispatchTargets = [];
 
     /// <summary>
     /// Re-anchors a dispatch to the slot as seen from the inferred receiver type, and records
@@ -47,33 +47,31 @@ internal sealed class DispatchAnchors(TypeHierarchy hierarchy)
             return token;
         }
 
-        var member = MemberKeyOf(assembly, instruction.Token);
-
-        if (member is null)
+        if (MemberOf(assembly, instruction.Token) is not { } member)
         {
             return token;
         }
 
-        if (!isDispatch && !hierarchy.IsDispatchable(member.Value.Type, member.Value.Member))
+        if (!isDispatch && !hierarchy.IsDispatchable(member.Type, member.Member))
         {
             return token;
         }
 
         if (!receivers.TryGetValue(instruction.Offset, out var receiver))
         {
-            Remember(token, member.Value);
+            Remember(token, member);
             return token;
         }
 
-        var slot = hierarchy.SlotFor(receiver, member.Value.Member);
+        var slot = hierarchy.SlotFor(receiver, member.Member);
 
-        if (slot is null || hierarchy.MethodOf(slot, member.Value.Member) is not { } anchored)
+        if (slot is null || hierarchy.MethodOf(slot, member.Member) is not { } anchored)
         {
-            Remember(token, member.Value);
+            Remember(token, member);
             return token;
         }
 
-        Remember(anchored, (slot, member.Value.Member));
+        Remember(anchored, member with { Type = slot });
 
         return anchored;
     }
@@ -101,7 +99,7 @@ internal sealed class DispatchAnchors(TypeHierarchy hierarchy)
     /// <summary>
     /// The declaring type and member key a call instruction names, as the hierarchy spells them.
     /// </summary>
-    private static (string Type, string Member)? MemberKeyOf(GraphAssembly assembly, int token)
+    private static DispatchMember? MemberOf(GraphAssembly assembly, int token)
     {
         try
         {
@@ -115,7 +113,7 @@ internal sealed class DispatchAnchors(TypeHierarchy hierarchy)
                 {
                     var method = reader.GetMethodDefinition((MethodDefinitionHandle)handle);
 
-                    return (
+                    return new DispatchMember(
                         MetadataNames.FullNameOf(reader, method.GetDeclaringType()),
                         MetadataNames.Key(
                             reader.GetString(method.Name),
@@ -137,7 +135,8 @@ internal sealed class DispatchAnchors(TypeHierarchy hierarchy)
 
                     return declaringType is null
                         ? null
-                        : (declaringType,
+                        : new DispatchMember(
+                            declaringType,
                             MetadataNames.Key(
                                 reader.GetString(reference.Name),
                                 signature.GenericParameterCount,
@@ -145,7 +144,7 @@ internal sealed class DispatchAnchors(TypeHierarchy hierarchy)
                 }
 
                 case HandleKind.MethodSpecification:
-                    return MemberKeyOf(
+                    return MemberOf(
                         assembly,
                         MetadataTokens.GetToken(
                             reader.GetMethodSpecification((MethodSpecificationHandle)handle).Method));
@@ -160,6 +159,13 @@ internal sealed class DispatchAnchors(TypeHierarchy hierarchy)
         }
     }
 
-    private void Remember(MethodId node, (string Type, string Member) member) =>
+    private void Remember(MethodId node, DispatchMember member) =>
         _dispatchTargets[node] = member;
+
+    /// <summary>
+    /// A member as the type hierarchy spells it.
+    /// </summary>
+    /// <param name="Type">The full metadata name of the type that declares the slot.</param>
+    /// <param name="Member">The member key within that type.</param>
+    private sealed record DispatchMember(string Type, string Member);
 }
