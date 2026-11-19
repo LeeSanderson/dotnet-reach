@@ -142,7 +142,7 @@ public class AnalysisScopeTests
         var core = tree.AddProject("Core", targetFrameworks: "net10.0", assemblyName: "Contoso.Core");
         var tests = tree.AddProject("Tests", [core], [TestPackage], "net10.0");
 
-        // The framework arrives from Directory.Build.props, as it does in Reach's own tree.
+        // A framework can also arrive from Directory.Build.props.
         tree.WriteFile(
             "src/Directory.Build.props",
             """

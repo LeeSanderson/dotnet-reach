@@ -1,7 +1,11 @@
 <Project>
 
+  <!--
+    No TargetFramework here: a non-empty TargetFramework turns off a project's own
+    TargetFrameworks, which would stop the Contoso fixture multi-targeting in place. Each
+    project declares its own (ADR-0013 for Reach's).
+  -->
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
     <LangVersion>default</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
