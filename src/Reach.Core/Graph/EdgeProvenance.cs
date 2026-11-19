@@ -10,7 +10,7 @@ namespace Reach.Graph;
 /// compiled edges. <see cref="Widened"/> is the only speculative class, and therefore the only
 /// class any future narrowing may touch.
 /// </remarks>
-internal enum EdgeProvenance : byte
+internal enum EdgeProvenance
 {
     /// <summary>
     /// <c>call</c> or <c>callvirt</c> to an exactly-resolved target. Read from an instruction.

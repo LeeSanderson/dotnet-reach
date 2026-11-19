@@ -75,3 +75,13 @@ Notes for review:
    to `ChangedSetBuilder` and `Selector`, which raised them from 32 and 31. **S107 at
    `Selector.Select`** (8 parameters) depends on how `Selector` is split. Should each of these be
    split, and along what lines, or suppressed?
+
+### Maintainer decisions (follow-up branch `cs/07b-small`)
+
+- **S4040** (question 1): "Keep output, fix design." `TargetFrameworkMoniker` no longer lower-cases
+  anything. Prefixes are compared with `OrdinalIgnoreCase`, and the platform is looked up in a
+  case-insensitive set of the SDK's platform names, which returns the set's lower-case literal. So
+  the notice still prints `(windows)`. A platform not in the set keeps its stamped spelling; every
+  comparison already ignores case. New tests pin the `(windows)` output.
+- **S4022** (question 2): "Change to int." `EdgeProvenance` is now `Int32`-backed. The per-edge
+  array is four times larger; the maintainer accepts that cost.

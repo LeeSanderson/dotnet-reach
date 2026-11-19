@@ -128,6 +128,22 @@ public class TargetFrameworkMonikerTests
         Assert.False(windows.Matches(plain));
     }
 
+    [Theory]
+    [InlineData("Windows7.0")]
+    [InlineData("WINDOWS")]
+    public void A_stamped_platform_reads_in_the_SDK_spelling(string stamped)
+    {
+        var moniker = TargetFrameworkMoniker.FromAttributes(".NETCoreApp,Version=v10.0", stamped)!;
+
+        Assert.Equal(".NETCoreApp,Version=v10.0 (windows)", moniker.ToString());
+    }
+
+    [Fact]
+    public void A_declared_moniker_is_read_whatever_its_case() =>
+        Assert.Equal(
+            ".NETCoreApp,Version=v10.0 (windows)",
+            TargetFrameworkMoniker.Parse("Net10.0-Windows")!.ToString());
+
     [Fact]
     public void The_declared_platform_version_is_ignored_because_the_attribute_always_carries_one()
     {
