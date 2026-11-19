@@ -1,5 +1,6 @@
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
+using Reach.Assemblies;
 using Reach.Changes;
 using Reach.Graph;
 
@@ -138,7 +139,7 @@ internal sealed class SpanJoin
                 continue;
             }
 
-            var document = Paths.Normalise(symbols.GetString(symbols.GetDocument(point.Document).Name));
+            var document = PdbDocuments.PathOf(symbols, point.Document);
 
             extents[document] = extents.TryGetValue(document, out var existing)
                 ? existing.Extend(point)

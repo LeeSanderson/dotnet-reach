@@ -147,7 +147,7 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
     [
         .. instances.Where(instance =>
             instance.Assembly.Documents.Any(document => Paths.Same(
-                Paths.Normalise(document.Path),
+                document.Path,
                 Paths.Normalise(absolutePath))))
     ];
 

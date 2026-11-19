@@ -62,14 +62,16 @@ public class AssemblyFactsTests
     {
         using var directory = TempDirectory.Create("reach-pdb");
 
+        // A path this machine spells natively, since documents come back in its separators.
+        var document = Path.Combine(directory.Path, "src", "Widget.cs");
         var path = Compiled
-            .Assembly("Core", Source, "/repo/src/Widget.cs")
-            .WriteTo(directory.Path);
+            .Assembly("Core", Source, document)
+            .WriteTo(directory.Combine("bin"));
 
-        var scanned = AssemblyScanner.Read(path, "/repo");
+        var scanned = AssemblyScanner.Read(path, directory.Path);
 
         Assert.NotNull(scanned);
-        Assert.Equal(["/repo/src/Widget.cs"], scanned.Documents.Select(document => document.Path));
+        Assert.Equal([document], scanned.Documents.Select(source => source.Path));
     }
 
     [Fact]
