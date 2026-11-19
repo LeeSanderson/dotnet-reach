@@ -109,7 +109,8 @@ The projects Reach asks the build to produce. May be narrower than analysis scop
 
 **First-party assembly**:
 An assembly built from source inside the working tree, identified by the source documents
-its debug symbols point at. Everything else in the output — package dependencies,
+its debug symbols point at. A CI build's deterministic `/_/` prefix reads as the repository
+root (ADR-0018). Everything else in the output — package dependencies,
 framework assemblies — is not first-party and is not analysed.
 _Avoid_: local assembly, our code, project assembly
 
