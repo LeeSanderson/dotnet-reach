@@ -65,7 +65,8 @@ public class GitAdapterTests
 
         await Adapter.UntrackedPathsAsync(TestContext.Current.CancellationToken);
 
-        AssertArgv("git", "-c", "core.quotePath=false", "ls-files", "--others", "--exclude-standard");
+        AssertArgv(
+            "git", "-c", "core.quotePath=false", "ls-files", "--others", "--exclude-standard", "--full-name", "--", ":/");
     }
 
     [Fact]

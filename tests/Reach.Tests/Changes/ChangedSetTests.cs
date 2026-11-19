@@ -381,6 +381,23 @@ public class ChangedSetTests
     }
 
     [Fact]
+    public async Task An_untracked_file_outside_a_test_project_target_is_in_the_changed_set()
+    {
+        using var repository = ChangeRepository.Create();
+
+        repository.Write("src/Core/Widget.cs", Widget);
+        var baseline = repository.CommitBaseline();
+
+        repository.Write("src/Core/New.cs", "namespace N; public class New { public int M() => 1; }");
+
+        // git runs in the target's directory, tests/Tests, and the new file is outside it.
+        var changes = await repository.ChangesAsync(baseline, "tests/Tests/Tests.csproj", Token);
+
+        Assert.Equal(["N.New.M()"], Names(changes.Members));
+        Assert.Contains(changes.Paths, path => path.Path == "src/Core/New.cs");
+    }
+
+    [Fact]
     public async Task An_untracked_source_file_is_disclosed()
     {
         using var repository = ChangeRepository.Create();
