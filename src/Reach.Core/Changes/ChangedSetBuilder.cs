@@ -30,8 +30,8 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
     {
         var paths = await PathsAsync(baseline, cancellationToken).ConfigureAwait(false);
 
-        var baselineTypes = new DeclarationsByTypeName();
-        var currentTypes = new DeclarationsByTypeName();
+        var baselineTypes = new ChangeSide();
+        var currentTypes = new ChangeSide();
 
         var unmappable = new List<ChangedPath>();
         var notices = new List<Notice>();
