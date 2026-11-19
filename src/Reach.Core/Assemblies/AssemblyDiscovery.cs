@@ -114,8 +114,8 @@ internal static class AssemblyDiscovery
         // send the reader looking in the wrong place.
         return unmapped.Length > 0
             ? $"its debug symbols record deterministic source paths ({string.Join(", ", unmapped)}) that "
-                + "Reach cannot map to the working tree, so it is not first-party. Only /_/, the repository "
-                + "root, is mapped; build with -p:DeterministicSourcePaths=false to record real paths"
+                + "Reach cannot map to the working tree, so it is not first-party. /_/ is read as the "
+                + "repository root; build with -p:DeterministicSourcePaths=false to record real paths"
             : "its debug symbols point at source outside the working tree, so it is not first-party";
     }
 

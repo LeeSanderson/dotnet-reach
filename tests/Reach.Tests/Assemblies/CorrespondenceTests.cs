@@ -369,7 +369,9 @@ public class CorrespondenceTests
 
         Assert.Contains("/_1/Helper.cs", RecordedDocuments(compiled));
 
-        var scanned = AssemblyScanner.Read(compiled.WriteTo(directory.Combine("bin")), directory.Path);
+        var scanned = AssemblyScanner.Read(
+            compiled.WriteTo(directory.Combine("bin")),
+            new SourceRoots(directory.Path, directory.Combine("packages")));
 
         Assert.NotNull(scanned);
         Assert.True(scanned.IsFirstParty);
@@ -388,6 +390,52 @@ public class CorrespondenceTests
         Assert.Contains("/_1/", notice.Message);
         Assert.Contains("DeterministicSourcePaths", notice.Message);
         Assert.Equal(CorrespondenceVerdict.Verified, result.Verdict);
+    }
+
+    [Fact]
+    public void Package_content_under_a_further_root_is_found_in_the_packages_folder()
+    {
+        using var directory = TempDirectory.Create("reach-deterministic");
+
+        var widget = directory.Combine("src", "Widget.cs");
+        var packages = directory.Combine("packages");
+        var content = Path.Combine(packages, "some.package", "1.0.0", "_content", "Reporter.cs");
+        const string contentSource = "namespace N; internal static class Reporter { public static int One() => 1; }";
+
+        Directory.CreateDirectory(Path.GetDirectoryName(widget)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(content)!);
+        File.WriteAllText(widget, Source);
+        File.WriteAllText(content, contentSource);
+
+        // What restore does: every package folder is a SourceRoot, so a content file a package
+        // compiles into the project is recorded under /_1/ — xunit.v3's runner does this.
+        var compiled = Compiled.Assembly(
+            "Core",
+            [(Source, widget), (contentSource, content)],
+            pathMap:
+            [
+                (packages + Path.DirectorySeparatorChar, "/_1/"),
+                (directory.Path + Path.DirectorySeparatorChar, "/_/"),
+            ]);
+
+        Assert.Contains("/_1/some.package/1.0.0/_content/Reporter.cs", RecordedDocuments(compiled));
+
+        var scanned = AssemblyScanner.Read(
+            compiled.WriteTo(directory.Combine("bin")),
+            new SourceRoots(directory.Path, packages));
+
+        Assert.NotNull(scanned);
+        Assert.Contains(scanned.Documents, document => Paths.Same(document.Path, content));
+
+        var project = ProjectFileReader.Read(WriteProject(directory));
+        var result = Correspondence.Verify(
+            [new AssemblyInstance(new ExpectedAssemblyInstance(project, "net10.0"), scanned)],
+            SourceVisibility.Unknown);
+
+        // Found by looking, then checked like any other file: no gap to disclose.
+        Assert.Empty(result.Notices);
+        Assert.Equal(CorrespondenceVerdict.Verified, result.Verdict);
+        Assert.Equal(2, result.Documents.Count(verdict => verdict.Class == DocumentClass.Verified));
     }
 
     /// <summary>

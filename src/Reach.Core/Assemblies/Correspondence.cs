@@ -140,8 +140,8 @@ internal static class Correspondence
 
     /// <summary>
     /// Documents recorded under a deterministic root Reach could not map. Never guessed: the
-    /// symbols do not say which directory <c>/_1/</c> was, and a guess that happened to find
-    /// a file would turn a disclosed gap into a silent one.
+    /// symbols do not say which directory <c>/_1/</c> was, and a guess would turn a disclosed
+    /// gap into a silent one.
     /// </summary>
     private static Notice? UnmappedRootNotice(IReadOnlyList<DocumentVerdict> verdicts)
     {
@@ -166,9 +166,9 @@ internal static class Correspondence
             NoticeKind.BlindSpot,
             $"{unmapped.Length} compiled source file(s) were recorded under a deterministic source root "
             + $"({string.Join(", ", roots)}) that Reach cannot map to a directory, so they were not "
-            + "checked against the working tree and a change to one cannot select a test. Only /_/, "
-            + "the repository root, is mapped. Build with -p:DeterministicSourcePaths=false to record "
-            + "real paths.",
+            + "checked against the working tree and a change to one cannot select a test. /_/ is read "
+            + "as the repository root, and other roots only where the file is in the NuGet global "
+            + "packages folder. Build with -p:DeterministicSourcePaths=false to record real paths.",
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["roots"] = roots });
     }
 
