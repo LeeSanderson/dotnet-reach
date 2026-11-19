@@ -71,22 +71,24 @@ internal static class TestMethods
         return markers;
     }
 
-    private static bool IsMarked(MetadataReader reader, MethodDefinition method, HashSet<string> markers)
+    /// <summary>
+    /// The full name of each attribute in <paramref name="attributes"/> that names its type.
+    /// </summary>
+    internal static IEnumerable<string> AttributeNames(MetadataReader reader, IEnumerable<CustomAttributeHandle> attributes)
     {
-        foreach (var handle in method.GetCustomAttributes())
+        foreach (var handle in attributes)
         {
             var attribute = reader.GetCustomAttribute(handle);
-            var declaring = DeclaringTypeOf(reader, attribute.Constructor);
-            var name = NameOf(reader, declaring);
 
-            if (name is not null && markers.Contains(name))
+            if (NameOf(reader, DeclaringTypeOf(reader, attribute.Constructor)) is { } name)
             {
-                return true;
+                yield return name;
             }
         }
-
-        return false;
     }
+
+    private static bool IsMarked(MetadataReader reader, MethodDefinition method, HashSet<string> markers) =>
+        AttributeNames(reader, method.GetCustomAttributes()).Any(markers.Contains);
 
     private static EntityHandle DeclaringTypeOf(MetadataReader reader, EntityHandle constructor) =>
         constructor.Kind switch

@@ -15,8 +15,9 @@ namespace Reach.Selection;
 public enum PathClass
 {
     /// <summary>
-    /// Reachable without a widened edge. Synthesised edges count here: containment and type
-    /// initialization are invented by Reach, but the control flow they describe is not in doubt.
+    /// Reachable without a widened edge. Synthesised edges count here: containment, type
+    /// initialization and test lifecycle are invented by Reach, but the control flow they
+    /// describe is not in doubt.
     /// </summary>
     Compiled,
 

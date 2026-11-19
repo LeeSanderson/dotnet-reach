@@ -5,9 +5,9 @@ namespace Reach.Graph;
 /// widening can be measured, and narrowing has one class it may safely touch.
 /// </summary>
 /// <remarks>
-/// <strong>Three classes, not two.</strong> Containment and type initialization are invented by
-/// Reach, but the control flow they describe is not in doubt, so they are as non-removable as
-/// compiled edges. <see cref="Widened"/> is the only speculative class, and therefore the only
+/// <strong>Three classes, not two.</strong> Containment, type initialization and test lifecycle
+/// are invented by Reach, but the control flow they describe is not in doubt, so they are as
+/// non-removable as compiled edges. <see cref="Widened"/> is the only speculative class, and therefore the only
 /// class any future narrowing may touch.
 /// </remarks>
 internal enum EdgeProvenance
@@ -36,4 +36,10 @@ internal enum EdgeProvenance
     /// A dispatch declaration to an implementation that could run.
     /// </summary>
     Widened = 4,
+
+    /// <summary>
+    /// A test method to a member the test framework runs around it: its class's constructors and
+    /// disposal, its setup and teardown, and the fixtures it is given. See ADR-0019.
+    /// </summary>
+    TestLifecycle = 5,
 }

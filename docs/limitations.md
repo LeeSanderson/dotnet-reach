@@ -129,6 +129,18 @@ The gaps that can cost you a regression. Listed worst first.
   the whole-type widening upgrade path above.
 - **Direction**: under-selection. **Detectable**: no. **Upgrade path**: framework models.
 
+### Test lifecycle the recognition table does not model
+- **Shape**: a test reaches what its framework runs around it through synthesised edges
+  ([ADR-0019](adr/0019-a-test-reaches-its-class-lifecycle.md)): constructors, the static
+  constructor, `Dispose`/`DisposeAsync`, and each supported framework's setup, teardown and
+  fixtures. A hook the framework finds some other way gets no edge. Examples are xUnit's
+  `BeforeAfterTestAttribute`, NUnit's `ITestAction` attributes, a custom attribute that derives
+  from a setup attribute, and a fixture the framework creates from a generic type argument it
+  cannot name.
+- **Direction**: under-selection. **Detectable**: no.
+- **Upgrade path**: one more row of data in the recognition table for each hook found in
+  practice.
+
 ### Renames are never detected
 - **Shape**: change detection is keyed on the declared type
   ([ADR-0005](adr/0005-change-detection-is-keyed-on-declared-type.md)), so a renamed type reads
@@ -197,6 +209,15 @@ and the first one distorts the numbers Reach reports about itself.
   risk is untouched**. A **stack merge** takes the common supertype, keeping full fan-out at that
   site. An **unconstrained generic receiver** falls to the slot-defining declaration.
 - **Direction**: over-selection. **Detectable**: no.
+
+### Collection fixtures and setup fixtures reach the whole test assembly
+- **Shape**: an xUnit `ICollectionFixture<T>` runs only for the test classes in its
+  collection, and an NUnit `[SetUpFixture]` only for the fixtures in its namespace and below.
+  Reach connects both to every test in the assembly
+  ([ADR-0019](adr/0019-a-test-reaches-its-class-lifecycle.md)), so a change reached only from
+  one selects tests that never use it.
+- **Direction**: over-selection. **Detectable**: no.
+- **Upgrade path**: match collection names and namespaces.
 
 ### Static abstract interface members widen to every implementer
 - **Shape**: the implementation is selected by the generic instantiation at the call site, which

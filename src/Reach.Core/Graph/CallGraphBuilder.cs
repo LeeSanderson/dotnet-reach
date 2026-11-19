@@ -55,9 +55,19 @@ internal sealed class CallGraphBuilder
     }
 
 
-    internal static CallGraphResult Build(IEnumerable<GraphAssembly> firstParty)
+    /// <summary>
+    /// Builds the graph over <paramref name="firstParty"/>.
+    /// </summary>
+    /// <param name="firstParty">The analysis scope's assemblies.</param>
+    /// <param name="entryEdges">
+    /// Synthesised edges whose knowledge the graph does not own: the test lifecycle edges, which
+    /// need test recognition. Selection derives them from the same assemblies.
+    /// </param>
+    internal static CallGraphResult Build(IEnumerable<GraphAssembly> firstParty, IEnumerable<Edge>? entryEdges = null)
     {
         var builder = new CallGraphBuilder();
+
+        builder._edges.AddRange(entryEdges ?? []);
 
         return builder.Run(firstParty);
     }
