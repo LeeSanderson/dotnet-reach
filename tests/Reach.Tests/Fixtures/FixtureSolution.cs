@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Reach.Reporting;
 
 namespace Reach.Tests.Fixtures;
@@ -31,12 +30,12 @@ internal sealed class FixtureSolution : IDisposable
     /// <summary>
     /// Copies, commits the baseline, and builds. The returned SHA is the baseline.
     /// </summary>
-    internal static FixtureSolution Build(out string baseline, [CallerFilePath] string testFile = "")
+    internal static FixtureSolution Build(out string baseline)
     {
         var repository = TempRepository.Create("reach-contoso");
         var fixture = new FixtureSolution(repository);
 
-        Copy(SourceDirectory(testFile), repository.Path);
+        Copy(SourceDirectory(), repository.Path);
 
         repository.WriteFile(".gitignore", "bin/\nobj/\n");
         baseline = repository.Commit("baseline");
@@ -93,19 +92,9 @@ internal sealed class FixtureSolution : IDisposable
             timings);
     }
 
-    private static string SourceDirectory(string testFile)
+    private static string SourceDirectory()
     {
-        var directory = System.IO.Path.GetDirectoryName(testFile);
-
-        // `.git` is a directory in a clone but a file in a linked worktree.
-        while (directory is not null && !System.IO.Path.Exists(System.IO.Path.Combine(directory, ".git")))
-        {
-            directory = System.IO.Path.GetDirectoryName(directory);
-        }
-
-        Assert.NotNull(directory);
-
-        var fixture = System.IO.Path.Combine(directory, "tests", "fixtures", "Contoso");
+        var fixture = RepositoryRoot.Combine("tests", "fixtures", "Contoso");
 
         Assert.True(Directory.Exists(fixture), $"No fixture solution at {fixture}.");
 
