@@ -1,5 +1,4 @@
 using Reach.Assemblies;
-using Reach.Changes;
 using Reach.Graph;
 using Reach.Join;
 using Reach.Output;
@@ -17,8 +16,10 @@ internal static class SelectionPhases
     /// <summary>
     /// Completes a run the change phases left successful.
     /// </summary>
-    internal static async Task<SelectRun> RunAsync(PipelineRun run, SelectRun partial, string repositoryRoot)
+    internal static async Task<SelectRun> RunAsync(PipelineRun run, SelectRun partial)
     {
+        var repositoryRoot = ChangePhases.WorkingRoot(partial.RepositoryRoot);
+
         var assemblies = run.Timings.Measure(
             "discovery",
             () => AssemblyDiscovery.Discover(
@@ -79,7 +80,7 @@ internal static class SelectionPhases
                 partial.Changes!,
                 roots,
                 run.Request.Paths,
-                new TierLadder(run.Scope, repositoryRoot)));
+                repositoryRoot));
 
         notices.AddRange(selection.Notices);
 

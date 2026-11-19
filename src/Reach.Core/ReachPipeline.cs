@@ -26,11 +26,11 @@ public sealed class ReachPipeline(IProcessRunner processRunner)
         PhaseTimings timings,
         CancellationToken cancellationToken)
     {
-        var (refusal, target, scope) = await CheckUsageAsync(request, timings, cancellationToken).ConfigureAwait(false);
+        var check = await CheckUsageAsync(request, timings, cancellationToken).ConfigureAwait(false);
 
-        if (refusal is not null)
+        if (check.Usable is not { } usable)
         {
-            return Usage(refusal);
+            return Usage(check.Refusal);
         }
 
         // Past here the invocation is a usable one, so the directory Reach owns comes into
@@ -41,49 +41,48 @@ public sealed class ReachPipeline(IProcessRunner processRunner)
             request,
             environment,
             timings,
-            target!,
-            scope!,
-            new GitAdapter(processRunner, target!.Directory),
+            usable,
+            new GitAdapter(processRunner, usable.Target.Directory),
             cancellationToken);
 
-        var (partial, repositoryRoot) = await ChangePhases.RunAsync(run, processRunner).ConfigureAwait(false);
+        var partial = await ChangePhases.RunAsync(run, processRunner).ConfigureAwait(false);
 
         if (partial.ExitCode != ExitCode.Success)
         {
             return partial;
         }
 
-        return await SelectionPhases.RunAsync(run, partial, repositoryRoot).ConfigureAwait(false);
+        return await SelectionPhases.RunAsync(run, partial).ConfigureAwait(false);
     }
 
     /// <summary>
     /// The checks that can still end the run as a usage error: the forwarded build arguments,
-    /// the target, and its analysis scope. The refusal is null when all three pass.
+    /// the target, and its analysis scope.
     /// </summary>
-    private static async Task<(string? Refusal, DiscoveredTarget? Target, AnalysisScopeResult? Scope)> CheckUsageAsync(
+    private static async Task<UsageCheck> CheckUsageAsync(
         SelectRequest request,
         PhaseTimings timings,
         CancellationToken cancellationToken)
     {
         if (ForwardedBuildArguments.Refuse(request.ForwardedBuildArguments) is { } refusal)
         {
-            return (refusal, null, null);
+            return UsageCheck.Refused(refusal);
         }
 
         var discovery = TargetDiscovery.Discover(request.Target ?? request.WorkingDirectory);
 
-        if (!discovery.Discovered)
+        if (discovery.Target is not { } target)
         {
-            return (discovery.Message, null, null);
+            return UsageCheck.Refused(discovery.Message);
         }
-
-        var target = discovery.Target!;
 
         var scope = await timings
             .MeasureAsync("scope", () => AnalysisScopeResolver.ResolveAsync(target, cancellationToken))
             .ConfigureAwait(false);
 
-        return scope.Resolved ? (null, target, scope) : (scope.Message, null, null);
+        return scope.Scope is { } resolved
+            ? UsageCheck.Passed(new UsableTarget(target, resolved, scope.Notices))
+            : UsageCheck.Refused(scope.Message);
     }
 
     private static SelectRun Usage(string message) =>

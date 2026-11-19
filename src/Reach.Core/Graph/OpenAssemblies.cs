@@ -27,7 +27,7 @@ internal sealed class OpenAssemblies : IDisposable
         var open = new OpenAssemblies([]);
         var assemblies = new List<GraphAssembly>();
 
-        foreach (var assembly in CallGraphBuilder.InOrdinalOrder(instances).Select(instance => instance.Assembly))
+        foreach (var assembly in InOrdinalOrder(instances).Select(instance => instance.Assembly))
         {
             PEReader reader;
 
@@ -64,6 +64,15 @@ internal sealed class OpenAssemblies : IDisposable
 
         return open;
     }
+    /// <summary>
+    /// Assembly simple name, then target framework: the deterministic order ordinals follow.
+    /// </summary>
+    private static IReadOnlyList<AssemblyInstance> InOrdinalOrder(IEnumerable<AssemblyInstance> instances) =>
+    [
+        .. instances
+            .OrderBy(instance => instance.Assembly.SimpleName, StringComparer.Ordinal)
+            .ThenBy(instance => instance.Expected.TargetFramework, StringComparer.Ordinal)
+    ];
 
     /// <summary>
     /// Handles both a separate <c>.pdb</c> and symbols embedded in the image.

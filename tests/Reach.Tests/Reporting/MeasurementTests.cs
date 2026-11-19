@@ -172,6 +172,20 @@ public class MeasurementTests
     }
 
     [Fact]
+    public void An_exact_midpoint_percentage_rounds_to_even()
+    {
+        var measurement = new ReportMeasurement(
+            Selected: 1,
+            WillRun: 1,
+            Total: 8,
+            ProjectsRunInFull: 0,
+            WidenedPairs: 0);
+
+        // 12.5% is an exact midpoint; ADR-0016's Math.Round(ratio * 100) rounds it to even.
+        Assert.Equal("selected 1 of 8 tests (12%)", measurement.Describe());
+    }
+
+    [Fact]
     public void Nothing_enumerable_reports_an_unknown_ratio()
     {
         var measurement = Measure(

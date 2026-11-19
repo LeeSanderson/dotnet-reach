@@ -220,6 +220,44 @@ internal static class MetadataNames
     }
 
     /// <summary>
+    /// The declaring type's canonical name, and the assembly it lives in.
+    /// </summary>
+    internal static (string? Type, string? Assembly) ParentOf(
+        MetadataReader reader,
+        EntityHandle parent,
+        SignatureNames names)
+    {
+        switch (parent.Kind)
+        {
+            case HandleKind.TypeReference:
+                var reference = (TypeReferenceHandle)parent;
+                return (MetadataNames.FullNameOf(reader, reference), MetadataNames.AssemblyOf(reader, reference));
+
+            case HandleKind.TypeDefinition:
+                return (MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)parent), null);
+
+            case HandleKind.TypeSpecification:
+                // A member reference against a generic instance carries the definition's own
+                // signature, so the instantiation is dropped and the definition is what to
+                // look the member up under.
+                var specification = reader
+                    .GetTypeSpecification((TypeSpecificationHandle)parent)
+                    .DecodeSignature(names, genericContext: null);
+
+                // The specification names no assembly of its own; the first type handle the
+                // decoder reached does.
+                var scope = names.FirstType.Kind == HandleKind.TypeReference
+                    ? MetadataNames.AssemblyOf(reader, (TypeReferenceHandle)names.FirstType)
+                    : null;
+
+                return (MetadataNames.WithoutInstantiation(specification), scope);
+
+            default:
+                return (null, null);
+        }
+    }
+
+    /// <summary>
     /// How many generic parameters a method declares. Part of what tells overloads apart.
     /// </summary>
     internal static int GenericArityOf(MetadataReader reader, MethodDefinition method) =>

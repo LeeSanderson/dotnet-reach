@@ -13,9 +13,7 @@ internal sealed class ReachedTests(
     IReadOnlyDictionary<MethodId, TestMethod> tests,
     bool includePaths)
 {
-    private readonly ChangesByTest _reachedBy = new();
-    private readonly Dictionary<MethodId, PathClass> _classOf = [];
-    private readonly PathsByTest? _pathsOf = includePaths ? new PathsByTest() : null;
+    private readonly Dictionary<MethodId, TestReach> _byTest = [];
 
     /// <summary>
     /// Walks back from one change's roots and records every test it reaches.
@@ -41,40 +39,31 @@ internal sealed class ReachedTests(
                 continue;
             }
 
-            Bucket(_reachedBy, method).Add(change.Entry.Index);
+            Bucket(_byTest, method).Add(change.Entry.Index, pathClass);
             change.Entry.TestsReached++;
-
-            _classOf[method] = _classOf.TryGetValue(method, out var existing)
-                ? Closer(existing, pathClass)
-                : pathClass;
         }
 
-        if (_pathsOf is not null)
+        if (includePaths)
         {
-            RecordPaths(change, reached, ownRoots, _pathsOf);
+            RecordPaths(change, reached, ownRoots);
         }
     }
 
     /// <summary>
     /// The index of every change that reached <paramref name="test"/>, once per reaching.
     /// </summary>
-    internal List<int> ChangesReaching(MethodId test) => _reachedBy.GetValueOrDefault(test) ?? [];
+    internal List<int> ChangesReaching(MethodId test) => _byTest.GetValueOrDefault(test)?.Changes ?? [];
 
     /// <summary>
     /// The strongest path class by which any change reached <paramref name="test"/>.
     /// </summary>
-    internal PathClass PathClassOf(MethodId test) => _classOf.GetValueOrDefault(test);
+    internal PathClass PathClassOf(MethodId test) => _byTest.GetValueOrDefault(test)?.Class ?? default;
 
     /// <summary>
     /// The hop-by-hop paths to <paramref name="test"/>, or null when paths were not asked for or
     /// none reached it.
     /// </summary>
-    internal List<IReadOnlyList<MethodId>>? PathsTo(MethodId test) => _pathsOf?.GetValueOrDefault(test);
-
-    /// <summary>
-    /// The stronger of two path classes: a compiled path beats a widened one.
-    /// </summary>
-    private static PathClass Closer(PathClass first, PathClass second) => first < second ? first : second;
+    internal List<IReadOnlyList<MethodId>>? PathsTo(MethodId test) => _byTest.GetValueOrDefault(test)?.Paths;
 
     /// <summary>
     /// Records, for every test one change reached, the hop-by-hop path from the test to the change.
@@ -87,12 +76,10 @@ internal sealed class ReachedTests(
     /// report next to an empty <c>changes</c> — a hop-by-hop answer to a question the report
     /// says was never asked.
     /// </param>
-    /// <param name="into">Where the paths go, keyed by test.</param>
     private void RecordPaths(
         Change change,
         IReadOnlyDictionary<MethodId, PathClass> reached,
-        IReadOnlySet<MethodId> ownRoots,
-        PathsByTest into)
+        IReadOnlySet<MethodId> ownRoots)
     {
         var predecessors = ReverseWalk.Predecessors(graph, change.Roots);
 
@@ -101,17 +88,42 @@ internal sealed class ReachedTests(
 
         foreach (var method in reachedTests)
         {
-            Bucket(into, method).Add(ReverseWalk.PathFrom(predecessors, method));
+            Bucket(_byTest, method).AddPath(ReverseWalk.PathFrom(predecessors, method));
         }
     }
 
     /// <summary>
-    /// Per test, the index of every change that reached it.
+    /// What reached one test: every change that did, the strongest path class among them, and,
+    /// when asked for, the hop-by-hop path from each.
     /// </summary>
-    private sealed class ChangesByTest : Dictionary<MethodId, List<int>>;
+    private sealed class TestReach
+    {
+        /// <summary>
+        /// The index of every change that reached the test, once per reaching.
+        /// </summary>
+        internal List<int> Changes { get; } = [];
 
-    /// <summary>
-    /// Per test, the hop-by-hop path from every change that reached it.
-    /// </summary>
-    private sealed class PathsByTest : Dictionary<MethodId, List<IReadOnlyList<MethodId>>>;
+        /// <summary>
+        /// The strongest path class by which any change reached the test.
+        /// </summary>
+        internal PathClass Class { get; private set; }
+
+        /// <summary>
+        /// The hop-by-hop paths to the test, or null when none were recorded.
+        /// </summary>
+        internal List<IReadOnlyList<MethodId>>? Paths { get; private set; }
+
+        internal void Add(int change, PathClass pathClass)
+        {
+            Class = Changes.Count == 0 ? pathClass : Closer(Class, pathClass);
+            Changes.Add(change);
+        }
+
+        internal void AddPath(IReadOnlyList<MethodId> path) => (Paths ??= []).Add(path);
+
+        /// <summary>
+        /// The stronger of two path classes: a compiled path beats a widened one.
+        /// </summary>
+        private static PathClass Closer(PathClass first, PathClass second) => first < second ? first : second;
+    }
 }

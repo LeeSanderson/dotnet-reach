@@ -37,31 +37,20 @@ internal static class SourceRevision
     internal static IReadOnlyDictionary<string, DeclaredType> DeclaredTypes(string text)
     {
         var root = Parse(text).GetRoot();
-        var types = new Dictionary<string, DeclaredType>(StringComparer.Ordinal);
+        var partials = new Dictionary<string, List<DeclaredType>>(StringComparer.Ordinal);
 
         foreach (var declaration in root.DescendantNodes().OfType<BaseTypeDeclarationSyntax>())
         {
             var name = QualifiedName(declaration);
-            var read = Read(declaration, name);
-
-            // A partial type declared twice in one file is one type: the members merge and the
-            // headers concatenate in source order, which is deterministic for a given file.
-            types[name] = types.TryGetValue(name, out var existing) ? Merge(existing, read) : read;
+            Buckets.Bucket(partials, name).Add(Read(declaration, name));
         }
 
-        return types;
-    }
-
-    private static DeclaredType Merge(DeclaredType first, DeclaredType second)
-    {
-        var members = new Dictionary<MemberKey, DeclaredMember>(first.Members);
-
-        foreach (var (key, member) in second.Members)
-        {
-            members[key] = member;
-        }
-
-        return first with { Header = first.Header + "\u0001" + second.Header, Members = members };
+        // A partial type declared twice in one file is one type, combined in source order,
+        // which is deterministic for a given file.
+        return partials.ToDictionary(
+            entry => entry.Key,
+            entry => DeclaredType.Combine(entry.Value),
+            StringComparer.Ordinal);
     }
 
     private static DeclaredType Read(BaseTypeDeclarationSyntax declaration, string name)
@@ -205,7 +194,41 @@ internal static class SourceRevision
 internal sealed record DeclaredType(
     string Name,
     string Header,
-    IReadOnlyDictionary<MemberKey, DeclaredMember> Members);
+    IReadOnlyDictionary<MemberKey, DeclaredMember> Members)
+{
+    /// <summary>
+    /// Separates the headers of a partial type's declarations. A control character, so it can
+    /// never occur in canonical source text and two different splits never join to the same
+    /// string.
+    /// </summary>
+    private const char PartialHeaderSeparator = '\u0001';
+
+    /// <summary>
+    /// The declarations of one partial type as one type: the headers joined, and the members
+    /// merged by key, both in the order given, so a later declaration of a key wins. Callers
+    /// give a deterministic order: source order within a file, then file path order.
+    /// </summary>
+    internal static DeclaredType Combine(IReadOnlyList<DeclaredType> partials)
+    {
+        if (partials.Count == 1)
+        {
+            return partials[0];
+        }
+
+        var members = new Dictionary<MemberKey, DeclaredMember>();
+
+        foreach (var (key, member) in partials.SelectMany(partial => partial.Members))
+        {
+            members[key] = member;
+        }
+
+        return partials[0] with
+        {
+            Header = string.Join(PartialHeaderSeparator, partials.Select(partial => partial.Header)),
+            Members = members,
+        };
+    }
+}
 
 /// <summary>
 /// One member as one revision of one file declares it.

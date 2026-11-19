@@ -136,7 +136,7 @@ internal sealed class Selections : IDisposable
             changedSet,
             joined,
             includePaths,
-            new TierLadder(scope, "/repo"));
+            "/repo");
 
         return selections;
     }

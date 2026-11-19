@@ -17,6 +17,6 @@
 
 ## Comments
 
-- `ReportMeasurement.Describe` now builds the line with `string.Create(CultureInfo.InvariantCulture, ...)`; the percentage is `Math.Round(ratio * 100, MidpointRounding.AwayFromZero)` (the rounding `P0` used) followed by a literal `%`.
+- `ReportMeasurement.Describe` now builds the line with `string.Create(CultureInfo.InvariantCulture, ...)`; the percentage is `Math.Round(ratio * 100, MidpointRounding.ToEven)` (ADR-0016's default rounding, and what `P0` gives on .NET 10 for an exact midpoint: 1 of 8 is `12%`) followed by a literal `%`. (Corrected in the code-review fixes; this first said `AwayFromZero`, which was wrong.)
 - New theory `MeasurementTests.The_summary_line_is_the_same_under_every_culture` sets `CurrentCulture` to en-US, de-DE and invariant and expects `selected 1,234 of 2,468 tests (50%) · ...` each time.
 - Verified in `mcr.microsoft.com/dotnet/sdk:10.0` against a clone of the branch: `dotnet build -warnaserror` clean, `dotnet format --verify-no-changes` clean, and the two named tests plus the new theory pass with the process locale set to `C`, `en_US.UTF-8` and `de_DE.UTF-8`. Full suite passes on Windows (527/527).

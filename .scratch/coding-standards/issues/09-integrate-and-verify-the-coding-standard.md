@@ -157,3 +157,53 @@ These are local runs. The CI legs themselves run on the PR (ticket 13).
     staged, another edit unstaged) passes; a staged whitespace violation fails with `WHITESPACE`
     on `RepositoryRoot.cs`, which proves the paths reach `dotnet format`.
   - CI is unaffected: it sets `HUSKY=0`.
+
+### Code review fixes (branch `cs/review-fixes`)
+
+One commit per finding, behaviour-preserving except the first.
+
+1. **Rounding.** `ReportMeasurement.Percent` now rounds midpoints to even (ADR-0016's
+   `Math.Round(ratio * 100)`; also what `P0` gives on .NET 10), and its doc comment and
+   ticket 10's comment say so. New fact `MeasurementTests.An_exact_midpoint_percentage_rounds_to_even`
+   pins 1 of 8 as `(12%)`. This is the one change in behaviour: before, it read `(13%)`.
+2. **Stray file.** The empty `src/Reach.Core/ForwardedBuildArguments.cs` is deleted.
+3. **`Verbosities`.** It has a class summary, and one table of spellings is the source of both
+   `Spellings` and the parser's lookup. `n` and `normal` are now in the lookup too, and still
+   read as normal.
+4. **Empty `Dictionary` subclasses.** `DeclarationsByTypeName` becomes `ChangeSide` (one side of a
+   change read as the types it declares), which owns its index and fills it with
+   `Buckets.Bucket`. In `ReachedTests`, `ChangesByTest` and `PathsByTest` (and the third parallel
+   index of path classes) become one index of `TestReach`: a test's changes, its strongest path
+   class and its paths.
+5. **Data clumps.** `(string Path, DeclaredType Type)` becomes `TypeDeclaration`.
+   `(string Type, string Member)` in `DispatchAnchors` becomes a private `DispatchMember` record.
+   `MemberKey` does not fit there: it is the source side's structured key and has no declaring
+   type, while the type hierarchy keys on metadata strings.
+6. **Partial merging.** `DeclaredType.Combine` is the one implementation, with a named
+   `PartialHeaderSeparator`. `SourceRevision` (within a file) and `DeclarationComparison` (across
+   files) both use it. The order was already consistent and is unchanged: source order within a
+   file, then ordinal file path order. So the joined headers, the merged members and their
+   iteration order are byte-for-byte what they were.
+7. **Repository root.** `ChangePhases.RunAsync` returns only the `SelectRun`, and
+   `SelectionPhases.RunAsync` reads the root from it. Before ticket 07c the pipeline never checked
+   the root either (`root.Value` everywhere, `root.Succeeded ? root.Value : null` in the result).
+   That is kept as it was: the report carries null, and the phases read an empty string
+   (`ChangePhases.WorkingRoot`). The one theoretical difference: a failed `git rev-parse` that
+   still wrote to stdout used to pass that text through, and now passes an empty string.
+8. **Null-forgiving operators.** `CheckUsageAsync` returns a `UsageCheck`, which holds either a
+   `UsableTarget` (target, resolved scope, scope notices) or the refusal. `PipelineRun` takes the
+   `UsableTarget`, so `ReachPipeline` and `PipelineRun` have no `!` left. `Selector.Select` takes
+   the repository root and builds its own `TierLadder` from the scope it already receives. Still
+   open, and outside this finding: `SelectionPhases` reads `partial.Changes!` from the nullable
+   `SelectRun`.
+9. **Feature envy.** `InOrdinalOrder` moves to `OpenAssemblies` (private). `ParentOf` moves to
+   `MetadataNames` (in `SignatureNames.cs`), beside the `FullNameOf`, `AssemblyOf` and
+   `WithoutInstantiation` it is built from. `CallSiteResolver` and `DispatchAnchors` both call it.
+10. **Stack slots.** `ILDecoder` reads slot counts from an explicit `SlotCounts` table that lists
+    every `StackBehaviour`. A switch expression was tried first, but it raises S1067 and S1541. A
+    dictionary initialiser has no branches. The counts are unchanged.
+
+Verified on Windows: `dotnet build Reach.slnx -c Release -warnaserror --no-incremental` gives
+0 warnings and 0 errors. `dotnet format --verify-no-changes --no-restore` exits 0.
+`dotnet test --project tests/Reach.Tests/Reach.Tests.csproj -c Release` passes 529 of 529,
+`ExampleReportTests` included. No suppressions were added.

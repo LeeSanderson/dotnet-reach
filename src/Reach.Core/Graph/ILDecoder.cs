@@ -22,11 +22,52 @@ internal static class ILDecoder
     /// </summary>
     private const int OneByteOpCodes = byte.MaxValue + 1;
 
+    private const int NoSlots = 0;
+    private const int OneSlot = 1;
+    private const int TwoSlots = 2;
+    private const int ThreeSlots = 3;
+
+    /// <summary>
+    /// How many slots each stack behaviour pops or pushes: one per part of its name, so
+    /// <c>Popref_popi_pop1</c> pops three, and none for the variable behaviours. Every behaviour
+    /// ECMA-335 defines is listed, so a missing one fails the type's initialisation rather than
+    /// reading as a guess.
+    /// </summary>
+    private static readonly Dictionary<StackBehaviour, int> SlotCounts = new()
+    {
+        [StackBehaviour.Pop0] = NoSlots,
+        [StackBehaviour.Push0] = NoSlots,
+        [StackBehaviour.Varpop] = NoSlots,
+        [StackBehaviour.Varpush] = NoSlots,
+        [StackBehaviour.Pop1] = OneSlot,
+        [StackBehaviour.Popi] = OneSlot,
+        [StackBehaviour.Popref] = OneSlot,
+        [StackBehaviour.Push1] = OneSlot,
+        [StackBehaviour.Pushi] = OneSlot,
+        [StackBehaviour.Pushi8] = OneSlot,
+        [StackBehaviour.Pushr4] = OneSlot,
+        [StackBehaviour.Pushr8] = OneSlot,
+        [StackBehaviour.Pushref] = OneSlot,
+        [StackBehaviour.Pop1_pop1] = TwoSlots,
+        [StackBehaviour.Popi_pop1] = TwoSlots,
+        [StackBehaviour.Popi_popi] = TwoSlots,
+        [StackBehaviour.Popi_popi8] = TwoSlots,
+        [StackBehaviour.Popi_popr4] = TwoSlots,
+        [StackBehaviour.Popi_popr8] = TwoSlots,
+        [StackBehaviour.Popref_pop1] = TwoSlots,
+        [StackBehaviour.Popref_popi] = TwoSlots,
+        [StackBehaviour.Push1_push1] = TwoSlots,
+        [StackBehaviour.Popi_popi_popi] = ThreeSlots,
+        [StackBehaviour.Popref_popi_pop1] = ThreeSlots,
+        [StackBehaviour.Popref_popi_popi] = ThreeSlots,
+        [StackBehaviour.Popref_popi_popi8] = ThreeSlots,
+        [StackBehaviour.Popref_popi_popr4] = ThreeSlots,
+        [StackBehaviour.Popref_popi_popr8] = ThreeSlots,
+        [StackBehaviour.Popref_popi_popref] = ThreeSlots,
+    };
+
     private static readonly int[] Pops = new int[512];
     private static readonly int[] Pushes = new int[512];
-
-    private static readonly HashSet<StackBehaviour> SlotlessBehaviours =
-        [StackBehaviour.Pop0, StackBehaviour.Push0, StackBehaviour.Varpop, StackBehaviour.Varpush];
 
     /// <summary>
     /// Every instruction whose operand is a branch target: the conditional and unconditional
@@ -54,8 +95,8 @@ internal static class ILDecoder
 
             var index = Index(OpCodeValues.ValueOf(opCode));
 
-            Pops[index] = Count(opCode.StackBehaviourPop);
-            Pushes[index] = Count(opCode.StackBehaviourPush);
+            Pops[index] = SlotCounts[opCode.StackBehaviourPop];
+            Pushes[index] = SlotCounts[opCode.StackBehaviourPush];
         }
     }
 
@@ -219,11 +260,4 @@ internal static class ILDecoder
 
     private static int Index(ushort value) =>
         value > byte.MaxValue ? OneByteOpCodes + (value & byte.MaxValue) : value;
-
-    /// <summary>
-    /// How many slots a behaviour pops or pushes: one per underscore-separated part of its name,
-    /// so <c>Popref_popi_pop1</c> pops three. The variable behaviours count as none.
-    /// </summary>
-    private static int Count(StackBehaviour behaviour) =>
-        SlotlessBehaviours.Contains(behaviour) ? 0 : behaviour.ToString().Split('_').Length;
 }

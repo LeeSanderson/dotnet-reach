@@ -7,16 +7,16 @@ namespace Reach.Changes;
 /// </summary>
 internal static class DeclarationComparison
 {
-    internal static DeclarationChanges Compare(DeclarationsByTypeName baseline, DeclarationsByTypeName current)
+    internal static DeclarationChanges Compare(ChangeSide baseline, ChangeSide current)
     {
         var members = new List<ChangedMember>();
         var typeWidenings = new List<TypeWidening>();
         var deletedTypes = new List<(string Name, string Path)>();
 
-        foreach (var name in baseline.Keys.Concat(current.Keys).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        foreach (var name in baseline.Names.Concat(current.Names).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
-            var before = baseline.GetValueOrDefault(name);
-            var after = current.GetValueOrDefault(name);
+            var before = baseline.DeclarationsOf(name);
+            var after = current.DeclarationsOf(name);
 
             if (before is null)
             {
@@ -39,7 +39,7 @@ internal static class DeclarationComparison
     /// An added type has no baseline, so every member it declares is a root.
     /// </summary>
     private static void AddedType(
-        List<(string Path, DeclaredType Type)> declarations,
+        IReadOnlyList<TypeDeclaration> declarations,
         string name,
         List<ChangedMember> members)
     {
@@ -60,8 +60,8 @@ internal static class DeclarationComparison
 
     private static void CompareType(
         string name,
-        List<(string Path, DeclaredType Type)> before,
-        List<(string Path, DeclaredType Type)> after,
+        IReadOnlyList<TypeDeclaration> before,
+        IReadOnlyList<TypeDeclaration> after,
         List<ChangedMember> members,
         List<TypeWidening> typeWidenings)
     {
@@ -76,13 +76,16 @@ internal static class DeclarationComparison
             typeWidenings.Add(new TypeWidening(name, WideningReason.TypeMoved, path));
         }
 
-        if (!string.Equals(Header(before), Header(after), StringComparison.Ordinal))
+        var baselineType = Combined(before);
+        var currentType = Combined(after);
+
+        if (!string.Equals(baselineType.Header, currentType.Header, StringComparison.Ordinal))
         {
             typeWidenings.Add(new TypeWidening(name, WideningReason.TypeHeaderChanged, path));
         }
 
-        var baselineMembers = Merge(before);
-        var currentMembers = Merge(after);
+        var baselineMembers = baselineType.Members;
+        var currentMembers = currentType.Members;
 
         foreach (var (key, member) in currentMembers)
         {
@@ -125,30 +128,14 @@ internal static class DeclarationComparison
     }
 
     /// <summary>
-    /// Partial declarations in source order, which is deterministic for a fixed path order.
+    /// One side's declarations of a type as one type, in file path order: each file's own
+    /// declarations are already combined in source order, so the whole is deterministic.
     /// </summary>
-    private static string Header(List<(string Path, DeclaredType Type)> declarations) =>
-        string.Join(
-            '\u0001',
-            declarations
-                .OrderBy(entry => entry.Path, StringComparer.Ordinal)
-                .Select(entry => entry.Type.Header));
-
-    private static Dictionary<MemberKey, DeclaredMember> Merge(
-        List<(string Path, DeclaredType Type)> declarations)
-    {
-        var merged = new Dictionary<MemberKey, DeclaredMember>();
-
-        foreach (var (_, type) in declarations.OrderBy(entry => entry.Path, StringComparer.Ordinal))
-        {
-            foreach (var (key, member) in type.Members)
-            {
-                merged[key] = member;
-            }
-        }
-
-        return merged;
-    }
+    private static DeclaredType Combined(IReadOnlyList<TypeDeclaration> declarations) =>
+        DeclaredType.Combine(
+            [.. declarations
+                .OrderBy(declaration => declaration.Path, StringComparer.Ordinal)
+                .Select(declaration => declaration.Type)]);
 }
 
 /// <summary>
