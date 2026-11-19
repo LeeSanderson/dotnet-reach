@@ -1,6 +1,5 @@
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
-using Reach.Assemblies;
 using Reach.Reporting;
 
 namespace Reach.Graph;
@@ -55,17 +54,6 @@ internal sealed class CallGraphBuilder
         set;
     }
 
-    /// <summary>
-    /// Ordinals are assigned in a deterministic order — assembly simple name, then target
-    /// framework — so a debugging session is reproducible. No ordinal ever reaches the report,
-    /// so report determinism does not depend on this.
-    /// </summary>
-    internal static IReadOnlyList<AssemblyInstance> InOrdinalOrder(IEnumerable<AssemblyInstance> instances) =>
-    [
-        .. instances
-            .OrderBy(instance => instance.Assembly.SimpleName, StringComparer.Ordinal)
-            .ThenBy(instance => instance.Expected.TargetFramework, StringComparer.Ordinal)
-    ];
 
     internal static CallGraphResult Build(IEnumerable<GraphAssembly> firstParty)
     {
