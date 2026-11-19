@@ -13,7 +13,7 @@ This is a batch on the integration branch. The build stays red until ticket 09.
 
 **Status:** ready-for-agent
 
-- [ ] Zero S and SA diagnostics in Reach's own projects (zero SA; 22 S sites remain, all waiting on the questions below or on ticket 06)
+- [x] Zero S and SA diagnostics in Reach's own projects (zero SA; the refactors below clear questions 3–6, and S4040/S4022 from questions 1–2 are fixed on their own branch)
 - [x] No diagnostics left from ticket 04's list that no batch owns
 - [x] No suppressions added unless approved (none added)
 - [x] Reach's tests still pass with warnings not treated as errors (520 of 521; the one failure is the known CRLF acceptance test that ticket 08 owns)
@@ -75,3 +75,39 @@ Notes for review:
    to `ChangedSetBuilder` and `Selector`, which raised them from 32 and 31. **S107 at
    `Selector.Select`** (8 parameters) depends on how `Selector` is split. Should each of these be
    split, and along what lines, or suppressed?
+
+### Maintainer decisions on questions 3–6
+
+> **Flat switches** (`ReceiverTypes.Apply`, `SourceRevision.Describe`): "Split by family" — group
+> cases into small methods by family (e.g. loads/stores/calls; types/methods/properties); the
+> switch dispatches to them; each method under the limits.
+
+> **Big orchestrators/classes** (`SelectAsync`, the S1200 classes, `Selector.Select` S107):
+> "Refactor properly" — introduce state/request objects (e.g. a pipeline context) and split each
+> class along its real responsibilities until the rules pass. Behaviour-preserving.
+
+No suppressions.
+
+### Done: questions 3–6 (branch `cs/07c-refactors`, one commit per class)
+
+- **`ReceiverTypes`**: the interpretation keeps its stack, arguments, locals and inferences as
+  state. A table classifies each opcode into a family (construction, conversion, argument load,
+  local load, field load, duplication, call, function load), and `Apply` switches on the family
+  to one small method each. IL decoding (instructions, branch targets, stack effects) moves to
+  `ILDecoder`; what a metadata token names, loads or returns moves to `OperandTypes`.
+- **`SourceRevision`**: reading one member moves to `MemberDeclarations`, whose switch dispatches
+  on Roslyn's own families (`BaseMethodDeclarationSyntax`, `BasePropertyDeclarationSyntax`,
+  `BaseFieldDeclarationSyntax`, plus delegates and enum members). `SourceRevision` keeps the types.
+- **`ChangedSetBuilder`**: comparing the two sides' declared types moves to
+  `DeclarationComparison`. Collecting a revision's types becomes `DeclarationsByTypeName.Collect`.
+- **`Selector`**: test enumeration moves to `TestEnumeration`. The reverse walk and its per-test
+  accumulators move to `ReachedTests`. `Select` takes the `CallGraphResult` in place of its
+  graph and assemblies (always the same build's), which clears S107.
+- **`CallGraphBuilder`**: token resolution and its notices move to `CallSiteResolver`. Dispatch
+  anchoring and widening move to `DispatchAnchors`, which owns the one type hierarchy.
+- **`ReachPipeline`**: the run's shared state becomes `PipelineRun`. Baseline, changed set and
+  build move to `ChangePhases`. Discovery through rendering moves to `SelectionPhases`.
+  `ReachPipeline` keeps the usage checks and the sequencing.
+
+Reach.Tests: 521 of 521 pass, `ExampleReportTests` included, run against this worktree's own
+repository root.
