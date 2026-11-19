@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.Globalization;
 using Reach.Output;
 using Reach.Processes;
 using Reach.Reporting;
@@ -20,64 +21,64 @@ namespace Reach.Cli;
 /// </remarks>
 internal sealed class ReachCommandLine
 {
-    private readonly Argument<string?> target = new("SOLUTION|PROJECT")
+    private readonly Argument<string?> _target = new("SOLUTION|PROJECT")
     {
         Arity = ArgumentArity.ZeroOrOne,
         Description = "The solution or single test project. Discovered in the working directory when omitted.",
     };
 
-    private readonly Option<string?> baseOption = new("--base")
+    private readonly Option<string?> _baseOption = new("--base")
     {
         Description = "The branch this work merges into. The baseline is merge-base(HEAD, <ref>). Auto-detected when omitted.",
         HelpName = "ref",
     };
 
-    private readonly Option<string?> configuration = new("--configuration", "-c")
+    private readonly Option<string?> _configuration = new("--configuration", "-c")
     {
         Description = "Build configuration. The SDK's default when omitted.",
         HelpName = "name",
     };
 
-    private readonly Option<string?> output = new("--output", "-o")
+    private readonly Option<string?> _output = new("--output", "-o")
     {
         Description = "The build's output directory. Never where Reach writes — see --report-dir.",
         HelpName = "dir",
     };
 
-    private readonly Option<string?> artifactsPath = new("--artifacts-path")
+    private readonly Option<string?> _artifactsPath = new("--artifacts-path")
     {
         Description = "The build's artifacts path.",
         HelpName = "dir",
     };
 
-    private readonly Option<bool> noBuild = new("--no-build")
+    private readonly Option<bool> _noBuild = new("--no-build")
     {
         Description = "Analyse the output already on disk instead of building first.",
     };
 
-    private readonly Option<string?> report = new("--report")
+    private readonly Option<string?> _report = new("--report")
     {
         Description = "Where to write report.json. '-' sends it to standard output and moves the summary to standard error.",
         HelpName = "path|-",
     };
 
-    private readonly Option<string?> reportDirectory = new("--report-dir")
+    private readonly Option<string?> _reportDirectory = new("--report-dir")
     {
         Description = $"The directory Reach owns, holding the report and every response file and testlist. Defaults to {ReachDirectory.DefaultName} under the working directory.",
         HelpName = "dir",
     };
 
-    private readonly Option<bool> paths = new("--paths")
+    private readonly Option<bool> _paths = new("--paths")
     {
         Description = "Include the source path of every changed member in the report.",
     };
 
-    private readonly Option<bool> listUnselected = new("--list-unselected")
+    private readonly Option<bool> _listUnselected = new("--list-unselected")
     {
         Description = "Include the tests that were not selected in the report.",
     };
 
-    private readonly Option<string?> runSettings = new("--runsettings")
+    private readonly Option<string?> _runSettings = new("--runsettings")
     {
         // Documented by its effect. The name is a foot-gun: someone will pass it expecting
         // Reach to *use* their settings for a test run Reach never performs.
@@ -85,46 +86,46 @@ internal sealed class ReachCommandLine
         HelpName = "path",
     };
 
-    private readonly Option<string?> verbosity = new("--verbosity", "-v")
+    private readonly Option<string?> _verbosity = new("--verbosity", "-v")
     {
         Description = "Set the verbosity level. Allowed values are q[uiet], m[inimal], n[ormal], d[etailed] and diag[nostic].",
         HelpName = "level",
     };
 
-    private readonly Option<bool> noColor = new("--no-color")
+    private readonly Option<bool> _noColor = new("--no-color")
     {
         Description = "Do not colour the summary. Auto-detected, and NO_COLOR is honoured too.",
     };
 
-    private readonly RootCommand root;
+    private readonly RootCommand _root;
 
     internal ReachCommandLine(Func<SelectRequest, CancellationToken, Task<int>> select)
     {
-        verbosity.AcceptOnlyFromAmong([.. Verbosities.Spellings]);
+        _verbosity.AcceptOnlyFromAmong([.. Verbosities.Spellings]);
 
         var selectCommand = new Command(
             "select",
             "Work out which tests a change could possibly affect, and write a report naming them.")
         {
-            target,
-            baseOption,
-            configuration,
-            output,
-            artifactsPath,
-            noBuild,
-            report,
-            reportDirectory,
-            paths,
-            listUnselected,
-            runSettings,
-            verbosity,
-            noColor,
+            _target,
+            _baseOption,
+            _configuration,
+            _output,
+            _artifactsPath,
+            _noBuild,
+            _report,
+            _reportDirectory,
+            _paths,
+            _listUnselected,
+            _runSettings,
+            _verbosity,
+            _noColor,
         };
 
         selectCommand.SetAction((parseResult, cancellationToken) =>
             select(RequestFrom(parseResult), cancellationToken));
 
-        root = new RootCommand(
+        _root = new RootCommand(
             "Reach works out which tests a code change could possibly affect, by reading "
             + "compiled assemblies and walking the call graph backwards from changed code to tests.")
         {
@@ -136,23 +137,23 @@ internal sealed class ReachCommandLine
     /// The forwarded build arguments are supplied separately because Reach splits the argument
     /// vector at <c>--</c> itself, before the parser sees it.
     /// </summary>
-    internal ParseResult Parse(IReadOnlyList<string> arguments) => root.Parse(arguments);
+    internal ParseResult Parse(IReadOnlyList<string> arguments) => _root.Parse(arguments);
 
     internal SelectRequest RequestFrom(ParseResult parseResult) => new()
     {
-        Target = parseResult.GetValue(target),
-        Base = parseResult.GetValue(baseOption),
-        Configuration = parseResult.GetValue(configuration),
-        Output = parseResult.GetValue(output),
-        ArtifactsPath = parseResult.GetValue(artifactsPath),
-        NoBuild = parseResult.GetValue(noBuild),
-        Report = parseResult.GetValue(report),
-        ReportDirectory = parseResult.GetValue(reportDirectory),
-        Paths = parseResult.GetValue(paths),
-        ListUnselected = parseResult.GetValue(listUnselected),
-        RunSettings = parseResult.GetValue(runSettings),
-        Verbosity = Verbosities.Parse(parseResult.GetValue(verbosity)),
-        NoColor = parseResult.GetValue(noColor),
+        Target = parseResult.GetValue(_target),
+        Base = parseResult.GetValue(_baseOption),
+        Configuration = parseResult.GetValue(_configuration),
+        Output = parseResult.GetValue(_output),
+        ArtifactsPath = parseResult.GetValue(_artifactsPath),
+        NoBuild = parseResult.GetValue(_noBuild),
+        Report = parseResult.GetValue(_report),
+        ReportDirectory = parseResult.GetValue(_reportDirectory),
+        Paths = parseResult.GetValue(_paths),
+        ListUnselected = parseResult.GetValue(_listUnselected),
+        RunSettings = parseResult.GetValue(_runSettings),
+        Verbosity = Verbosities.Parse(parseResult.GetValue(_verbosity)),
+        NoColor = parseResult.GetValue(_noColor),
     };
 }
 
@@ -192,7 +193,7 @@ internal static class ReachCli
 
             Print(run, request, timings, standardOutput, standardError, environment, outputIsRedirected);
 
-            return (int)run.ExitCode;
+            return Convert.ToInt32(run.ExitCode, CultureInfo.InvariantCulture);
         });
 
         return await commandLine

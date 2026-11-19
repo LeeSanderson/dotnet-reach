@@ -18,7 +18,7 @@ public class CorrespondenceInBothModesTests
     private const string Before = "namespace N; public class Widget { public int Spin() => 1; }";
     private const string After = "namespace N; public class Widget { public int Spin() => 42; }";
 
-    private readonly ScriptedProcessRunner runner = new();
+    private readonly ScriptedProcessRunner _runner = new();
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -32,9 +32,9 @@ public class CorrespondenceInBothModesTests
         // The binaries belong to a different revision of this file, and no timestamp would say
         // so: git does not preserve them, so checking out an older commit onto a warm agent
         // can leave source *older* than the binaries beside it.
-        File.WriteAllText(sourcePath, After);
+        await File.WriteAllTextAsync(sourcePath, After, Token);
 
-        var run = await Select(repository, noBuild: true);
+        var run = await SelectAsync(repository, noBuild: true);
 
         Assert.Equal(ExitCode.CorrespondenceFailed, run.ExitCode);
         Assert.Contains("Widget.cs", run.Message);
@@ -46,15 +46,15 @@ public class CorrespondenceInBothModesTests
         using var repository = Repository(out var sourcePath);
 
         Compile(repository, sourcePath, Before);
-        File.WriteAllText(sourcePath, After);
+        await File.WriteAllTextAsync(sourcePath, After, Token);
 
         // What a real `dotnet build` would do with an edited file.
-        runner.Performs(() => Compile(repository, sourcePath, After), "build");
+        _runner.Performs(() => Compile(repository, sourcePath, After), "build");
 
-        var run = await Select(repository, noBuild: false);
+        var run = await SelectAsync(repository, noBuild: false);
 
         Assert.NotEqual(ExitCode.CorrespondenceFailed, run.ExitCode);
-        Assert.Contains(runner.Requests, request => request.Arguments.Contains("build"));
+        Assert.Contains(_runner.Requests, request => request.Arguments.Contains("build"));
     }
 
     [Fact]
@@ -64,17 +64,17 @@ public class CorrespondenceInBothModesTests
 
         Compile(repository, sourcePath, Before);
 
-        await Select(repository, noBuild: true);
+        await SelectAsync(repository, noBuild: true);
 
-        Assert.DoesNotContain(runner.Requests, request => request.Executable == "dotnet");
+        Assert.DoesNotContain(_runner.Requests, request => request.Executable == "dotnet");
     }
 
-    private async Task<SelectRun> Select(TempRepository repository, bool noBuild)
+    private async Task<SelectRun> SelectAsync(TempRepository repository, bool noBuild)
     {
         // git is real; only the build is scripted.
         var real = new Reach.Processes.ProcessRunner();
 
-        return await new ReachPipeline(new SplitRunner(runner, real))
+        return await new ReachPipeline(new SplitRunner(_runner, real))
             .SelectAsync(
                 new SelectRequest
                 {
@@ -151,7 +151,7 @@ internal sealed class SplitRunner(Reach.Processes.IProcessRunner scripted, Reach
 {
     public Task<Reach.Processes.ProcessResult> RunAsync(
         Reach.Processes.ProcessRequest request,
-        CancellationToken cancellationToken = default) =>
+        CancellationToken cancellationToken) =>
         request.Executable == "dotnet"
             ? scripted.RunAsync(request, cancellationToken)
             : real.RunAsync(request, cancellationToken);

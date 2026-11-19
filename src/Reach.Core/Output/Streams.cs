@@ -10,7 +10,7 @@ namespace Reach.Output;
 /// <c>--report -</c>, which puts the JSON on standard output and moves the summary across, so
 /// that a consumer piping Reach into a parser never has to strip prose out of it.
 /// </remarks>
-internal sealed class Streams
+public sealed class Streams
 {
     private Streams(TextWriter summary, TextWriter notices, TextWriter? report, bool colour)
     {
@@ -20,16 +20,18 @@ internal sealed class Streams
         Colour = colour;
     }
 
-    internal TextWriter Summary { get; }
+    public TextWriter Summary { get; }
 
-    internal TextWriter Notices { get; }
+    public TextWriter Notices { get; }
 
-    /// <summary>Non-null only when the report goes to a stream rather than a file.</summary>
+    /// <summary>
+    /// Non-null only when the report goes to a stream rather than a file.
+    /// </summary>
     internal TextWriter? Report { get; }
 
     internal bool Colour { get; }
 
-    internal static Streams For(
+    public static Streams For(
         ReportDestination destination,
         TextWriter standardOutput,
         TextWriter standardError,
@@ -42,9 +44,9 @@ internal sealed class Streams
 /// <summary>
 /// Whether to colour the summary. Auto-detected, with two ways to say no.
 /// </summary>
-internal static class ColourSupport
+public static class ColourSupport
 {
-    internal static bool Enabled(bool noColorOption, EnvironmentLookup environment, bool outputIsRedirected)
+    public static bool Enabled(bool noColorOption, EnvironmentLookup environment, bool outputIsRedirected)
     {
         if (noColorOption || outputIsRedirected)
         {

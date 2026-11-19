@@ -13,10 +13,13 @@ could have produced in milliseconds.
 | `tests/Contoso.Tests.NUnit` | the **`~` dialect**, with a parameterised test and a `MyTest`/`MyTest2` pair — the one fixture standing between the design and a silent under-selection |
 | `tests/Contoso.Tests.Unrecognised` | a test project on a framework Reach does not recognise, so whole-project selection has something real to fall back on |
 
-**It is never built in place.** `FixtureSolution` copies it into a fresh temporary directory,
-runs `git init` and commits it as the baseline, then applies the change under test. A fixture
-committed in *this* repository has this repository's history, which is not a usable baseline;
-and committing fixture *history* would make every test depend on a real commit graph nobody can
-read.
+**No acceptance test runs on the copy built in place.** The fixture projects are part of
+`Reach.slnx`, so CI builds them here to hold them to the coding standard. The acceptance tests
+use a separate copy: `FixtureSolution` copies only the files git tracks into a fresh temporary
+directory, runs `git init` and commits it as the baseline, then applies the change under test.
+A fixture committed in *this* repository has this repository's history, which is not a usable
+baseline; and committing fixture *history* would make every test depend on a real commit graph
+nobody can read.
 
-There is no `bin/` or `obj/` here and there never should be — the copy is what gets built.
+The `bin/` and `obj/` that a build here leaves behind are ignored, never committed, and never
+copied. The copy is what the tests build.

@@ -224,7 +224,7 @@ public class InvocationTests
         using var directory = TempDirectory.Create("reach-argv");
 
         var project = Project();
-        var names = LongSelection();
+        var names = LongSelection.OverflowingTheCeiling();
 
         var rendered = Render(
             [Instance(project, "net10.0")],
@@ -252,7 +252,7 @@ public class InvocationTests
         using var directory = TempDirectory.Create("reach-argv");
 
         var project = Project();
-        var names = LongSelection();
+        var names = LongSelection.OverflowingTheCeiling();
 
         var rendered = Render(
             [Instance(project, "net10.0")],
@@ -278,7 +278,7 @@ public class InvocationTests
         using var directory = TempDirectory.Create("reach-argv");
 
         var project = Project();
-        var names = LongSelection();
+        var names = LongSelection.OverflowingTheCeiling();
 
         Render([Instance(project, "net10.0")], [Selection(project, "net10.0", "xunit-v3-4", names)], directory);
         Render([Instance(project, "net10.0")], [Selection(project, "net10.0", "xunit-v3-4", names)], directory);
@@ -413,10 +413,4 @@ public class InvocationTests
         Assert.Equal(1, Assert.Single(rendered.Entries).WillRun);
         Assert.DoesNotContain(rendered.Notices, notice => notice.Code == NoticeCodes.DialectOverSelects);
     }
-
-    private static IReadOnlyList<string> LongSelection() =>
-    [
-        .. Enumerable.Range(0, 300)
-            .Select(index => $"Contoso.Billing.Tests.InvoiceTests.Calculates_the_total_case_{index:D3}")
-    ];
 }

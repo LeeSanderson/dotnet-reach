@@ -21,15 +21,30 @@ internal sealed class GitAdapter(IProcessRunner runner, string workingDirectory)
     /// </summary>
     private static readonly string[] GlobalOptions = ["-c", "core.quotePath=false"];
 
-    /// <summary>The commit a change is measured against, as the merge-base with a reference.</summary>
+    /// <summary>
+    /// Appended to every <c>ls-files</c>. The adapter runs in the target's directory, which is
+    /// often a subdirectory, and there <c>ls-files</c> lists only that subtree, spelled relative
+    /// to it — so a test project's run saw none of the code under test as tracked or untracked.
+    /// <c>:/</c> widens the listing to the whole repository and <c>--full-name</c> spells it from
+    /// the root, which is the spelling <c>diff</c> already returns.
+    /// </summary>
+    private static readonly string[] WholeRepository = ["--full-name", "--", ":/"];
+
+    /// <summary>
+    /// The commit a change is measured against, as the merge-base with a reference.
+    /// </summary>
     internal Task<ProcessResult> MergeBaseAsync(string reference, CancellationToken cancellationToken = default) =>
         RunAsync(cancellationToken, "merge-base", "HEAD", reference);
 
-    /// <summary>Resolves a reference to a SHA. Also how a reference is shown to exist at all.</summary>
+    /// <summary>
+    /// Resolves a reference to a SHA. Also how a reference is shown to exist at all.
+    /// </summary>
     internal Task<ProcessResult> RevParseAsync(string reference, CancellationToken cancellationToken = default) =>
         RunAsync(cancellationToken, "rev-parse", reference);
 
-    /// <summary>Reports <c>true</c> or <c>false</c> on standard output. A shallow clone has no merge-base to find.</summary>
+    /// <summary>
+    /// Reports <c>true</c> or <c>false</c> on standard output. A shallow clone has no merge-base to find.
+    /// </summary>
     internal Task<ProcessResult> IsShallowCloneAsync(CancellationToken cancellationToken = default) =>
         RunAsync(cancellationToken, "rev-parse", "--is-shallow-repository");
 
@@ -52,13 +67,15 @@ internal sealed class GitAdapter(IProcessRunner runner, string workingDirectory)
     /// under <c>obj/</c> returns as untracked and every project's assembly widens on every run.
     /// </remarks>
     internal Task<ProcessResult> UntrackedPathsAsync(CancellationToken cancellationToken = default) =>
-        RunAsync(cancellationToken, "ls-files", "--others", "--exclude-standard");
+        RunAsync(cancellationToken, ["ls-files", "--others", "--exclude-standard", .. WholeRepository]);
 
     /// <summary>
     /// A file's contents at the baseline. Exits non-zero when the path did not exist there,
     /// which is how an added file is told from a modified one without a second command.
     /// </summary>
+    /// <param name="baseline">The revision to read the file at.</param>
     /// <param name="path">Repository-relative, forward-slashed — the spelling git itself returns.</param>
+    /// <param name="cancellationToken">Stops the git process.</param>
     internal Task<ProcessResult> FileAtBaselineAsync(
         string baseline,
         string path,
@@ -70,9 +87,11 @@ internal sealed class GitAdapter(IProcessRunner runner, string workingDirectory)
     /// can see, which is what makes the complement — untracked <em>and</em> ignored — nameable.
     /// </summary>
     internal Task<ProcessResult> TrackedPathsAsync(CancellationToken cancellationToken = default) =>
-        RunAsync(cancellationToken, "ls-files", "--cached");
+        RunAsync(cancellationToken, ["ls-files", "--cached", .. WholeRepository]);
 
-    /// <summary>The working tree's root, which is what repository-relative paths are relative to.</summary>
+    /// <summary>
+    /// The working tree's root, which is what repository-relative paths are relative to.
+    /// </summary>
     internal Task<ProcessResult> RepositoryRootAsync(CancellationToken cancellationToken = default) =>
         RunAsync(cancellationToken, "rev-parse", "--show-toplevel");
 

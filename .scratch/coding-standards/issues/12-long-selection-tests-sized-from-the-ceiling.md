@@ -10,8 +10,12 @@
 
 **Status:** ready-for-agent
 
-- [ ] The rendering test "the chunker partitions the set with nothing dropped or duplicated" passes on Linux
-- [ ] The invocation tests "a long selection on the testing platform goes through a response file", "re-running overwrites a side-car rather than accumulating" and "a long selection on a host with no channel is chunked" pass on Linux
-- [ ] All four still pass on Windows
-- [ ] No production code changes
-- [ ] Build and format gates remain clean
+- [x] The rendering test "the chunker partitions the set with nothing dropped or duplicated" passes on Linux
+- [x] The invocation tests "a long selection on the testing platform goes through a response file", "re-running overwrites a side-car rather than accumulating" and "a long selection on a host with no channel is chunked" pass on Linux
+- [x] All four still pass on Windows
+- [x] No production code changes
+- [x] Build and format gates remain clean
+
+## Comments
+
+- A shared test helper `tests/Reach.Tests/Rendering/LongSelection.cs` sizes the selection as `CommandLineCeiling.Characters / name length + 100`, so the bare names alone overflow the ceiling. `Every_chunk_fits_under_the_ceiling` uses it too, so that test is meaningful on Linux. Verified on Linux in `mcr.microsoft.com/dotnet/sdk:10.0` (build with `-warnaserror` clean; each named test passes) and on Windows (full suite: 524 passed).

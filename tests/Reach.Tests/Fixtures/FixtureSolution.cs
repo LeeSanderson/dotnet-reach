@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Reach.Reporting;
 
 namespace Reach.Tests.Fixtures;
@@ -20,21 +19,23 @@ namespace Reach.Tests.Fixtures;
 /// </remarks>
 internal sealed class FixtureSolution : IDisposable
 {
-    private readonly TempRepository repository;
+    private readonly TempRepository _repository;
 
-    private FixtureSolution(TempRepository repository) => this.repository = repository;
+    private FixtureSolution(TempRepository repository) => _repository = repository;
 
-    internal string Path => repository.Path;
+    internal string Path => _repository.Path;
 
-    internal string Solution => repository.Combine("Contoso.slnx");
+    internal string Solution => _repository.Combine("Contoso.slnx");
 
-    /// <summary>Copies, commits the baseline, and builds. The returned SHA is the baseline.</summary>
-    internal static FixtureSolution Build(out string baseline, [CallerFilePath] string testFile = "")
+    /// <summary>
+    /// Copies, commits the baseline, and builds. The returned SHA is the baseline.
+    /// </summary>
+    internal static FixtureSolution Build(out string baseline)
     {
         var repository = TempRepository.Create("reach-contoso");
         var fixture = new FixtureSolution(repository);
 
-        Copy(SourceDirectory(testFile), repository.Path);
+        Copy(SourceDirectory(), repository.Path);
 
         repository.WriteFile(".gitignore", "bin/\nobj/\n");
         baseline = repository.Commit("baseline");
@@ -47,7 +48,7 @@ internal sealed class FixtureSolution : IDisposable
     }
 
     internal string WriteFile(string relativePath, string contents) =>
-        repository.WriteFile(relativePath, contents);
+        _repository.WriteFile(relativePath, contents);
 
     internal string ReadFile(string relativePath) =>
         File.ReadAllText(System.IO.Path.Combine(Path, relativePath));
@@ -55,7 +56,9 @@ internal sealed class FixtureSolution : IDisposable
     internal void Delete(string relativePath) =>
         File.Delete(System.IO.Path.Combine(Path, relativePath));
 
-    /// <summary>Rebuilds after a change, for the assertions that need the binaries to agree.</summary>
+    /// <summary>
+    /// Rebuilds after a change, for the assertions that need the binaries to agree.
+    /// </summary>
     internal void Rebuild()
     {
         var build = Run("dotnet", ["build", Solution], Path);
@@ -63,7 +66,9 @@ internal sealed class FixtureSolution : IDisposable
         Assert.True(build.ExitCode == 0, "the fixture solution did not rebuild:\n" + build.Output);
     }
 
-    /// <summary>Runs Reach over the fixture and returns the report it wrote.</summary>
+    /// <summary>
+    /// Runs Reach over the fixture and returns the report it wrote.
+    /// </summary>
     internal async Task<Report> SelectAsync(string baseline, CancellationToken cancellationToken, bool paths = false)
     {
         var timings = new PhaseTimings();
@@ -87,44 +92,54 @@ internal sealed class FixtureSolution : IDisposable
             timings);
     }
 
-    private static string SourceDirectory(string testFile)
+    private static string SourceDirectory()
     {
-        var directory = System.IO.Path.GetDirectoryName(testFile);
-
-        while (directory is not null && !Directory.Exists(System.IO.Path.Combine(directory, ".git")))
-        {
-            directory = System.IO.Path.GetDirectoryName(directory);
-        }
-
-        Assert.NotNull(directory);
-
-        var fixture = System.IO.Path.Combine(directory, "tests", "fixtures", "Contoso");
+        var fixture = RepositoryRoot.Combine("tests", "fixtures", "Contoso");
 
         Assert.True(Directory.Exists(fixture), $"No fixture solution at {fixture}.");
 
         return fixture;
     }
 
+    /// <summary>
+    /// Copies the files git tracks under <paramref name="source"/>, and nothing else on disk.
+    /// </summary>
+    /// <remarks>
+    /// The fixture may have been built in place (CI does, to hold it to the coding standards),
+    /// and that build output must not reach the temporary repository: Reach running with no
+    /// build would find the extra assemblies.
+    /// </remarks>
     private static void Copy(string source, string destination)
     {
-        foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        var listing = new Reach.Processes.ProcessRunner()
+            .RunAsync(new Reach.Processes.ProcessRequest("git", ["ls-files", "-z"], source), CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+
+        Assert.True(listing.ExitCode == 0, "git ls-files failed over the fixture:\n" + listing.StandardError);
+
+        var files = listing.StandardOutput.Split('\0', StringSplitOptions.RemoveEmptyEntries);
+
+        Assert.NotEmpty(files);
+
+        foreach (var file in files)
         {
-            var target = System.IO.Path.Combine(destination, System.IO.Path.GetRelativePath(source, file));
+            var target = System.IO.Path.Combine(destination, file);
 
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(target)!);
-            File.Copy(file, target, overwrite: true);
+            File.Copy(System.IO.Path.Combine(source, file), target, overwrite: true);
         }
     }
 
     private static (int ExitCode, string Output) Run(string executable, string[] arguments, string workingDirectory)
     {
         var result = new Reach.Processes.ProcessRunner()
-            .RunAsync(new Reach.Processes.ProcessRequest(executable, arguments, workingDirectory))
+            .RunAsync(new Reach.Processes.ProcessRequest(executable, arguments, workingDirectory), CancellationToken.None)
             .GetAwaiter()
             .GetResult();
 
         return (result.ExitCode, result.StandardOutput + result.StandardError);
     }
 
-    public void Dispose() => repository.Dispose();
+    public void Dispose() => _repository.Dispose();
 }

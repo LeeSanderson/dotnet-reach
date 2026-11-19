@@ -5,18 +5,6 @@ using Reach.Graph;
 namespace Reach.Selection;
 
 /// <summary>
-/// The unit of selection. Individual cases of a parameterised test are never selected
-/// independently of the method that declares them.
-/// </summary>
-/// <param name="DeclaringType">Fully qualified, as a filter expression will need it.</param>
-internal sealed record TestMethod(MethodId Id, string DeclaringType, string Name)
-{
-    internal string FullyQualifiedName => DeclaringType + "." + Name;
-
-    public override string ToString() => FullyQualifiedName;
-}
-
-/// <summary>
 /// Every test method in one test assembly instance — not only the selected ones, because the
 /// totals, the rendered-match computation and the over-selection measurement all read the
 /// whole list.
@@ -83,22 +71,24 @@ internal static class TestMethods
         return markers;
     }
 
-    private static bool IsMarked(MetadataReader reader, MethodDefinition method, HashSet<string> markers)
+    /// <summary>
+    /// The full name of each attribute in <paramref name="attributes"/> that names its type.
+    /// </summary>
+    internal static IEnumerable<string> AttributeNames(MetadataReader reader, IEnumerable<CustomAttributeHandle> attributes)
     {
-        foreach (var handle in method.GetCustomAttributes())
+        foreach (var handle in attributes)
         {
             var attribute = reader.GetCustomAttribute(handle);
-            var declaring = DeclaringTypeOf(reader, attribute.Constructor);
-            var name = NameOf(reader, declaring);
 
-            if (name is not null && markers.Contains(name))
+            if (NameOf(reader, DeclaringTypeOf(reader, attribute.Constructor)) is { } name)
             {
-                return true;
+                yield return name;
             }
         }
-
-        return false;
     }
+
+    private static bool IsMarked(MetadataReader reader, MethodDefinition method, HashSet<string> markers) =>
+        AttributeNames(reader, method.GetCustomAttributes()).Any(markers.Contains);
 
     private static EntityHandle DeclaringTypeOf(MetadataReader reader, EntityHandle constructor) =>
         constructor.Kind switch
@@ -124,4 +114,18 @@ internal static class TestMethods
             _ => null,
         };
     }
+}
+
+/// <summary>
+/// The unit of selection. Individual cases of a parameterised test are never selected
+/// independently of the method that declares them.
+/// </summary>
+/// <param name="Id">The method's node in the call graph.</param>
+/// <param name="DeclaringType">Fully qualified, as a filter expression will need it.</param>
+/// <param name="Name">The method's name.</param>
+public sealed record TestMethod(MethodId Id, string DeclaringType, string Name)
+{
+    internal string FullyQualifiedName => DeclaringType + "." + Name;
+
+    public override string ToString() => FullyQualifiedName;
 }

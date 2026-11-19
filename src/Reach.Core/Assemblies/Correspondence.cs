@@ -1,54 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using Reach.Reporting;
 
 namespace Reach.Assemblies;
-
-/// <summary>How one recorded document compared against the working tree.</summary>
-internal enum DocumentClass
-{
-    /// <summary>On disk, and the file's bytes hash to the checksum the compiler recorded.</summary>
-    Verified,
-
-    /// <summary>On disk, and they do not. The assembly was compiled from different source.</summary>
-    Mismatched,
-
-    /// <summary>No file on disk: a source generator's output, or the SDK's own generated members.</summary>
-    Generated,
-
-    /// <summary>On disk, but the symbols recorded no checksum to compare against.</summary>
-    Unverifiable,
-
-    /// <summary>
-    /// On disk, untracked <em>and</em> git-ignored. Compiled source Reach cannot see changes
-    /// to, because <c>.gitignore</c> governs only untracked files. Reported, never selected on.
-    /// </summary>
-    Invisible,
-}
-
-internal sealed record DocumentVerdict(SourceDocument Document, DocumentClass Class);
-
-/// <summary>What the run concluded about the correspondence between source and binaries.</summary>
-internal enum CorrespondenceVerdict
-{
-    /// <summary>At least one document was checked, and every checked document agreed.</summary>
-    Verified,
-
-    /// <summary>Nothing could be checked — no symbols, or no checksums in them.</summary>
-    Skipped,
-
-    /// <summary>At least one document disagreed. Exit 5.</summary>
-    Failed,
-}
-
-internal sealed record CorrespondenceResult(
-    CorrespondenceVerdict Verdict,
-    string Message,
-    IReadOnlyList<Notice> Notices,
-    IReadOnlyList<DocumentVerdict> Documents)
-{
-    internal ExitCode ExitCode =>
-        Verdict == CorrespondenceVerdict.Failed ? ExitCode.CorrespondenceFailed : ExitCode.Success;
-}
 
 /// <summary>
 /// Proves that the assemblies Reach is about to read were compiled from the source it diffed.
@@ -81,6 +35,9 @@ internal static class Correspondence
     /// </summary>
     private static readonly string[] BuildDirectories = ["obj", "bin"];
 
+    private static readonly char[] Separators = ['/', '\\'];
+
+    /// <param name="instances">The assemblies whose debug-symbol documents are checked against the working tree.</param>
     /// <param name="visibility">
     /// Which paths git can see. A document that is neither tracked nor listed as an ordinary
     /// untracked file is untracked <em>and</em> ignored.
@@ -89,30 +46,77 @@ internal static class Correspondence
         IReadOnlyList<AssemblyInstance> instances,
         SourceVisibility visibility)
     {
-        var verdicts = new List<DocumentVerdict>();
-        var seen = new HashSet<string>(Paths.Comparer);
-
-        foreach (var document in instances.SelectMany(instance => instance.Assembly.Documents))
-        {
-            // One document belongs to several assembly instances in any multi-targeted
-            // project. Hashing it once is both faster and what keeps the report stable.
-            if (seen.Add(document.Path))
-            {
-                verdicts.Add(new DocumentVerdict(document, Classify(document, visibility)));
-            }
-        }
+        // One document belongs to several assembly instances in any multi-targeted project.
+        // Hashing it once is both faster and what keeps the report stable.
+        var verdicts = instances
+            .SelectMany(instance => instance.Assembly.Documents)
+            .DistinctBy(document => document.Path, Paths.Comparer)
+            .Select(document => new DocumentVerdict(document, Classify(document, visibility)))
+            .ToList();
 
         var mismatched = verdicts.Where(verdict => verdict.Class == DocumentClass.Mismatched).ToArray();
         var verified = verdicts.Count(verdict => verdict.Class == DocumentClass.Verified);
+        var misrooted = Misrooted(instances, verdicts);
+
+        var outcome = (mismatched.Length + misrooted.Count, verified) switch
+        {
+            ( > 0, _) => CorrespondenceVerdict.Failed,
+            (_, > 0) => CorrespondenceVerdict.Verified,
+            _ => CorrespondenceVerdict.Skipped,
+        };
+
+        var messages = new[]
+        {
+            misrooted.Count > 0 ? MisrootedMessage(misrooted) : string.Empty,
+            mismatched.Length > 0 ? Message(mismatched) : string.Empty,
+        };
 
         return new CorrespondenceResult(
-            mismatched.Length > 0
-                ? CorrespondenceVerdict.Failed
-                : verified > 0 ? CorrespondenceVerdict.Verified : CorrespondenceVerdict.Skipped,
-            mismatched.Length > 0 ? Message(mismatched) : string.Empty,
+            outcome,
+            string.Join("\n\n", messages.Where(message => message.Length > 0)),
             Notices(verdicts),
             verdicts);
     }
+
+    /// <summary>
+    /// Assemblies whose <c>/_/</c> was read as the repository root, and not one of whose
+    /// documents is there. A correct mapping cannot produce that: the build compiled those files
+    /// from the working tree, and only a source generator's output has no file. So the build gave
+    /// <c>/_/</c> to another directory — a hand-written <c>SourceRoot</c> with source-control
+    /// queries off — and reading every document as generated would hide it.
+    /// </summary>
+    /// <remarks>
+    /// Per assembly, because the <c>SourceRoot</c> is per project. A wrong root whose mapped paths
+    /// happen to name files fails as a checksum mismatch instead, which needs no rule here.
+    /// </remarks>
+    private static IReadOnlyList<AssemblyInstance> Misrooted(
+        IReadOnlyList<AssemblyInstance> instances,
+        IReadOnlyList<DocumentVerdict> verdicts)
+    {
+        var classes = verdicts.ToDictionary(verdict => verdict.Document.Path, verdict => verdict.Class, Paths.Comparer);
+
+        return
+        [
+            .. instances.Where(instance =>
+            {
+                var mapped = instance.Assembly.Documents.Where(document => document.ReadAsRepositoryRoot).ToArray();
+
+                return mapped.Length > 0
+                    && Array.TrueForAll(mapped, document => classes[document.Path] == DocumentClass.Generated);
+            })
+        ];
+    }
+
+    private static string MisrootedMessage(IReadOnlyList<AssemblyInstance> misrooted) =>
+        "These assemblies were built with deterministic source paths, and none of the source files "
+        + "their symbols record under /_/ is in the repository:\n"
+        + string.Join(
+            "\n",
+            misrooted.Select(instance => $"  {instance.Expected} ({instance.Assembly.Path})").Order(StringComparer.Ordinal))
+        + "\n\nReach reads /_/ as the repository root, which is what the SDK gives it when it can query "
+        + "git. These builds gave it to another directory: a hand-written SourceRoot, or a PathMap, "
+        + "with source-control queries off. Build with -p:DeterministicSourcePaths=false to record "
+        + "real paths, or make the repository root the SourceRoot.";
 
     private static DocumentClass Classify(SourceDocument document, SourceVisibility visibility)
     {
@@ -138,6 +142,8 @@ internal static class Correspondence
             : DocumentClass.Verified;
     }
 
+    [SuppressMessage("Security", "CA5350:Do Not Use Weak Cryptographic Algorithms", Justification = "The hash must match the algorithm the compiler recorded in the PDB; it is not used for security.")]
+    [SuppressMessage("Security", "CA5351:Do Not Use Broken Cryptographic Algorithms", Justification = "The hash must match the algorithm the compiler recorded in the PDB; it is not used for security.")]
     private static byte[]? Hash(SourceDocument document)
     {
         try
@@ -165,9 +171,9 @@ internal static class Correspondence
     }
 
     private static bool IsBuildOutput(string path) =>
-        path
-            .Split('/', '\\')
-            .Any(segment => BuildDirectories.Contains(segment, StringComparer.OrdinalIgnoreCase));
+        Array.Exists(
+            path.Split(Separators),
+            segment => BuildDirectories.Contains(segment, StringComparer.OrdinalIgnoreCase));
 
     private static string Message(IReadOnlyList<DocumentVerdict> mismatched) =>
         "The assemblies Reach read were not compiled from the source in the working tree, so "
@@ -176,7 +182,44 @@ internal static class Correspondence
         + string.Join("\n", mismatched.Select(verdict => "  " + verdict.Document.Path).Order(StringComparer.Ordinal))
         + "\n\nBuild, or drop --no-build.";
 
-    private static IReadOnlyList<Notice> Notices(IReadOnlyList<DocumentVerdict> verdicts)
+    private static IReadOnlyList<Notice> Notices(IReadOnlyList<DocumentVerdict> verdicts) =>
+        [.. new[] { InvisibleNotice(verdicts), UnmappedRootNotice(verdicts) }.OfType<Notice>()];
+
+    /// <summary>
+    /// Documents recorded under a deterministic root Reach could not map. Never guessed: the
+    /// symbols do not say which directory <c>/_1/</c> was, and a guess would turn a disclosed
+    /// gap into a silent one.
+    /// </summary>
+    private static Notice? UnmappedRootNotice(IReadOnlyList<DocumentVerdict> verdicts)
+    {
+        var unmapped = verdicts
+            .Where(verdict => verdict.Document.UnmappedRoot is not null)
+            .ToArray();
+
+        if (unmapped.Length == 0)
+        {
+            return null;
+        }
+
+        var roots = unmapped
+            .Select(verdict => verdict.Document.UnmappedRoot!)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        return new Notice(
+            NoticeCodes.UnmappedDeterministicSourceRoot,
+            // A blind spot: a change to one of these files can be neither verified nor joined.
+            NoticeKind.BlindSpot,
+            $"{unmapped.Length} compiled source file(s) were recorded under a deterministic source root "
+            + $"({string.Join(", ", roots)}) that Reach cannot map to a directory, so they were not "
+            + "checked against the working tree and a change to one cannot select a test. /_/ is read "
+            + "as the repository root, and other roots only where the file is in the NuGet global "
+            + "packages folder. Build with -p:DeterministicSourcePaths=false to record real paths.",
+            new Dictionary<string, object?>(StringComparer.Ordinal) { ["roots"] = roots });
+    }
+
+    private static Notice? InvisibleNotice(IReadOnlyList<DocumentVerdict> verdicts)
     {
         var invisible = verdicts
             .Where(verdict => verdict.Class == DocumentClass.Invisible)
@@ -186,20 +229,82 @@ internal static class Correspondence
 
         if (invisible.Length == 0)
         {
-            return [];
+            return null;
         }
 
-        return
-        [
-            new Notice(
-                NoticeCodes.IgnoredUntrackedAssembly,
-                // A blind spot rather than a widening: Reach can see the file, but it cannot
-                // see changes to it, because git will never report one.
-                NoticeKind.BlindSpot,
-                $"{invisible.Length} compiled source file(s) are untracked and git-ignored, so "
-                + "a change to one is invisible to Reach and cannot select a test: "
-                + string.Join(", ", invisible),
-                new Dictionary<string, object?>(StringComparer.Ordinal) { ["paths"] = invisible }),
-        ];
+        return new Notice(
+            NoticeCodes.IgnoredUntrackedAssembly,
+            // A blind spot rather than a widening: Reach can see the file, but it cannot
+            // see changes to it, because git will never report one.
+            NoticeKind.BlindSpot,
+            $"{invisible.Length} compiled source file(s) are untracked and git-ignored, so "
+            + "a change to one is invisible to Reach and cannot select a test: "
+            + string.Join(", ", invisible),
+            new Dictionary<string, object?>(StringComparer.Ordinal) { ["paths"] = invisible });
     }
+}
+
+/// <summary>
+/// How one recorded document compared against the working tree.
+/// </summary>
+public enum DocumentClass
+{
+    /// <summary>
+    /// On disk, and the file's bytes hash to the checksum the compiler recorded.
+    /// </summary>
+    Verified,
+
+    /// <summary>
+    /// On disk, and they do not. The assembly was compiled from different source.
+    /// </summary>
+    Mismatched,
+
+    /// <summary>
+    /// No file on disk: a source generator's output, or the SDK's own generated members.
+    /// </summary>
+    Generated,
+
+    /// <summary>
+    /// On disk, but the symbols recorded no checksum to compare against.
+    /// </summary>
+    Unverifiable,
+
+    /// <summary>
+    /// On disk, untracked <em>and</em> git-ignored. Compiled source Reach cannot see changes
+    /// to, because <c>.gitignore</c> governs only untracked files. Reported, never selected on.
+    /// </summary>
+    Invisible,
+}
+
+public sealed record DocumentVerdict(SourceDocument Document, DocumentClass Class);
+
+/// <summary>
+/// What the run concluded about the correspondence between source and binaries.
+/// </summary>
+public enum CorrespondenceVerdict
+{
+    /// <summary>
+    /// At least one document was checked, and every checked document agreed.
+    /// </summary>
+    Verified,
+
+    /// <summary>
+    /// Nothing could be checked — no symbols, or no checksums in them.
+    /// </summary>
+    Skipped,
+
+    /// <summary>
+    /// At least one document disagreed. Exit 5.
+    /// </summary>
+    Failed,
+}
+
+public sealed record CorrespondenceResult(
+    CorrespondenceVerdict Verdict,
+    string Message,
+    IReadOnlyList<Notice> Notices,
+    IReadOnlyList<DocumentVerdict> Documents)
+{
+    internal ExitCode ExitCode =>
+        Verdict == CorrespondenceVerdict.Failed ? ExitCode.CorrespondenceFailed : ExitCode.Success;
 }

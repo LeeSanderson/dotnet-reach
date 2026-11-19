@@ -4,13 +4,21 @@ using Reach.Output;
 
 namespace Reach.Reporting;
 
-/// <summary>Serialises the report, and puts it where the command line said.</summary>
-internal static class ReportWriter
+/// <summary>
+/// Serialises the report, and puts it where the command line said.
+/// </summary>
+public static class ReportWriter
 {
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
+
+        // A null in a non-nullable report property is a bug: fail rather than write it.
+        RespectNullableAnnotations = true,
+
+        // Only ever used to serialise, which this setting does not affect.
+        RespectRequiredConstructorParameters = true,
 
         // The report carries filter fragments and type names. HTML-escaping them would make
         // the document unreadable for the one person it exists for.
@@ -23,7 +31,7 @@ internal static class ReportWriter
     /// <summary>
     /// Writes the report and returns where it went, or null when it went to a stream.
     /// </summary>
-    internal static string? Write(Report report, ReportDestination destination, Streams streams)
+    public static string? Write(Report report, ReportDestination destination, Streams streams)
     {
         var json = Serialise(report);
 

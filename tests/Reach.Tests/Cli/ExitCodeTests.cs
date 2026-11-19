@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Reach.Tests.Cli;
 
 /// <summary>
@@ -11,7 +13,7 @@ public class ExitCodeTests
     public void The_set_is_exactly_the_one_the_specification_names()
     {
         var actual = Enum.GetValues<ExitCode>()
-            .ToDictionary(code => code.ToString(), code => (int)code, StringComparer.Ordinal);
+            .ToDictionary(code => code.ToString(), code => Convert.ToInt32(code, CultureInfo.InvariantCulture), StringComparer.Ordinal);
 
         Assert.Equal(
             new Dictionary<string, int>(StringComparer.Ordinal)
@@ -32,6 +34,6 @@ public class ExitCodeTests
     {
         // Success includes an empty selection. Anything else would make every quiet day look
         // like a failure and train pipelines to ignore the code that matters.
-        Assert.Equal(0, (int)ExitCode.Success);
+        Assert.Equal(0, Convert.ToInt32(ExitCode.Success, CultureInfo.InvariantCulture));
     }
 }

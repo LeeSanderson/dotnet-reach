@@ -54,7 +54,9 @@ internal static class FrameworkSelector
         };
     }
 
-    /// <summary><c>4.7.2</c> becomes <c>472</c>, and <c>4.8.0</c> becomes <c>48</c>.</summary>
+    /// <summary>
+    /// <c>4.7.2</c> becomes <c>472</c>, and <c>4.8.0</c> becomes <c>48</c>.
+    /// </summary>
     private static string Digits(Version version)
     {
         var parts = version.Build > 0

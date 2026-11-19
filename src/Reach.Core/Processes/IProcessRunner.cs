@@ -11,7 +11,7 @@ namespace Reach.Processes;
 /// shallow clone, five CI environment variables and a failed build testable without any of
 /// those things being true.
 /// </remarks>
-internal interface IProcessRunner
+public interface IProcessRunner
 {
-    Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken = default);
+    Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken);
 }

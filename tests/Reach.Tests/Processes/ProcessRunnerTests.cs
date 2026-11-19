@@ -11,12 +11,12 @@ namespace Reach.Tests.Processes;
 /// </summary>
 public class ProcessRunnerTests
 {
-    private readonly ProcessRunner runner = new();
+    private readonly ProcessRunner _runner = new();
 
     [Fact]
     public async Task Reports_standard_output_and_a_zero_exit_code()
     {
-        var result = await runner.RunAsync(
+        var result = await _runner.RunAsync(
             new ProcessRequest("git", ["--version"], Environment.CurrentDirectory),
             TestContext.Current.CancellationToken);
 
@@ -28,7 +28,7 @@ public class ProcessRunnerTests
     [Fact]
     public async Task A_non_zero_exit_is_a_result_not_an_exception()
     {
-        var result = await runner.RunAsync(
+        var result = await _runner.RunAsync(
             new ProcessRequest(
                 "git",
                 ["rev-parse", "--verify", "no-such-ref-exists"],
@@ -43,17 +43,17 @@ public class ProcessRunnerTests
     [Fact]
     public async Task A_child_flooding_both_streams_does_not_deadlock()
     {
-        const int Lines = 500;
+        const int lines = 500;
 
         using var script = ChildScript.Chatty();
 
-        var result = await runner.RunAsync(
-            script.Invoke(Lines.ToString()),
+        var result = await _runner.RunAsync(
+            script.Invoke(lines.ToString()),
             TestContext.Current.CancellationToken);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Equal(Lines, result.Lines.Count);
-        Assert.Equal(Lines, result.StandardError.Split('\n').Count(line => line.Contains("err ")));
+        Assert.Equal(lines, result.Lines().Count);
+        Assert.Equal(lines, result.StandardError.Split('\n').Count(line => line.Contains("err ")));
 
         // The point of the assertion: both streams carried far more than a pipe buffer, so
         // a runner that drained them one after the other would have hung rather than failed.
@@ -71,9 +71,9 @@ public class ProcessRunnerTests
         var grandchildBeat = beats.Combine("grandchild.txt");
 
         using var cancellation = new CancellationTokenSource();
-        var run = runner.RunAsync(script.Invoke(childBeat, grandchildBeat), cancellation.Token);
+        var run = _runner.RunAsync(script.Invoke(childBeat, grandchildBeat), cancellation.Token);
 
-        await WaitUntil(() => Beats(childBeat) >= 2 && Beats(grandchildBeat) >= 2);
+        await WaitUntilAsync(() => Beats(childBeat) >= 2 && Beats(grandchildBeat) >= 2);
 
         await cancellation.CancelAsync();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
@@ -93,24 +93,24 @@ public class ProcessRunnerTests
     {
         using var repository = TempRepository.Create("reach repo café-Ω");
 
-        const string Spaced = "a file with spaces.cs";
-        const string NonAscii = "café-Ω.cs";
+        const string spaced = "a file with spaces.cs";
+        const string nonAscii = "café-Ω.cs";
 
-        repository.WriteFile(Spaced, "class A;");
-        repository.WriteFile(NonAscii, "class B;");
+        repository.WriteFile(spaced, "class A;");
+        repository.WriteFile(nonAscii, "class B;");
         repository.Commit("baseline");
 
         // -c core.quotePath=false is load-bearing, not tidiness: without it git returns
         // "caf\303\251-\316\251.cs", which matches no file in the working tree.
-        var result = await runner.RunAsync(
+        var result = await _runner.RunAsync(
             new ProcessRequest(
                 "git",
-                ["-c", "core.quotePath=false", "ls-files", "--", Spaced, NonAscii],
+                ["-c", "core.quotePath=false", "ls-files", "--", spaced, nonAscii],
                 repository.Path),
             TestContext.Current.CancellationToken);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Equal([Spaced, NonAscii], result.Lines.Order(StringComparer.Ordinal));
+        Assert.Equal([spaced, nonAscii], result.Lines().Order(StringComparer.Ordinal));
     }
 
     private static int Beats(string path)
@@ -125,7 +125,7 @@ public class ProcessRunnerTests
         }
     }
 
-    private static async Task WaitUntil(Func<bool> condition)
+    private static async Task WaitUntilAsync(Func<bool> condition)
     {
         var deadline = Stopwatch.StartNew();
 

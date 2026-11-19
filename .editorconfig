@@ -1,14 +1,19 @@
 # Deliberately small. `dotnet format --verify-no-changes` is the gate, and every rule added
 # here is a rule the gate then enforces, so only settings the codebase already keeps appear.
-# end_of_line is left unset on purpose: .gitattributes normalises it per platform.
+# end_of_line must match .gitattributes (ADR-0017): CRLF everywhere, LF for shell scripts and
+# Husky hooks, so git and the formatter agree on every platform.
 root = true
 
 [*]
 charset = utf-8
+end_of_line = crlf
 indent_style = space
 indent_size = 4
 insert_final_newline = true
 trim_trailing_whitespace = true
+
+[{*.sh,.husky/**}]
+end_of_line = lf
 
 [*.{json,yml,yaml,csproj,props,targets,slnx}]
 indent_size = 2

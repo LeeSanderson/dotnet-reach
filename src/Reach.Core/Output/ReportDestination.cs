@@ -4,13 +4,13 @@ namespace Reach.Output;
 /// Where <c>report.json</c> goes. <c>--report -</c> sends it to standard output and moves the
 /// human summary to standard error, so a consumer can pipe the JSON straight into a parser.
 /// </summary>
-internal sealed record ReportDestination(string? Path)
+public sealed record ReportDestination(string? Path)
 {
     internal const string StandardOutputToken = "-";
 
     internal bool ToStandardOutput => Path is null;
 
-    internal static ReportDestination Resolve(
+    public static ReportDestination Resolve(
         string? report,
         ReachDirectory directory,
         string workingDirectory) => report switch

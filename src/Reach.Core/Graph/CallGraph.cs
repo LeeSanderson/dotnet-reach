@@ -1,9 +1,13 @@
 namespace Reach.Graph;
 
-/// <summary>One call edge. No string-typed field, by design and by test.</summary>
+/// <summary>
+/// One call edge. No string-typed field, by design and by test.
+/// </summary>
 internal readonly record struct Edge(MethodId From, MethodId To, EdgeProvenance Provenance);
 
-/// <summary>The callers of one node, with the provenance of each edge.</summary>
+/// <summary>
+/// The callers of one node, with the provenance of each edge.
+/// </summary>
 internal readonly ref struct IncomingEdges(ReadOnlySpan<MethodId> sources, ReadOnlySpan<EdgeProvenance> provenances)
 {
     internal ReadOnlySpan<MethodId> Sources { get; } = sources;
@@ -23,17 +27,17 @@ internal readonly ref struct IncomingEdges(ReadOnlySpan<MethodId> sources, ReadO
 /// reconstruct backwards. A forward index would be a second structure obliged to agree with
 /// the first.
 /// </remarks>
-internal sealed class CallGraph
+public sealed class CallGraph
 {
-    private readonly Dictionary<MethodId, int> indexOf;
-    private readonly MethodId[] nodes;
+    private readonly Dictionary<MethodId, int> _indexOf;
+    private readonly MethodId[] _nodes;
 
     // Compressed sparse row over the reversed edges: offsets[i]..offsets[i+1] indexes the
     // callers of nodes[i]. Inverted once after the pass rather than maintained during it — the
     // node count is not known until the pass ends.
-    private readonly int[] offsets;
-    private readonly MethodId[] sources;
-    private readonly EdgeProvenance[] provenances;
+    private readonly int[] _offsets;
+    private readonly MethodId[] _sources;
+    private readonly EdgeProvenance[] _provenances;
 
     private CallGraph(
         Dictionary<MethodId, int> indexOf,
@@ -42,33 +46,35 @@ internal sealed class CallGraph
         MethodId[] sources,
         EdgeProvenance[] provenances)
     {
-        this.indexOf = indexOf;
-        this.nodes = nodes;
-        this.offsets = offsets;
-        this.sources = sources;
-        this.provenances = provenances;
+        _indexOf = indexOf;
+        _nodes = nodes;
+        _offsets = offsets;
+        _sources = sources;
+        _provenances = provenances;
     }
 
-    internal IReadOnlyList<MethodId> Nodes => nodes;
+    internal IReadOnlyList<MethodId> Nodes => _nodes;
 
-    internal int EdgeCount => sources.Length;
+    internal int EdgeCount => _sources.Length;
 
-    internal bool Contains(MethodId id) => indexOf.ContainsKey(id);
+    internal bool Contains(MethodId id) => _indexOf.ContainsKey(id);
 
-    /// <summary>Every method that can invoke <paramref name="id"/>. The only direction the graph indexes.</summary>
+    /// <summary>
+    /// Every method that can invoke <paramref name="id"/>. The only direction the graph indexes.
+    /// </summary>
     internal IncomingEdges CallersOf(MethodId id)
     {
-        if (!indexOf.TryGetValue(id, out var index))
+        if (!_indexOf.TryGetValue(id, out var index))
         {
             return default;
         }
 
-        var start = offsets[index];
-        var length = offsets[index + 1] - start;
+        var start = _offsets[index];
+        var length = _offsets[index + 1] - start;
 
         return new IncomingEdges(
-            sources.AsSpan(start, length),
-            provenances.AsSpan(start, length));
+            _sources.AsSpan(start, length),
+            _provenances.AsSpan(start, length));
     }
 
     /// <summary>
@@ -116,7 +122,7 @@ internal sealed class CallGraph
 
         var sources = new MethodId[edges.Count];
         var provenances = new EdgeProvenance[edges.Count];
-        var cursor = (int[])offsets.Clone();
+        int[] cursor = [.. offsets];
 
         foreach (var edge in edges)
         {

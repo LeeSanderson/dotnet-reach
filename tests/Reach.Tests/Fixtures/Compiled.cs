@@ -9,36 +9,6 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Reach.Tests.Fixtures;
 
-/// <summary>One assembly compiled from a source string, with its portable PDB.</summary>
-/// <param name="Symbols">Empty when the symbols were embedded in <paramref name="Image"/>.</param>
-internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbols)
-{
-    /// <summary>Writes the assembly and, unless they are embedded, its symbols.</summary>
-    internal string WriteTo(string directory)
-    {
-        Directory.CreateDirectory(directory);
-
-        var path = Path.Combine(directory, Name + ".dll");
-
-        File.WriteAllBytes(path, Image);
-
-        if (Symbols.Length > 0)
-        {
-            File.WriteAllBytes(Path.ChangeExtension(path, ".pdb"), Symbols);
-        }
-
-        return path;
-    }
-
-    /// <summary>Opens the image the way production code does, without writing anything to disk.</summary>
-    internal T Read<T>(Func<MetadataReader, T> read)
-    {
-        using var peReader = new PEReader(ImmutableArray.Create(Image));
-
-        return read(peReader.GetMetadataReader());
-    }
-}
-
 /// <summary>
 /// Compiles C# to real IL in memory. This is what "anything testable in memory is tested in
 /// memory" buys: an in-memory compilation and a file on disk produce the same
@@ -47,27 +17,34 @@ internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbol
 /// </summary>
 internal static class Compiled
 {
-    /// <summary>What <see cref="File.WriteAllText(string, string?)"/> writes, byte for byte.</summary>
+    /// <summary>
+    /// What <see cref="File.WriteAllText(string, string?)"/> writes, byte for byte.
+    /// </summary>
     private static readonly Encoding Utf8NoPreamble = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
     private static readonly Lazy<ImmutableArray<MetadataReference>> FrameworkReferences =
         new(() =>
         [
-            .. ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+            .. (AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string
+                ?? throw new InvalidOperationException("The runtime reported no trusted platform assemblies."))
                 .Split(Path.PathSeparator)
                 .Where(path => path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-                .Select(path => (MetadataReference)MetadataReference.CreateFromFile(path))
+                .Select(MetadataReference (path) => MetadataReference.CreateFromFile(path))
         ]);
 
     /// <summary>
     /// Compiles one source file.
     /// </summary>
+    /// <param name="name">The assembly name.</param>
+    /// <param name="source">The C# to compile.</param>
     /// <param name="documentPath">
     /// The path the debug symbols will record. What first-party classification reads, so tests
     /// can put an assembly's source inside or outside a working tree without moving a file.
     /// </param>
     /// <param name="targetFramework">Stamped as <c>TargetFrameworkAttribute</c>, as the SDK does.</param>
     /// <param name="targetPlatform">Stamped as <c>TargetPlatformAttribute</c> when given.</param>
+    /// <param name="references">Other compiled assemblies this one references.</param>
+    /// <param name="embedSymbols">Put the portable PDB inside the image.</param>
     internal static CompiledAssembly Assembly(
         string name,
         string source,
@@ -78,9 +55,22 @@ internal static class Compiled
         bool embedSymbols = false) =>
         Assembly(name, [(source, documentPath)], targetFramework, targetPlatform, references, embedSymbols);
 
+    /// <summary>
+    /// Compiles several source files into one assembly.
+    /// </summary>
+    /// <param name="name">The assembly name.</param>
+    /// <param name="files">Each file's C#, with the path the debug symbols will record for it.</param>
+    /// <param name="targetFramework">Stamped as <c>TargetFrameworkAttribute</c>, as the SDK does.</param>
+    /// <param name="targetPlatform">Stamped as <c>TargetPlatformAttribute</c> when given.</param>
+    /// <param name="references">Other compiled assemblies this one references.</param>
     /// <param name="embedSymbols">
     /// Put the portable PDB inside the image, as <c>&lt;DebugType&gt;embedded&lt;/DebugType&gt;</c>
     /// does. Both shapes have to verify identically.
+    /// </param>
+    /// <param name="pathMap">
+    /// Rewrites the paths the debug symbols record, as the compiler's <c>-pathmap</c> does. A CI
+    /// build passes one (<c>DeterministicSourcePaths</c>) that records the repository root as
+    /// <c>/_/</c>. Each prefix is a directory ending in a separator; the first that matches wins.
     /// </param>
     internal static CompiledAssembly Assembly(
         string name,
@@ -88,7 +78,8 @@ internal static class Compiled
         string targetFramework = ".NETCoreApp,Version=v10.0",
         string? targetPlatform = null,
         IEnumerable<CompiledAssembly>? references = null,
-        bool embedSymbols = false)
+        bool embedSymbols = false,
+        IEnumerable<(string Prefix, string Replacement)>? pathMap = null)
     {
         var options = new CSharpParseOptions(LanguageVersion.Preview);
 
@@ -114,8 +105,8 @@ internal static class Compiled
             trees,
             [
                 .. FrameworkReferences.Value,
-                .. (references ?? []).Select(reference =>
-                    (MetadataReference)MetadataReference.CreateFromImage(reference.Image))
+                .. (references ?? []).Select(MetadataReference (reference) =>
+                    MetadataReference.CreateFromImage(reference.Image))
             ],
             new CSharpCompilationOptions(
                 OutputKind.DynamicallyLinkedLibrary,
@@ -126,7 +117,15 @@ internal static class Compiled
                 specificDiagnosticOptions: new Dictionary<string, ReportDiagnostic>
                 {
                     ["CS0436"] = ReportDiagnostic.Suppress,
-                }));
+                },
+                // The compiler applies -pathmap through the source resolver. Only set when asked
+                // for, so every other fixture records its document path exactly as given.
+                sourceReferenceResolver: pathMap is null
+                    ? null
+                    : new SourceFileResolver(
+                        [],
+                        baseDirectory: null,
+                        [.. pathMap.Select(entry => KeyValuePair.Create(entry.Prefix, entry.Replacement))])));
 
         using var image = new MemoryStream();
         using var symbols = new MemoryStream();
@@ -161,5 +160,43 @@ internal static class Compiled
             [assembly: System.Runtime.Versioning.TargetFramework("{targetFramework}")]
             {platform}
             """;
+    }
+}
+
+/// <summary>
+/// One assembly compiled from a source string, with its portable PDB.
+/// </summary>
+/// <param name="Name">The assembly name, and the file name it is written under.</param>
+/// <param name="Image">The assembly's bytes.</param>
+/// <param name="Symbols">Empty when the symbols were embedded in <paramref name="Image"/>.</param>
+internal sealed record CompiledAssembly(string Name, byte[] Image, byte[] Symbols)
+{
+    /// <summary>
+    /// Writes the assembly and, unless they are embedded, its symbols.
+    /// </summary>
+    internal string WriteTo(string directory)
+    {
+        Directory.CreateDirectory(directory);
+
+        var path = Path.Combine(directory, Name + ".dll");
+
+        File.WriteAllBytes(path, Image);
+
+        if (Symbols.Length > 0)
+        {
+            File.WriteAllBytes(Path.ChangeExtension(path, ".pdb"), Symbols);
+        }
+
+        return path;
+    }
+
+    /// <summary>
+    /// Opens the image the way production code does, without writing anything to disk.
+    /// </summary>
+    internal T Read<T>(Func<MetadataReader, T> inspect)
+    {
+        using var peReader = new PEReader(ImmutableArray.Create(Image));
+
+        return inspect(peReader.GetMetadataReader());
     }
 }

@@ -114,7 +114,9 @@ internal static class TargetDiscovery
                 : $"Point Reach at {solution} instead."));
     }
 
-    /// <summary>Read only far enough to name the solution. Never expanded into a project list.</summary>
+    /// <summary>
+    /// Read only far enough to name the solution. Never expanded into a project list.
+    /// </summary>
     private static string? UnderlyingSolution(string filterPath)
     {
         try

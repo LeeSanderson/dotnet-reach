@@ -129,6 +129,18 @@ The gaps that can cost you a regression. Listed worst first.
   the whole-type widening upgrade path above.
 - **Direction**: under-selection. **Detectable**: no. **Upgrade path**: framework models.
 
+### Test lifecycle the recognition table does not model
+- **Shape**: a test reaches what its framework runs around it through synthesised edges
+  ([ADR-0019](adr/0019-a-test-reaches-its-class-lifecycle.md)): constructors, the static
+  constructor, `Dispose`/`DisposeAsync`, and each supported framework's setup, teardown and
+  fixtures. A hook the framework finds some other way gets no edge. Examples are xUnit's
+  `BeforeAfterTestAttribute`, NUnit's `ITestAction` attributes, a custom attribute that derives
+  from a setup attribute, and a fixture the framework creates from a generic type argument it
+  cannot name.
+- **Direction**: under-selection. **Detectable**: no.
+- **Upgrade path**: one more row of data in the recognition table for each hook found in
+  practice.
+
 ### Renames are never detected
 - **Shape**: change detection is keyed on the declared type
   ([ADR-0005](adr/0005-change-detection-is-keyed-on-declared-type.md)), so a renamed type reads
@@ -142,6 +154,30 @@ The gaps that can cost you a regression. Listed worst first.
 - **Direction**: under-selection.
 - **Detectable**: **yes** — `ignored-untracked-assembly`. Reach can see the file; it cannot see
   its history, so it cannot decide whether it changed.
+
+### Deterministic source roots other than the repository root
+- **Shape**: a CI build (`ContinuousIntegrationBuild=true`, which turns on
+  `DeterministicSourcePaths`) records source paths with a prefix instead of the real directory.
+  Reach maps `/_/` back to the git top-level, which is what the SDK assigns it, and git
+  submodules nest under it. Further roots (`/_1/`, `/_2/`, ...) are NuGet package folders and
+  any `SourceRoot` a build adds itself. Reach maps a file under one only when it exists at the
+  same relative path in the NuGet global packages folder (`NUGET_PACKAGES`, else
+  `~/.nuget/packages`). Nothing in the debug symbols says which directory the others stood
+  for, so Reach does not guess. Their files are not checked against the working tree, and a
+  change to one cannot join to a method. See
+  [ADR-0018](adr/0018-deterministic-source-paths-map-to-the-repository-root.md).
+- **Direction**: under-selection. An assembly recorded *only* under such a root is not
+  first-party, and discovery fails and names the cause.
+- **Detectable**: **yes** — `unmapped-deterministic-source-root`. It also fires, with no
+  under-selection, for package content restored to a packages folder configured some other way
+  (`globalPackagesFolder`, `RestorePackagesPath`, fallback folders). Workaround: build with
+  `-p:DeterministicSourcePaths=false`, which records real paths.
+- **`/_/` read as the wrong directory** (source-control queries off, and a hand-written
+  `SourceRoot` that is not the repository root) fails the run rather than under-selecting. If
+  none of an assembly's `/_/` files is in the repository, correspondence exits 5 and names the
+  cause. If a mapped path names a file with other content, the checksum fails. Not detected: a
+  wrong root where some mapped paths name files with *identical* content. Those files verify,
+  and the rest read as generated.
 
 ### Stale output under `--no-build`
 - **Shape**: an assembly whose own sources are unchanged — so
@@ -197,6 +233,15 @@ and the first one distorts the numbers Reach reports about itself.
   risk is untouched**. A **stack merge** takes the common supertype, keeping full fan-out at that
   site. An **unconstrained generic receiver** falls to the slot-defining declaration.
 - **Direction**: over-selection. **Detectable**: no.
+
+### Collection fixtures and setup fixtures reach the whole test assembly
+- **Shape**: an xUnit `ICollectionFixture<T>` runs only for the test classes in its
+  collection, and an NUnit `[SetUpFixture]` only for the fixtures in its namespace and below.
+  Reach connects both to every test in the assembly
+  ([ADR-0019](adr/0019-a-test-reaches-its-class-lifecycle.md)), so a change reached only from
+  one selects tests that never use it.
+- **Direction**: over-selection. **Detectable**: no.
+- **Upgrade path**: match collection names and namespaces.
 
 ### Static abstract interface members widen to every implementer
 - **Shape**: the implementation is selected by the generic instantiation at the call site, which

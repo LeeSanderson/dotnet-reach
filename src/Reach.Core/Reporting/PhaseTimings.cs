@@ -10,14 +10,24 @@ namespace Reach.Reporting;
 /// Segregated into the envelope's one clearly-marked object, so that excluding a single key
 /// makes two reports comparable.
 /// </remarks>
-internal sealed class PhaseTimings
+public sealed class PhaseTimings(TimeProvider clock)
 {
-    private readonly Dictionary<string, long> phases = new(StringComparer.Ordinal);
-    private readonly Stopwatch total = Stopwatch.StartNew();
+    private readonly Dictionary<string, long> _phases = new(StringComparer.Ordinal);
+    private readonly Stopwatch _total = Stopwatch.StartNew();
 
-    internal DateTimeOffset StartedUtc { get; } = DateTimeOffset.UtcNow;
+    /// <summary>
+    /// Starts timing against the system clock.
+    /// </summary>
+    public PhaseTimings()
+        : this(TimeProvider.System)
+    {
+    }
 
-    /// <summary>Times <paramref name="work"/> and records it under <paramref name="phase"/>.</summary>
+    internal DateTimeOffset StartedUtc { get; } = clock.GetUtcNow();
+
+    /// <summary>
+    /// Times <paramref name="work"/> and records it under <paramref name="phase"/>.
+    /// </summary>
     internal async Task<T> MeasureAsync<T>(string phase, Func<Task<T>> work)
     {
         var timer = Stopwatch.StartNew();
@@ -47,13 +57,13 @@ internal sealed class PhaseTimings
     }
 
     internal void Record(string phase, TimeSpan elapsed) =>
-        phases[phase] = phases.GetValueOrDefault(phase) + (long)elapsed.TotalMilliseconds;
+        _phases[phase] = _phases.GetValueOrDefault(phase) + (elapsed.Ticks / TimeSpan.TicksPerMillisecond);
 
     internal ReportTimings ToReport() =>
         new()
         {
             StartedUtc = StartedUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
-            TotalMs = (long)total.Elapsed.TotalMilliseconds,
-            Phases = new SortedDictionary<string, long>(phases, StringComparer.Ordinal),
+            TotalMs = _total.Elapsed.Ticks / TimeSpan.TicksPerMillisecond,
+            Phases = new SortedDictionary<string, long>(_phases, StringComparer.Ordinal),
         };
 }

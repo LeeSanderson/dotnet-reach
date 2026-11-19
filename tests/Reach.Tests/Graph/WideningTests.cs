@@ -399,7 +399,9 @@ public class WideningTests
         Assert.Equal(1, graphs.Result.HierarchyConstructions);
     }
 
-    /// <summary>Whether <paramref name="from"/> can reach <paramref name="to"/> at all.</summary>
+    /// <summary>
+    /// Whether <paramref name="from"/> can reach <paramref name="to"/> at all.
+    /// </summary>
     private static bool Reaches(Graphs graphs, MethodId from, MethodId to) =>
         Reach.Selection.ReverseWalk.From(graphs.Graph, [to]).ContainsKey(from);
 }

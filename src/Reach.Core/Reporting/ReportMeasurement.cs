@@ -1,3 +1,4 @@
+using System.Globalization;
 using Reach.Rendering;
 using Reach.Selection;
 
@@ -27,7 +28,7 @@ namespace Reach.Reporting;
 /// widened path reads <c>compiled</c>, so this <em>understates</em> widening's contribution — a
 /// registered measurement limitation, with a second traversal as the upgrade path.
 /// </param>
-internal sealed record ReportMeasurement(
+public sealed record ReportMeasurement(
     int Selected,
     int WillRun,
     int Total,
@@ -35,10 +36,20 @@ internal sealed record ReportMeasurement(
     int WidenedPairs)
 {
     /// <summary>
+    /// The ratio's precision in the report: hundredths of a percent.
+    /// </summary>
+    private const int RatioDecimals = 4;
+
+    /// <summary>
+    /// A ratio of one is a hundred percent.
+    /// </summary>
+    private const int PercentPerUnit = 100;
+
+    /// <summary>
     /// Null when nothing was enumerable, which is reported as <c>unknown</c> rather than as a
     /// zero denominator.
     /// </summary>
-    public double? Ratio => Total > 0 ? Math.Round((double)WillRun / Total, 4) : null;
+    public double? Ratio => Total > 0 ? Math.Round(Fraction(WillRun, Total), RatioDecimals, MidpointRounding.ToEven) : null;
 
     internal static ReportMeasurement Of(RenderedSelection rendered)
     {
@@ -64,17 +75,35 @@ internal sealed record ReportMeasurement(
             .Sum(test => test.Changes.Count);
 
     /// <summary>
+    /// Floating-point division: both counts widen to <see cref="double"/> on the way in.
+    /// </summary>
+    private static double Fraction(double part, double whole) => part / whole;
+
+    /// <summary>
     /// The line a person reads. Two numbers, never one — no estimated denominator and no
-    /// silent zero.
+    /// silent zero. Culture-invariant, so every host reads the same line; the percentage is a
+    /// rounded whole number and a literal <c>%</c>, because even the invariant culture's
+    /// <c>P0</c> pattern inserts a space.
     /// </summary>
     internal string Describe()
     {
         var head = Ratio is { } ratio
-            ? $"selected {WillRun:N0} of {Total:N0} tests ({ratio:P0})"
-            : $"selected {WillRun:N0} tests of an unknown total";
+            ? string.Create(
+                CultureInfo.InvariantCulture,
+                $"selected {WillRun:N0} of {Total:N0} tests ({Percent(ratio)}%)")
+            : string.Create(CultureInfo.InvariantCulture, $"selected {WillRun:N0} tests of an unknown total");
 
         return ProjectsRunInFull == 0
             ? head
-            : $"{head} · {ProjectsRunInFull} project(s) on unrecognised frameworks run in full";
+            : string.Create(
+                CultureInfo.InvariantCulture,
+                $"{head} · {ProjectsRunInFull} project(s) on unrecognised frameworks run in full");
     }
+
+    /// <summary>
+    /// Midpoints round to even, as ADR-0016 prescribes and as the <c>P0</c> specifier this
+    /// replaces did on .NET 10: one of eight is <c>12%</c>, not <c>13%</c>.
+    /// </summary>
+    private static double Percent(double ratio) =>
+        Math.Round(ratio * PercentPerUnit, MidpointRounding.ToEven);
 }

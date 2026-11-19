@@ -109,7 +109,8 @@ The projects Reach asks the build to produce. May be narrower than analysis scop
 
 **First-party assembly**:
 An assembly built from source inside the working tree, identified by the source documents
-its debug symbols point at. Everything else in the output — package dependencies,
+its debug symbols point at. A CI build's deterministic `/_/` prefix reads as the repository
+root (ADR-0018). Everything else in the output — package dependencies,
 framework assemblies — is not first-party and is not analysed.
 _Avoid_: local assembly, our code, project assembly
 
@@ -143,6 +144,12 @@ _Avoid_: missed test, false negative
 The unit of selection. Individual cases of a parameterised test are never selected
 independently of the method that declares them.
 _Avoid_: test case, test, fact, theory
+
+**Test lifecycle**:
+What a test framework runs around a test method besides the method itself: its class's
+constructors and disposal, its setup and teardown, and the fixtures it is given. A test
+method reaches it through synthesised edges (ADR-0019).
+_Avoid_: test setup, fixture code
 
 **Whole-project selection**:
 Selecting every test in a project because Reach cannot analyse it — an unrecognised test

@@ -15,9 +15,9 @@ namespace Reach.Graph;
 /// same type — and an <c>IAssemblyReader</c> wrapping it would be an interface nearly as
 /// complex as its implementation.
 /// </remarks>
-internal sealed class GraphAssembly
+public sealed class GraphAssembly
 {
-    private Dictionary<string, List<MethodId>>? index;
+    private Dictionary<string, List<MethodId>>? _index;
 
     internal GraphAssembly(
         int ordinal,
@@ -49,7 +49,9 @@ internal sealed class GraphAssembly
 
     internal MetadataReader Reader { get; }
 
-    /// <summary>Null when the metadata came from somewhere other than a PE file.</summary>
+    /// <summary>
+    /// Null when the metadata came from somewhere other than a PE file.
+    /// </summary>
     internal PEReader? PEReader { get; }
 
     /// <summary>
@@ -61,7 +63,7 @@ internal sealed class GraphAssembly
     /// function-pointer parameters leave residual ambiguity, and the safe answer there is to
     /// edge to every candidate.
     /// </remarks>
-    internal IReadOnlyDictionary<string, List<MethodId>> Index => index ??= BuildIndex();
+    internal IReadOnlyDictionary<string, List<MethodId>> Index => _index ??= BuildIndex();
 
     private Dictionary<string, List<MethodId>> BuildIndex()
     {

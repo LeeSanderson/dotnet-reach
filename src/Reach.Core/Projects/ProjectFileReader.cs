@@ -81,18 +81,22 @@ internal static class ProjectFileReader
             : declared;
     }
 
+    /// <summary>
+    /// The frameworks MSBuild actually builds. The SDK multi-targets only while
+    /// <c>TargetFramework</c> is empty, so a non-empty one — from the project or inherited —
+    /// beats any <c>TargetFrameworks</c>, and a project's own empty <c>TargetFramework</c>
+    /// clears an inherited one.
+    /// </summary>
     private static IReadOnlyList<string> TargetFrameworksOf(XElement? project, XElement? inherited)
     {
-        var many = Property(project, "TargetFrameworks") ?? Property(inherited, "TargetFrameworks");
+        var one = Split(Property(project, "TargetFramework") ?? Property(inherited, "TargetFramework") ?? "");
 
-        if (many is not null)
+        if (one.Length > 0)
         {
-            return Split(many);
+            return one;
         }
 
-        var one = Property(project, "TargetFramework") ?? Property(inherited, "TargetFramework");
-
-        return one is null ? [] : Split(one);
+        return Split(Property(project, "TargetFrameworks") ?? Property(inherited, "TargetFrameworks") ?? "");
     }
 
     private static string[] Split(string value) =>
@@ -133,7 +137,9 @@ internal static class ProjectFileReader
             .Select(id => id!)
     ];
 
-    /// <summary>Reads an attribute or a child element — MSBuild metadata can be written either way.</summary>
+    /// <summary>
+    /// Reads an attribute or a child element — MSBuild metadata can be written either way.
+    /// </summary>
     private static string? Metadata(XElement element, string name) =>
         element.Attribute(name)?.Value
         ?? element.Elements().FirstOrDefault(child => child.Name.LocalName == name)?.Value;
@@ -141,14 +147,18 @@ internal static class ProjectFileReader
     private static bool IsFalse(string? value) =>
         string.Equals(value?.Trim(), "false", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>The last declaration wins, which is what MSBuild does for an unconditioned property.</summary>
+    /// <summary>
+    /// The last declaration wins, which is what MSBuild does for an unconditioned property.
+    /// </summary>
     private static string? Property(XElement? project, string name) =>
         Descendants(project, name).LastOrDefault()?.Value.Trim();
 
     private static IEnumerable<XElement> Elements(XElement? project, string name) =>
         Descendants(project, name);
 
-    /// <summary>Matched on local name, because a project file may or may not carry the MSBuild namespace.</summary>
+    /// <summary>
+    /// Matched on local name, because a project file may or may not carry the MSBuild namespace.
+    /// </summary>
     private static IEnumerable<XElement> Descendants(XElement? project, string name) =>
         project?.Descendants().Where(element => element.Name.LocalName == name) ?? [];
 }

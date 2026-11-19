@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Reach.Reporting;
 using Reach.Tests.Fixtures;
@@ -21,27 +20,38 @@ namespace Reach.Tests.Acceptance;
 /// </remarks>
 public sealed partial class ExampleReportTests : IDisposable
 {
-    private readonly FixtureSolution fixture;
-    private readonly string baseline;
+    private static readonly JsonSerializerOptions Readable = new()
+    {
+        WriteIndented = true,
+        RespectNullableAnnotations = true,
+        RespectRequiredConstructorParameters = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
 
-    public ExampleReportTests() => fixture = FixtureSolution.Build(out baseline);
+    private readonly FixtureSolution _fixture;
+    private readonly string _baseline;
+
+    public ExampleReportTests() => _fixture = FixtureSolution.Build(out _baseline);
 
     [Fact]
     public async Task The_committed_example_is_what_the_determinism_fixture_produces()
     {
-        var path = fixture.ReadFile("src/Contoso.Core/Invoice.cs");
+        var path = _fixture.ReadFile("src/Contoso.Core/Invoice.cs");
 
-        fixture.WriteFile(
+        // A miss would leave the fixture unchanged and the report a quiet no-changes.
+        Assert.Contains("public static int Tax(int net) => net * StandardRate / Percent;", path);
+
+        _fixture.WriteFile(
             "src/Contoso.Core/Invoice.cs",
             path.Replace(
-                "public int Tax(int net) => net * StandardRate / 100;",
-                "public int Tax(int net) => (net * StandardRate / 100) + 0;",
+                "public static int Tax(int net) => net * StandardRate / Percent;",
+                "public static int Tax(int net) => (net * StandardRate / Percent) + 0;",
                 StringComparison.Ordinal));
 
-        fixture.Rebuild();
+        _fixture.Rebuild();
 
-        var report = await fixture.SelectAsync(baseline, TestContext.Current.CancellationToken);
-        var actual = Stabilise(ReportWriter.Serialise(report), fixture.Path);
+        var report = await _fixture.SelectAsync(_baseline, TestContext.Current.CancellationToken);
+        var actual = Stabilise(ReportWriter.Serialise(report), _fixture.Path);
 
         AssertExample(actual);
     }
@@ -51,7 +61,7 @@ public sealed partial class ExampleReportTests : IDisposable
     /// the SHAs and the tool version. Everything the documentation actually walks survives.
     /// </summary>
     [System.Text.RegularExpressions.GeneratedRegex("[0-9a-f]{40}")]
-    private static partial System.Text.RegularExpressions.Regex Sha();
+    private static partial System.Text.RegularExpressions.Regex Sha { get; }
 
     private static string Stabilise(string json, string fixtureRoot)
     {
@@ -67,7 +77,7 @@ public sealed partial class ExampleReportTests : IDisposable
             .Replace("/repo\\\\", "/repo/", StringComparison.Ordinal)
             .Replace("\\\\", "/", StringComparison.Ordinal);
 
-        json = Sha().Replace(json, "0000000000000000000000000000000000000000");
+        json = Sha.Replace(json, "0000000000000000000000000000000000000000");
 
         using var document = JsonDocument.Parse(json);
 
@@ -80,13 +90,7 @@ public sealed partial class ExampleReportTests : IDisposable
                 : property.Value;
         }
 
-        return JsonSerializer.Serialize(
-            root,
-            new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            }).ReplaceLineEndings("\n");
+        return JsonSerializer.Serialize(root, Readable).ReplaceLineEndings("\n");
     }
 
     /// <summary>
@@ -142,5 +146,5 @@ public sealed partial class ExampleReportTests : IDisposable
         Assert.Equal(File.ReadAllText(path).ReplaceLineEndings("\n").TrimEnd(), actual.TrimEnd());
     }
 
-    public void Dispose() => fixture.Dispose();
+    public void Dispose() => _fixture.Dispose();
 }

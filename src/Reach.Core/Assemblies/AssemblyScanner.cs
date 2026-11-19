@@ -3,22 +3,6 @@ using System.Reflection.PortableExecutable;
 
 namespace Reach.Assemblies;
 
-/// <summary>One candidate file, opened and read.</summary>
-/// <param name="IsFirstParty">
-/// True when the debug symbols point at source inside the working tree. Symbols sitting
-/// <em>beside</em> an assembly prove nothing — <c>.pdb</c> is an
-/// <c>AllowedReferenceRelatedFileExtension</c>, so dependencies' symbols are copied into
-/// consuming projects' output — so this resolves the document paths recorded <em>inside</em>
-/// the symbols and never checks whether a file exists beside the assembly.
-/// </param>
-internal sealed record ScannedAssembly(
-    string Path,
-    string SimpleName,
-    Guid ModuleVersionId,
-    TargetFrameworkMoniker? Framework,
-    bool IsFirstParty,
-    IReadOnlyList<SourceDocument> Documents);
-
 /// <summary>
 /// Finds assemblies on disk by looking, never by predicting.
 /// </summary>
@@ -59,6 +43,7 @@ internal static class AssemblyScanner
         string sourceRoot)
     {
         var scanned = new List<ScannedAssembly>();
+        var roots = SourceRoots.Of(sourceRoot);
 
         foreach (var file in Candidates(root))
         {
@@ -67,7 +52,7 @@ internal static class AssemblyScanner
                 continue;
             }
 
-            var assembly = Read(file, sourceRoot);
+            var assembly = Read(file, roots);
 
             if (assembly is not null)
             {
@@ -78,7 +63,17 @@ internal static class AssemblyScanner
         return scanned;
     }
 
-    internal static ScannedAssembly? Read(string file, string sourceRoot)
+    /// <param name="file">The candidate file.</param>
+    /// <param name="sourceRoot">The working tree. What "first-party" is measured against.</param>
+    internal static ScannedAssembly? Read(string file, string sourceRoot) =>
+        Read(file, SourceRoots.Of(sourceRoot));
+
+    /// <param name="file">The candidate file.</param>
+    /// <param name="roots">
+    /// The working tree, which "first-party" is measured against, and where a deterministic
+    /// build's other prefixes can point.
+    /// </param>
+    internal static ScannedAssembly? Read(string file, SourceRoots roots)
     {
         try
         {
@@ -97,7 +92,7 @@ internal static class AssemblyScanner
                 return null;
             }
 
-            var documents = DocumentsOf(peReader, file);
+            var documents = DocumentsOf(peReader, file, roots);
 
             return new ScannedAssembly(
                 Paths.Normalise(file),
@@ -106,7 +101,7 @@ internal static class AssemblyScanner
                 TargetFrameworkMoniker.FromAttributes(
                     AssemblyFacts.TargetFramework(reader),
                     AssemblyFacts.TargetPlatform(reader)),
-                documents.Any(document => Paths.IsUnder(document.Path, sourceRoot)),
+                documents.Any(document => Paths.IsUnder(document.Path, roots.Repository)),
                 documents);
         }
         catch (BadImageFormatException)
@@ -124,8 +119,10 @@ internal static class AssemblyScanner
         }
     }
 
-    /// <summary>Handles both a separate <c>.pdb</c> and an embedded one.</summary>
-    private static IReadOnlyList<SourceDocument> DocumentsOf(PEReader peReader, string file)
+    /// <summary>
+    /// Handles both a separate <c>.pdb</c> and an embedded one.
+    /// </summary>
+    private static IReadOnlyList<SourceDocument> DocumentsOf(PEReader peReader, string file, SourceRoots roots)
     {
         try
         {
@@ -141,7 +138,7 @@ internal static class AssemblyScanner
 
             using (provider)
             {
-                return PdbDocuments.Of(provider.GetMetadataReader());
+                return PdbDocuments.Of(provider.GetMetadataReader(), roots);
             }
         }
         catch (BadImageFormatException)
@@ -184,13 +181,36 @@ internal static class AssemblyScanner
                 yield return file;
             }
 
-            foreach (var subdirectory in subdirectories)
+            foreach (var subdirectory in subdirectories.Where(IsSearched))
             {
-                if (!SkippedDirectories.Contains(Path.GetFileName(subdirectory), StringComparer.OrdinalIgnoreCase))
-                {
-                    pending.Push(subdirectory);
-                }
+                pending.Push(subdirectory);
             }
         }
     }
+
+    private static bool IsSearched(string directory) =>
+        !SkippedDirectories.Contains(Path.GetFileName(directory), StringComparer.OrdinalIgnoreCase);
 }
+
+/// <summary>
+/// One candidate file, opened and read.
+/// </summary>
+/// <param name="Path">Where the file was found.</param>
+/// <param name="SimpleName">The assembly name from its metadata, without version or culture.</param>
+/// <param name="ModuleVersionId">The module's MVID, unique to each compilation.</param>
+/// <param name="Framework">The target framework the assembly stamps, or null when it stamps none.</param>
+/// <param name="IsFirstParty">
+/// True when the debug symbols point at source inside the working tree. Symbols sitting
+/// <em>beside</em> an assembly prove nothing — <c>.pdb</c> is an
+/// <c>AllowedReferenceRelatedFileExtension</c>, so dependencies' symbols are copied into
+/// consuming projects' output — so this resolves the document paths recorded <em>inside</em>
+/// the symbols and never checks whether a file exists beside the assembly.
+/// </param>
+/// <param name="Documents">The source files its debug symbols record; empty when it has none.</param>
+public sealed record ScannedAssembly(
+    string Path,
+    string SimpleName,
+    Guid ModuleVersionId,
+    TargetFrameworkMoniker? Framework,
+    bool IsFirstParty,
+    IReadOnlyList<SourceDocument> Documents);

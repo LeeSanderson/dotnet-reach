@@ -5,31 +5,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Reach.Changes;
 
 /// <summary>
-/// One type as one revision of one file declares it: a hash of its header, and a hash per
-/// member.
-/// </summary>
-/// <param name="Header">
-/// Modifiers, attributes, base list and type parameters. Its own unit, because a change there
-/// is whole-type widening — a test class gaining an attribute that makes its methods
-/// discoverable is invisible to any member-level comparison.
-/// </param>
-internal sealed record DeclaredType(
-    string Name,
-    string Header,
-    IReadOnlyDictionary<MemberKey, DeclaredMember> Members);
-
-/// <param name="Span">
-/// Where the declaration sits in its file, one-based, as debug symbols spell it. The join
-/// matches a source declaration to the IL methods whose sequence points fall inside it.
-/// </param>
-internal sealed record DeclaredMember(
-    MemberKey Key,
-    string Declaration,
-    bool IsCompileTimeConstant,
-    DeclarationSpan Span);
-
-/// <summary>
-/// Reads one revision of one C# file into the types it declares. The only place in Reach that
+/// Reads one revision of one C# file into the types it declares. With
+/// <see cref="MemberDeclarations"/>, which reads each member, the only place in Reach that
 /// touches Roslyn.
 /// </summary>
 /// <remarks>
@@ -54,41 +31,26 @@ internal static class SourceRevision
 
     internal static SyntaxTree Parse(string text) => CSharpSyntaxTree.ParseText(text, Options);
 
-    /// <summary>Every type the revision declares, keyed on fully-qualified name plus arity.</summary>
+    /// <summary>
+    /// Every type the revision declares, keyed on fully-qualified name plus arity.
+    /// </summary>
     internal static IReadOnlyDictionary<string, DeclaredType> DeclaredTypes(string text)
     {
         var root = Parse(text).GetRoot();
-        var types = new Dictionary<string, DeclaredType>(StringComparer.Ordinal);
+        var partials = new Dictionary<string, List<DeclaredType>>(StringComparer.Ordinal);
 
         foreach (var declaration in root.DescendantNodes().OfType<BaseTypeDeclarationSyntax>())
         {
             var name = QualifiedName(declaration);
-
-            // A partial type declared twice in one file is one type: the members merge and the
-            // headers concatenate in source order, which is deterministic for a given file.
-            if (types.TryGetValue(name, out var existing))
-            {
-                types[name] = Merge(existing, Read(declaration, name));
-            }
-            else
-            {
-                types[name] = Read(declaration, name);
-            }
+            Buckets.Bucket(partials, name).Add(Read(declaration, name));
         }
 
-        return types;
-    }
-
-    private static DeclaredType Merge(DeclaredType first, DeclaredType second)
-    {
-        var members = new Dictionary<MemberKey, DeclaredMember>(first.Members);
-
-        foreach (var (key, member) in second.Members)
-        {
-            members[key] = member;
-        }
-
-        return first with { Header = first.Header + "" + second.Header, Members = members };
+        // A partial type declared twice in one file is one type, combined in source order,
+        // which is deterministic for a given file.
+        return partials.ToDictionary(
+            entry => entry.Key,
+            entry => DeclaredType.Combine(entry.Value),
+            StringComparer.Ordinal);
     }
 
     private static DeclaredType Read(BaseTypeDeclarationSyntax declaration, string name)
@@ -146,9 +108,9 @@ internal static class SourceRevision
                 continue;
             }
 
-            foreach (var (key, node, isConstant) in Describe(member))
+            foreach (var declared in MemberDeclarations.Read(member))
             {
-                yield return (key, new DeclaredMember(key, Canonicaliser.Of([node]), isConstant, SpanOf(node)));
+                yield return (declared.Key, declared);
             }
         }
     }
@@ -168,175 +130,6 @@ internal static class SourceRevision
             _ => [],
         };
 
-    private static IEnumerable<(MemberKey Key, SyntaxNode Node, bool IsConstant)> Describe(
-        MemberDeclarationSyntax member)
-    {
-        switch (member)
-        {
-            case MethodDeclarationSyntax method:
-                yield return (
-                    new MemberKey(
-                        MemberKind.Method,
-                        method.Identifier.Text,
-                        method.TypeParameterList?.Parameters.Count ?? 0,
-                        ParameterTypes(method.ParameterList)),
-                    method,
-                    HasDefault(method.ParameterList));
-                break;
-
-            case ConstructorDeclarationSyntax constructor:
-                yield return (
-                    new MemberKey(MemberKind.Constructor, ".ctor", 0, ParameterTypes(constructor.ParameterList)),
-                    constructor,
-                    HasDefault(constructor.ParameterList));
-                break;
-
-            case DestructorDeclarationSyntax destructor:
-                yield return (new MemberKey(MemberKind.Destructor, "Finalize", 0, []), destructor, false);
-                break;
-
-            case OperatorDeclarationSyntax @operator:
-                yield return (
-                    new MemberKey(
-                        MemberKind.Operator,
-                        "op" + @operator.OperatorToken.Text,
-                        0,
-                        ParameterTypes(@operator.ParameterList)),
-                    @operator,
-                    false);
-                break;
-
-            case ConversionOperatorDeclarationSyntax conversion:
-                yield return (
-                    new MemberKey(
-                        MemberKind.ConversionOperator,
-                        "op_" + conversion.ImplicitOrExplicitKeyword.Text + "_" + conversion.Type.ToString(),
-                        0,
-                        ParameterTypes(conversion.ParameterList)),
-                    conversion,
-                    false);
-                break;
-
-            case IndexerDeclarationSyntax indexer:
-                yield return (
-                    new MemberKey(MemberKind.Indexer, "this[]", 0, ParameterTypes(indexer.ParameterList)),
-                    indexer,
-                    HasDefault(indexer.ParameterList));
-                break;
-
-            case PropertyDeclarationSyntax property:
-                yield return (
-                    new MemberKey(MemberKind.Property, property.Identifier.Text, 0, []),
-                    property,
-                    false);
-                break;
-
-            case EventDeclarationSyntax @event:
-                yield return (new MemberKey(MemberKind.Event, @event.Identifier.Text, 0, []), @event, false);
-                break;
-
-            case DelegateDeclarationSyntax @delegate:
-                yield return (
-                    new MemberKey(
-                        MemberKind.Delegate,
-                        @delegate.Identifier.Text,
-                        @delegate.TypeParameterList?.Parameters.Count ?? 0,
-                        ParameterTypes(@delegate.ParameterList)),
-                    @delegate,
-                    HasDefault(@delegate.ParameterList));
-                break;
-
-            case EnumMemberDeclarationSyntax enumMember:
-                // An enum member's value is a compile-time constant and is baked into every
-                // consumer that names it.
-                yield return (
-                    new MemberKey(MemberKind.EnumMember, enumMember.Identifier.Text, 0, []),
-                    enumMember,
-                    true);
-                break;
-
-            case EventFieldDeclarationSyntax eventField:
-                foreach (var variable in eventField.Declaration.Variables)
-                {
-                    yield return (
-                        new MemberKey(MemberKind.Event, variable.Identifier.Text, 0, []),
-                        eventField,
-                        false);
-                }
-
-                break;
-
-            case FieldDeclarationSyntax field:
-                // `int a = 1, b = 2;` is two members, and one of them can change alone.
-                var isConst = field.Modifiers.Any(SyntaxKind.ConstKeyword);
-
-                foreach (var variable in field.Declaration.Variables)
-                {
-                    yield return (
-                        new MemberKey(MemberKind.Field, variable.Identifier.Text, 0, []),
-                        variable,
-                        isConst);
-                }
-
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Roslyn counts lines and columns from zero; debug symbols count from one. Converted here
-    /// so the join compares two things measured the same way.
-    /// </summary>
-    private static DeclarationSpan SpanOf(SyntaxNode node)
-    {
-        var span = node.GetLocation().GetLineSpan();
-
-        return new DeclarationSpan(
-            span.StartLinePosition.Line + 1,
-            span.StartLinePosition.Character + 1,
-            span.EndLinePosition.Line + 1,
-            span.EndLinePosition.Character + 1);
-    }
-
-    /// <summary>
-    /// The parameter's type <em>and</em> its passing mode. <c>ref</c>, <c>out</c> and <c>in</c>
-    /// sit on the parameter rather than on the type, so without them <c>M(int)</c> and
-    /// <c>M(ref int)</c> are one key — and one of two genuinely different overloads becomes
-    /// invisible to change detection.
-    /// </summary>
-    private static IReadOnlyList<string> ParameterTypes(BaseParameterListSyntax? parameters) =>
-        parameters is null
-            ? []
-            : [.. parameters.Parameters.Select(parameter => Mode(parameter) + TypeOf(parameter))];
-
-    /// <summary>
-    /// As written, with runs of whitespace collapsed — <em>not</em> through the canonicaliser.
-    /// A member key is a display form as well as a key: it reaches the report's forward change
-    /// list, and the canonicaliser's U+0001 token separator has no business in a product
-    /// surface.
-    /// </summary>
-    private static string TypeOf(ParameterSyntax parameter) =>
-        parameter.Type is null
-            ? string.Empty
-            : string.Join(' ', parameter.Type.ToString().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-
-    private static string Mode(ParameterSyntax parameter)
-    {
-        foreach (var modifier in parameter.Modifiers)
-        {
-            if (modifier.IsKind(SyntaxKind.RefKeyword)
-                || modifier.IsKind(SyntaxKind.OutKeyword)
-                || modifier.IsKind(SyntaxKind.InKeyword))
-            {
-                return modifier.Text + " ";
-            }
-        }
-
-        return string.Empty;
-    }
-
-    private static bool HasDefault(BaseParameterListSyntax? parameters) =>
-        parameters is not null && parameters.Parameters.Any(parameter => parameter.Default is not null);
-
     /// <summary>
     /// The metadata spelling of the type's name: namespaces joined with <c>.</c>, nesting with
     /// <c>+</c>, and each level carrying its own arity after a backtick.
@@ -347,15 +140,16 @@ internal static class SourceRevision
 
         for (SyntaxNode? node = declaration; node is not null; node = node.Parent)
         {
-            switch (node)
+            var segment = node switch
             {
-                case TypeDeclarationSyntax type:
-                    nested.Insert(0, type.Identifier.Text + Arity(type.TypeParameterList));
-                    break;
+                TypeDeclarationSyntax type => type.Identifier.Text + Arity(type.TypeParameterList),
+                EnumDeclarationSyntax @enum => @enum.Identifier.Text,
+                _ => null,
+            };
 
-                case EnumDeclarationSyntax @enum:
-                    nested.Insert(0, @enum.Identifier.Text);
-                    break;
+            if (segment is not null)
+            {
+                nested.Insert(0, segment);
             }
         }
 
@@ -374,7 +168,7 @@ internal static class SourceRevision
     {
         var parts = new List<string>();
 
-        for (SyntaxNode? node = declaration; node is not null; node = node.Parent)
+        for (var node = declaration; node is not null; node = node.Parent)
         {
             if (node is BaseNamespaceDeclarationSyntax @namespace)
             {
@@ -385,3 +179,71 @@ internal static class SourceRevision
         return string.Join('.', parts);
     }
 }
+
+/// <summary>
+/// One type as one revision of one file declares it: a hash of its header, and a hash per
+/// member.
+/// </summary>
+/// <param name="Name">The type's fully-qualified name, with its arity.</param>
+/// <param name="Header">
+/// Modifiers, attributes, base list and type parameters. Its own unit, because a change there
+/// is whole-type widening — a test class gaining an attribute that makes its methods
+/// discoverable is invisible to any member-level comparison.
+/// </param>
+/// <param name="Members">Each member the type declares, by key.</param>
+internal sealed record DeclaredType(
+    string Name,
+    string Header,
+    IReadOnlyDictionary<MemberKey, DeclaredMember> Members)
+{
+    /// <summary>
+    /// Separates the headers of a partial type's declarations. A control character, so it can
+    /// never occur in canonical source text and two different splits never join to the same
+    /// string.
+    /// </summary>
+    private const char PartialHeaderSeparator = '\u0001';
+
+    /// <summary>
+    /// The declarations of one partial type as one type: the headers joined, and the members
+    /// merged by key, both in the order given, so a later declaration of a key wins. Callers
+    /// give a deterministic order: source order within a file, then file path order.
+    /// </summary>
+    internal static DeclaredType Combine(IReadOnlyList<DeclaredType> partials)
+    {
+        if (partials.Count == 1)
+        {
+            return partials[0];
+        }
+
+        var members = new Dictionary<MemberKey, DeclaredMember>();
+
+        foreach (var (key, member) in partials.SelectMany(partial => partial.Members))
+        {
+            members[key] = member;
+        }
+
+        return partials[0] with
+        {
+            Header = string.Join(PartialHeaderSeparator, partials.Select(partial => partial.Header)),
+            Members = members,
+        };
+    }
+}
+
+/// <summary>
+/// One member as one revision of one file declares it.
+/// </summary>
+/// <param name="Key">The member's key within its type.</param>
+/// <param name="Declaration">The declaration's canonical text, which is what two revisions compare.</param>
+/// <param name="IsCompileTimeConstant">
+/// True for a <c>const</c>, an enum member, or a declaration carrying a parameter default.
+/// </param>
+/// <param name="Span">
+/// Where the declaration sits in its file, one-based, as debug symbols spell it. The join
+/// matches a source declaration to the IL methods whose sequence points fall inside it.
+/// </param>
+internal sealed record DeclaredMember(
+    MemberKey Key,
+    string Declaration,
+    bool IsCompileTimeConstant,
+    DeclarationSpan Span);

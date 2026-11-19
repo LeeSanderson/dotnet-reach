@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
+using static Reach.Buckets;
 
 namespace Reach.Graph;
 
@@ -18,8 +19,8 @@ namespace Reach.Graph;
 /// </remarks>
 internal sealed class TypeHierarchy
 {
-    private readonly Dictionary<string, TypeInfo> types = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, List<string>> subtypes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TypeInfo> _types = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _subtypes = new(StringComparer.Ordinal);
 
     internal TypeHierarchy(IEnumerable<GraphAssembly> assemblies)
     {
@@ -28,11 +29,11 @@ internal sealed class TypeHierarchy
             Read(assembly);
         }
 
-        foreach (var (name, type) in types)
+        foreach (var (name, type) in _types)
         {
             foreach (var parent in type.Parents)
             {
-                Bucket(subtypes, parent).Add(name);
+                Bucket(_subtypes, parent).Add(name);
             }
         }
     }
@@ -55,7 +56,7 @@ internal sealed class TypeHierarchy
 
         while (pending.TryDequeue(out var name))
         {
-            if (!seen.Add(name) || !types.TryGetValue(name, out var type))
+            if (!seen.Add(name) || !_types.TryGetValue(name, out var type))
             {
                 continue;
             }
@@ -75,7 +76,7 @@ internal sealed class TypeHierarchy
     }
 
     internal MethodId? MethodOf(string typeName, string memberKey) =>
-        types.TryGetValue(typeName, out var type) && type.Methods.TryGetValue(memberKey, out var method)
+        _types.TryGetValue(typeName, out var type) && type.Methods.TryGetValue(memberKey, out var method)
             ? method
             : null;
 
@@ -91,7 +92,7 @@ internal sealed class TypeHierarchy
     /// </remarks>
     internal bool IsDispatchable(string typeName, string memberKey)
     {
-        if (!types.TryGetValue(typeName, out var type))
+        if (!_types.TryGetValue(typeName, out var type))
         {
             return false;
         }
@@ -99,7 +100,7 @@ internal sealed class TypeHierarchy
         return type.IsInterface || type.Virtual.Contains(memberKey);
     }
 
-    internal bool Declares(string typeName) => types.ContainsKey(typeName);
+    internal bool Declares(string typeName) => _types.ContainsKey(typeName);
 
     /// <summary>
     /// Every implementation or override of <paramref name="declaringType"/>'s
@@ -116,11 +117,11 @@ internal sealed class TypeHierarchy
     {
         var found = new List<MethodId>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        var pending = new Queue<string>(subtypes.GetValueOrDefault(declaringType) ?? []);
+        var pending = new Queue<string>(_subtypes.GetValueOrDefault(declaringType) ?? []);
 
         while (pending.TryDequeue(out var name))
         {
-            if (!seen.Add(name) || !types.TryGetValue(name, out var type))
+            if (!seen.Add(name) || !_types.TryGetValue(name, out var type))
             {
                 continue;
             }
@@ -133,8 +134,12 @@ internal sealed class TypeHierarchy
             {
                 found.Add(implicitly);
             }
+            else
+            {
+                // Inherits the slot without overriding it; its subtypes may still implement it.
+            }
 
-            foreach (var child in subtypes.GetValueOrDefault(name) ?? [])
+            foreach (var child in _subtypes.GetValueOrDefault(name) ?? [])
             {
                 pending.Enqueue(child);
             }
@@ -152,68 +157,105 @@ internal sealed class TypeHierarchy
         {
             var definition = reader.GetTypeDefinition(handle);
             var name = MetadataNames.FullNameOf(reader, handle);
+            var parents = ParentsOf(reader, definition);
+            var (methods, virtuals) = MethodsOf(assembly, definition, names);
+            var implementations = MethodImplsOf(assembly, definition, names);
 
-            var parents = new List<string>();
-
-            if (NameOf(reader, definition.BaseType) is { } baseType)
-            {
-                parents.Add(baseType);
-            }
-
-            foreach (var implementation in definition.GetInterfaceImplementations())
-            {
-                if (NameOf(reader, reader.GetInterfaceImplementation(implementation).Interface) is { } @interface)
-                {
-                    parents.Add(@interface);
-                }
-            }
-
-            var methods = new Dictionary<string, MethodId>(StringComparer.Ordinal);
-            var virtuals = new HashSet<string>(StringComparer.Ordinal);
-
-            foreach (var methodHandle in definition.GetMethods())
-            {
-                var method = reader.GetMethodDefinition(methodHandle);
-                var key = KeyOf(reader, method, names);
-
-                if (key is null)
-                {
-                    continue;
-                }
-
-                methods[key] = MethodId.Definition(assembly.Ordinal, MetadataTokens.GetToken(methodHandle));
-
-                if ((method.Attributes & (MethodAttributes.Virtual | MethodAttributes.Abstract)) != 0)
-                {
-                    virtuals.Add(key);
-                }
-            }
-
-            var implementations = new Dictionary<string, MethodId>(StringComparer.Ordinal);
-
-            foreach (var implHandle in definition.GetMethodImplementations())
-            {
-                var impl = reader.GetMethodImplementation(implHandle);
-                var declaration = DeclarationOf(reader, impl.MethodDeclaration, names);
-
-                if (declaration is not null && impl.MethodBody.Kind == HandleKind.MethodDefinition)
-                {
-                    implementations[declaration] = MethodId.Definition(
-                        assembly.Ordinal,
-                        MetadataTokens.GetToken(impl.MethodBody));
-                }
-            }
-
-            types[name] = new TypeInfo(
+            _types[name] = new TypeInfo(
                 parents,
                 methods,
                 implementations,
                 virtuals,
-                (definition.Attributes & TypeAttributes.Interface) != 0);
+                definition.Attributes.HasFlag(TypeAttributes.Interface));
         }
     }
 
-    /// <summary>The <c>Type::member</c> spelling a <c>MethodImpl</c>'s declaration half resolves to.</summary>
+    /// <summary>
+    /// The base type and every directly implemented interface.
+    /// </summary>
+    private static List<string> ParentsOf(MetadataReader reader, TypeDefinition definition)
+    {
+        var parents = new List<string>();
+
+        if (NameOf(reader, definition.BaseType) is { } baseType)
+        {
+            parents.Add(baseType);
+        }
+
+        foreach (var implementation in definition.GetInterfaceImplementations())
+        {
+            if (NameOf(reader, reader.GetInterfaceImplementation(implementation).Interface) is { } @interface)
+            {
+                parents.Add(@interface);
+            }
+        }
+
+        return parents;
+    }
+
+    /// <summary>
+    /// The type's methods by key, and which of those keys are virtual or abstract.
+    /// </summary>
+    private static (Dictionary<string, MethodId> Methods, HashSet<string> Virtuals) MethodsOf(
+        GraphAssembly assembly,
+        TypeDefinition definition,
+        SignatureNames names)
+    {
+        var reader = assembly.Reader;
+        var methods = new Dictionary<string, MethodId>(StringComparer.Ordinal);
+        var virtuals = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var methodHandle in definition.GetMethods())
+        {
+            var method = reader.GetMethodDefinition(methodHandle);
+            var key = KeyOf(reader, method, names);
+
+            if (key is null)
+            {
+                continue;
+            }
+
+            methods[key] = MethodId.Definition(assembly.Ordinal, MetadataTokens.GetToken(methodHandle));
+
+            if ((method.Attributes & (MethodAttributes.Virtual | MethodAttributes.Abstract)) != 0)
+            {
+                virtuals.Add(key);
+            }
+        }
+
+        return (methods, virtuals);
+    }
+
+    /// <summary>
+    /// The type's explicit implementations, keyed on the <c>Type::member</c> they implement.
+    /// </summary>
+    private static Dictionary<string, MethodId> MethodImplsOf(
+        GraphAssembly assembly,
+        TypeDefinition definition,
+        SignatureNames names)
+    {
+        var reader = assembly.Reader;
+        var implementations = new Dictionary<string, MethodId>(StringComparer.Ordinal);
+
+        foreach (var implHandle in definition.GetMethodImplementations())
+        {
+            var impl = reader.GetMethodImplementation(implHandle);
+            var declaration = DeclarationOf(reader, impl.MethodDeclaration, names);
+
+            if (declaration is not null && impl.MethodBody.Kind == HandleKind.MethodDefinition)
+            {
+                implementations[declaration] = MethodId.Definition(
+                    assembly.Ordinal,
+                    MetadataTokens.GetToken(impl.MethodBody));
+            }
+        }
+
+        return implementations;
+    }
+
+    /// <summary>
+    /// The <c>Type::member</c> spelling a <c>MethodImpl</c>'s declaration half resolves to.
+    /// </summary>
     private static string? DeclarationOf(MetadataReader reader, EntityHandle handle, SignatureNames names)
     {
         switch (handle.Kind)
@@ -278,27 +320,30 @@ internal sealed class TypeHierarchy
     /// <c>&lt;Module&gt;</c> has no base type, and a nil handle still reports a kind — so the
     /// emptiness check comes first or the row lookup reads off the end of the table.
     /// </summary>
-    private static string? NameOf(MetadataReader reader, EntityHandle handle) => handle.IsNil ? null : handle.Kind switch
-    {
-        HandleKind.TypeDefinition => MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)handle),
-        HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)handle),
-        HandleKind.TypeSpecification => MetadataNames.WithoutInstantiation(
-            reader.GetTypeSpecification((TypeSpecificationHandle)handle)
-                .DecodeSignature(new SignatureNames(), genericContext: null)),
-        _ => null,
-    };
+    private static string? NameOf(MetadataReader reader, EntityHandle handle) =>
+        handle.IsNil
+            ? null
+            : handle.Kind switch
+            {
+                HandleKind.TypeDefinition => MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)handle),
+                HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)handle),
+                HandleKind.TypeSpecification => MetadataNames.WithoutInstantiation(
+                    reader.GetTypeSpecification((TypeSpecificationHandle)handle)
+                        .DecodeSignature(new SignatureNames(), genericContext: null)),
+                _ => null,
+            };
 
-    private static List<T> Bucket<T>(Dictionary<string, List<T>> index, string key)
-    {
-        if (!index.TryGetValue(key, out var bucket))
-        {
-            index[key] = bucket = [];
-        }
-
-        return bucket;
-    }
-
+    /// <summary>
+    /// One type definition, as much of it as the hierarchy needs.
+    /// </summary>
     /// <param name="Parents">The base type and every directly implemented interface.</param>
+    /// <param name="Methods">The methods the type defines, by member key.</param>
+    /// <param name="MethodImpls">
+    /// Explicit implementations, keyed by the declaration they implement
+    /// (<c>DeclaringType::MemberKey</c>).
+    /// </param>
+    /// <param name="Virtual">The member keys of its virtual or abstract methods.</param>
+    /// <param name="IsInterface">True when the type is an interface.</param>
     private sealed record TypeInfo(
         IReadOnlyList<string> Parents,
         Dictionary<string, MethodId> Methods,

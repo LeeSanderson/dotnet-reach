@@ -5,40 +5,6 @@ using Reach.Selection;
 
 namespace Reach.Rendering;
 
-/// <summary>How a selection reached the runner.</summary>
-internal enum Delivery
-{
-    /// <summary>On the command line.</summary>
-    Inline,
-
-    /// <summary>In a response file Reach wrote, passed as an argument.</summary>
-    ResponseFile,
-
-    /// <summary>Across several invocations, because the host has no private channel.</summary>
-    Chunked,
-
-    /// <summary>Merged into the settings file the caller supplied.</summary>
-    RunSettings,
-
-    /// <summary>Nothing was rendered.</summary>
-    None,
-}
-
-/// <param name="WillRun">
-/// What the rendered filter actually matches, which deliberately disagrees with the selection
-/// where the dialect renders with <c>~</c>.
-/// </param>
-internal sealed record RenderedEntry(
-    ProjectSelection Selection,
-    SelectionMode Mode,
-    Delivery Delivery,
-    int WillRun,
-    IReadOnlyList<IReadOnlyList<string>> Invocations);
-
-internal sealed record RenderedSelection(
-    IReadOnlyList<RenderedEntry> Entries,
-    IReadOnlyList<Notice> Notices);
-
 /// <summary>
 /// Turns the canonical selection into argument vectors a pipeline can execute.
 /// </summary>
@@ -51,7 +17,9 @@ internal sealed class Renderer(
     SelectRequest request,
     ReachDirectory directory)
 {
-    private readonly List<Notice> notices = [];
+    private const string FilterSwitch = "--filter";
+
+    private readonly List<Notice> _notices = [];
 
     internal RenderedSelection Render(SelectionResult selection)
     {
@@ -73,7 +41,7 @@ internal sealed class Renderer(
 
         Summarise(entries);
 
-        return new RenderedSelection(entries, notices);
+        return new RenderedSelection(entries, _notices);
     }
 
     private RenderedEntry RenderOne(ProjectSelection project, HashSet<string> projectWideEmitted)
@@ -90,7 +58,7 @@ internal sealed class Renderer(
             .ToArray();
 
         var multiTargeted = siblings.Length > 1;
-        var instance = siblings.FirstOrDefault(candidate =>
+        var instance = Array.Find(siblings, candidate =>
             candidate.Expected.TargetFramework == project.TargetFramework);
 
         var selector = multiTargeted ? FrameworkSelector.Derive(instance?.Assembly.Framework) : null;
@@ -99,7 +67,7 @@ internal sealed class Renderer(
         // runs every target framework, so one sibling that cannot be pinned makes every
         // sibling's filter reach it — pinning the others correctly would not save the run.
         if (multiTargeted
-            && (selector is null || siblings.Any(sibling => FrameworkSelector.Derive(sibling.Assembly.Framework) is null)))
+            && (selector is null || Array.Exists(siblings, sibling => FrameworkSelector.Derive(sibling.Assembly.Framework) is null)))
         {
             return ProjectWide(project, projectWideEmitted);
         }
@@ -136,7 +104,7 @@ internal sealed class Renderer(
             return WithRunSettings(project, selector, names, willRun, settings);
         }
 
-        var overhead = Command(project, selector, ["--filter"]).Sum(argument => argument.Length + 3);
+        var overhead = Command(project, selector, [FilterSwitch]).Sum(argument => argument.Length + 3);
         var chunks = Chunker.Split(dialect, names, overhead);
 
         if (chunks.Count == 1)
@@ -146,7 +114,7 @@ internal sealed class Renderer(
                 SelectionMode.Filtered,
                 Delivery.Inline,
                 willRun,
-                [Command(project, selector, ["--filter", FilterDialect.Expression(dialect, names)])]);
+                [Command(project, selector, [FilterSwitch, FilterDialect.Expression(dialect, names)])]);
         }
 
         // Microsoft.Testing.Platform reads a response file Reach writes and passes as an
@@ -155,7 +123,7 @@ internal sealed class Renderer(
         // for. Every other host under `dotnet test` has no such channel and gets chunks.
         return FilterDialect.UsesTestingPlatform(dialect)
             ? ViaResponseFile(project, selector, names, willRun)
-            : Chunked(project, selector, chunks, willRun);
+            : Chunked(project, selector, [.. chunks.Select(chunk => FilterDialect.Expression(dialect, chunk))], willRun);
     }
 
     private RenderedEntry ViaResponseFile(
@@ -166,7 +134,7 @@ internal sealed class Renderer(
     {
         var path = SideCar(project, "rsp", 0);
 
-        File.WriteAllLines(path, ["--filter", FilterDialect.Expression(project.Dialect!, names)]);
+        File.WriteAllLines(path, [FilterSwitch, FilterDialect.Expression(project.Dialect!, names)]);
 
         Note(
             NoticeCodes.SelectionDeliveredOutOfBand,
@@ -186,7 +154,7 @@ internal sealed class Renderer(
     private RenderedEntry Chunked(
         ProjectSelection project,
         string? selector,
-        IReadOnlyList<IReadOnlyList<string>> chunks,
+        IReadOnlyList<string> filters,
         int willRun)
     {
         Note(
@@ -194,17 +162,14 @@ internal sealed class Renderer(
             NoticeKind.Environment,
             $"{project.Project.Name} ({project.TargetFramework}): the selection exceeds the "
             + $"command-line ceiling of {CommandLineCeiling.Characters} characters and this host "
-            + $"has no response-file channel, so it runs as {chunks.Count} invocations.");
+            + $"has no response-file channel, so it runs as {filters.Count} invocations.");
 
         return new RenderedEntry(
             project,
             SelectionMode.Filtered,
             Delivery.Chunked,
             willRun,
-            [
-                .. chunks.Select(chunk =>
-                    Command(project, selector, ["--filter", FilterDialect.Expression(project.Dialect!, chunk)]))
-            ]);
+            [.. filters.Select(filter => Command(project, selector, [FilterSwitch, filter]))]);
     }
 
     private RenderedEntry WithRunSettings(
@@ -357,7 +322,7 @@ internal sealed class Renderer(
     }
 
     private void Note(string code, NoticeKind kind, string message, IReadOnlyList<string>? projects = null) =>
-        notices.Add(new Notice(
+        _notices.Add(new Notice(
             code,
             kind,
             message,
@@ -365,3 +330,56 @@ internal sealed class Renderer(
                 ? null
                 : new Dictionary<string, object?>(StringComparer.Ordinal) { ["projects"] = projects }));
 }
+
+/// <summary>
+/// How a selection reached the runner.
+/// </summary>
+public enum Delivery
+{
+    /// <summary>
+    /// On the command line.
+    /// </summary>
+    Inline,
+
+    /// <summary>
+    /// In a response file Reach wrote, passed as an argument.
+    /// </summary>
+    ResponseFile,
+
+    /// <summary>
+    /// Across several invocations, because the host has no private channel.
+    /// </summary>
+    Chunked,
+
+    /// <summary>
+    /// Merged into the settings file the caller supplied.
+    /// </summary>
+    RunSettings,
+
+    /// <summary>
+    /// Nothing was rendered.
+    /// </summary>
+    None,
+}
+
+/// <summary>
+/// One project's selection, rendered for its runner.
+/// </summary>
+/// <param name="Selection">The project's selection.</param>
+/// <param name="Mode">How the project's tests were selected.</param>
+/// <param name="Delivery">How the selection reaches the runner.</param>
+/// <param name="WillRun">
+/// What the rendered filter actually matches, which deliberately disagrees with the selection
+/// where the dialect renders with <c>~</c>.
+/// </param>
+/// <param name="Invocations">The argument vectors to run, one per runner invocation.</param>
+public sealed record RenderedEntry(
+    ProjectSelection Selection,
+    SelectionMode Mode,
+    Delivery Delivery,
+    int WillRun,
+    IReadOnlyList<IReadOnlyList<string>> Invocations);
+
+public sealed record RenderedSelection(
+    IReadOnlyList<RenderedEntry> Entries,
+    IReadOnlyList<Notice> Notices);

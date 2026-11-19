@@ -9,4 +9,4 @@ namespace Reach;
 /// detection variables, <c>NO_COLOR</c> and a provider marker without setting any of them on
 /// the machine running the suite.
 /// </remarks>
-internal delegate string? EnvironmentLookup(string name);
+public delegate string? EnvironmentLookup(string name);

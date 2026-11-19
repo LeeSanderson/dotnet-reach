@@ -1,20 +1,10 @@
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
+using Reach.Assemblies;
 using Reach.Changes;
 using Reach.Graph;
 
 namespace Reach.Join;
-
-/// <summary>What one changed declaration reached in the call graph.</summary>
-/// <param name="Joined">
-/// False when nothing matched. A declaration that fails to join falls through to whole-assembly
-/// widening for its project — over-selection, and it is what makes a phantom member from a
-/// misparse survivable rather than a silent hole.
-/// </param>
-internal sealed record JoinResult(ChangedMember Member, IReadOnlyList<MethodId> Methods)
-{
-    internal bool Joined => Methods.Count > 0;
-}
 
 /// <summary>
 /// Turns a changed declaration in source into method identities in the call graph, by matching
@@ -42,13 +32,13 @@ internal sealed record JoinResult(ChangedMember Member, IReadOnlyList<MethodId> 
 /// </remarks>
 internal sealed class SpanJoin
 {
-    private readonly Dictionary<string, List<MethodExtent>> byDocument;
-    private readonly string repositoryRoot;
+    private readonly Dictionary<string, List<MethodExtent>> _byDocument;
+    private readonly string _repositoryRoot;
 
     internal SpanJoin(IEnumerable<GraphAssembly> assemblies, string repositoryRoot)
     {
-        this.repositoryRoot = Paths.Normalise(repositoryRoot);
-        byDocument = Index(assemblies);
+        _repositoryRoot = Paths.Normalise(repositoryRoot);
+        _byDocument = Index(assemblies, SourceRoots.Of(_repositoryRoot));
     }
 
     /// <summary>
@@ -62,9 +52,9 @@ internal sealed class SpanJoin
             return new JoinResult(member, []);
         }
 
-        var path = Paths.Normalise(Path.Combine(repositoryRoot, member.Path));
+        var path = Paths.Normalise(Path.Combine(_repositoryRoot, member.Path));
 
-        if (!byDocument.TryGetValue(path, out var candidates))
+        if (!_byDocument.TryGetValue(path, out var candidates))
         {
             return new JoinResult(member, []);
         }
@@ -89,7 +79,9 @@ internal sealed class SpanJoin
     /// no sequence points at all — abstract, <c>extern</c>, a <c>partial</c> declaration with
     /// no implementation — appears nowhere, which is how it falls through to widening.
     /// </summary>
-    private static Dictionary<string, List<MethodExtent>> Index(IEnumerable<GraphAssembly> assemblies)
+    private static Dictionary<string, List<MethodExtent>> Index(
+        IEnumerable<GraphAssembly> assemblies,
+        SourceRoots roots)
     {
         var index = new Dictionary<string, List<MethodExtent>>(Paths.Comparer);
 
@@ -100,6 +92,21 @@ internal sealed class SpanJoin
             if (symbols is null)
             {
                 continue;
+            }
+
+            // Once per document rather than once per sequence point: mapping a deterministic
+            // path can look for a file on disk.
+            var paths = new Dictionary<DocumentHandle, string>();
+
+            string PathOf(DocumentHandle document)
+            {
+                if (!paths.TryGetValue(document, out var path))
+                {
+                    path = PdbDocuments.PathOf(symbols, document, roots).Path;
+                    paths[document] = path;
+                }
+
+                return path;
             }
 
             foreach (var handle in symbols.MethodDebugInformation)
@@ -115,7 +122,7 @@ internal sealed class SpanJoin
                     assembly.Ordinal,
                     MetadataTokens.GetToken(handle.ToDefinitionHandle()));
 
-                foreach (var (document, extent) in ExtentsOf(symbols, information, method))
+                foreach (var (document, extent) in ExtentsOf(information, method, PathOf))
                 {
                     if (!index.TryGetValue(document, out var methods))
                     {
@@ -135,9 +142,9 @@ internal sealed class SpanJoin
     /// partial method's body and its declaration sit in different files.
     /// </summary>
     private static IEnumerable<(string Document, MethodExtent Extent)> ExtentsOf(
-        MetadataReader symbols,
         MethodDebugInformation information,
-        MethodId method)
+        MethodId method,
+        Func<DocumentHandle, string> pathOf)
     {
         var extents = new Dictionary<string, MethodExtent>(Paths.Comparer);
 
@@ -149,7 +156,7 @@ internal sealed class SpanJoin
                 continue;
             }
 
-            var document = Paths.Normalise(symbols.GetString(symbols.GetDocument(point.Document).Name));
+            var document = pathOf(point.Document);
 
             extents[document] = extents.TryGetValue(document, out var existing)
                 ? existing.Extend(point)
@@ -159,7 +166,9 @@ internal sealed class SpanJoin
         return extents.Select(entry => (entry.Key, entry.Value));
     }
 
-    /// <summary>The first and last place in one document a method's IL came from.</summary>
+    /// <summary>
+    /// The first and last place in one document a method's IL came from.
+    /// </summary>
     private readonly record struct MethodExtent(
         MethodId Method,
         int StartLine,
@@ -192,4 +201,19 @@ internal sealed class SpanJoin
         private static bool Before(int line, int column, int otherLine, int otherColumn) =>
             line < otherLine || (line == otherLine && column < otherColumn);
     }
+}
+
+/// <summary>
+/// What one changed declaration reached in the call graph.
+/// </summary>
+/// <param name="Member">The changed declaration.</param>
+/// <param name="Methods">The call-graph methods its source span matched; empty when nothing did.</param>
+public sealed record JoinResult(ChangedMember Member, IReadOnlyList<MethodId> Methods)
+{
+    /// <summary>
+    /// False when nothing matched. A declaration that fails to join falls through to whole-assembly
+    /// widening for its project — over-selection, and it is what makes a phantom member from a
+    /// misparse survivable rather than a silent hole.
+    /// </summary>
+    internal bool Joined => Methods.Count > 0;
 }

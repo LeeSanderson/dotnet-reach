@@ -23,17 +23,29 @@ internal sealed class Selections : IDisposable
     private const string CorePath = "/repo/src/Core/Widget.cs";
     private const string TestsPath = "/repo/tests/Tests/WidgetTests.cs";
 
-    private readonly List<IDisposable> open = [];
+    private readonly List<IDisposable> _open = [];
 
     private Selections()
     {
     }
 
-    internal SelectionResult Result { get; private set; } = null!;
+    internal SelectionResult Result
+    {
+        get => field ?? throw new InvalidOperationException("Set by Of before the fixture is returned.");
+        private set;
+    }
 
-    internal CallGraph Graph { get; private set; } = null!;
+    internal CallGraph Graph
+    {
+        get => field ?? throw new InvalidOperationException("Set by Of before the fixture is returned.");
+        private set;
+    }
 
-    internal AnalysisScope Scope { get; private set; } = null!;
+    internal AnalysisScope Scope
+    {
+        get => field ?? throw new InvalidOperationException("Set by Of before the fixture is returned.");
+        private set;
+    }
 
     internal IReadOnlyList<AssemblyInstance> Instances { get; private set; } = [];
 
@@ -46,17 +58,29 @@ internal sealed class Selections : IDisposable
     internal IReadOnlyList<string> SelectedNames =>
         [.. TestProject.Selected.Select(test => test.Test.Name).Order(StringComparer.Ordinal)];
 
+    /// <summary>
+    /// Compiles a production assembly and a test assembly, marks declarations as changed, and
+    /// runs the selector over them.
+    /// </summary>
+    /// <param name="coreSource">The production assembly's C#.</param>
+    /// <param name="testsSource">The test assembly's C#, which references the production one.</param>
     /// <param name="changed">
     /// Declarations to mark as changed, as "Type.member" — matched against the source's own
     /// declarations, so a typo fails loudly rather than selecting nothing.
     /// </param>
     /// <param name="added">Declarations to mark as added rather than modified.</param>
+    /// <param name="includePaths">Record hop-by-hop paths, as <c>--paths</c> does.</param>
+    /// <param name="testFramework">
+    /// A stand-in test framework assembly the test assembly also references, for a framework
+    /// the suite itself does not run on. Never opened: like a real one, it is not first-party.
+    /// </param>
     internal static Selections Of(
         string coreSource,
         string testsSource,
         IEnumerable<string>? changed = null,
         IEnumerable<string>? added = null,
-        bool includePaths = false)
+        bool includePaths = false,
+        CompiledAssembly? testFramework = null)
     {
         var selections = new Selections();
 
@@ -66,13 +90,17 @@ internal sealed class Selections : IDisposable
         // fixture that writes no Xunit type gets no reference, and falls back to whole-project
         // selection for the same reason a real project would.
         var core = Compiled.Assembly("Core", coreSource, CorePath);
-        var tests = Compiled.Assembly("Tests", testsSource, TestsPath, references: [core]);
+        var tests = Compiled.Assembly(
+            "Tests",
+            testsSource,
+            TestsPath,
+            references: testFramework is null ? [core] : [core, testFramework]);
 
         var coreProject = Project("/repo/src/Core/Core.csproj", "Core");
         var testsProject = Project("/repo/tests/Tests/Tests.csproj", "Tests");
 
-        var coreAssembly = selections.Open(0, "Core", core, CorePath);
-        var testsAssembly = selections.Open(1, "Tests", tests, TestsPath);
+        var coreAssembly = selections.Open(0, "Core", core);
+        var testsAssembly = selections.Open(1, "Tests", tests);
 
         var scope = new AnalysisScope(
             [coreProject, testsProject],
@@ -89,7 +117,7 @@ internal sealed class Selections : IDisposable
         };
 
         var graphAssemblies = new[] { coreAssembly, testsAssembly };
-        var graph = CallGraphBuilder.Build(graphAssemblies);
+        var graph = CallGraphBuilder.Build(graphAssemblies, TestLifecycle.EdgesIn(graphAssemblies));
 
         var members = Members(coreSource, "src/Core/Widget.cs", changed, added)
             .Concat(Members(testsSource, "tests/Tests/WidgetTests.cs", changed, added))
@@ -111,14 +139,13 @@ internal sealed class Selections : IDisposable
         selections.Changed = changedSet;
 
         selections.Result = Selector.Select(
-            graph.Graph,
-            graphAssemblies,
+            graph,
             instances,
             scope,
             changedSet,
             joined,
             includePaths,
-            new TierLadder(scope, "/repo"));
+            "/repo");
 
         return selections;
     }
@@ -168,13 +195,13 @@ internal sealed class Selections : IDisposable
                 IsFirstParty: true,
                 []));
 
-    private GraphAssembly Open(int ordinal, string name, CompiledAssembly compiled, string documentPath)
+    private GraphAssembly Open(int ordinal, string name, CompiledAssembly compiled)
     {
         var reader = new PEReader(ImmutableArray.Create(compiled.Image));
         var symbols = MetadataReaderProvider.FromPortablePdbImage(ImmutableArray.Create(compiled.Symbols));
 
-        open.Add(reader);
-        open.Add(symbols);
+        _open.Add(reader);
+        _open.Add(symbols);
 
         return new GraphAssembly(
             ordinal,
@@ -187,7 +214,7 @@ internal sealed class Selections : IDisposable
 
     public void Dispose()
     {
-        foreach (var item in open)
+        foreach (var item in _open)
         {
             item.Dispose();
         }

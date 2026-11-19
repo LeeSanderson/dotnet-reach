@@ -15,8 +15,8 @@ namespace Reach.Graph;
 /// </remarks>
 internal sealed class OpenAssemblies : IDisposable
 {
-    private readonly List<PEReader> readers = [];
-    private readonly List<MetadataReaderProvider> symbols = [];
+    private readonly List<PEReader> _readers = [];
+    private readonly List<MetadataReaderProvider> _symbols = [];
 
     private OpenAssemblies(IReadOnlyList<GraphAssembly> assemblies) => Assemblies = assemblies;
 
@@ -27,7 +27,7 @@ internal sealed class OpenAssemblies : IDisposable
         var open = new OpenAssemblies([]);
         var assemblies = new List<GraphAssembly>();
 
-        foreach (var instance in CallGraphBuilder.InOrdinalOrder(instances))
+        foreach (var assembly in InOrdinalOrder(instances).Select(instance => instance.Assembly))
         {
             PEReader reader;
 
@@ -37,7 +37,7 @@ internal sealed class OpenAssemblies : IDisposable
                 // sections, and reading those lazily would keep a file handle open on every
                 // assembly in the solution for the length of the run.
                 reader = new PEReader(
-                    File.OpenRead(instance.Assembly.Path),
+                    File.OpenRead(assembly.Path),
                     PEStreamOptions.PrefetchEntireImage);
             }
             catch (IOException)
@@ -49,23 +49,34 @@ internal sealed class OpenAssemblies : IDisposable
                 continue;
             }
 
-            open.readers.Add(reader);
+            open._readers.Add(reader);
 
             assemblies.Add(new GraphAssembly(
                 assemblies.Count,
-                instance.Assembly.SimpleName,
-                instance.Assembly.Framework,
+                assembly.SimpleName,
+                assembly.Framework,
                 reader.GetMetadataReader(),
                 reader,
-                open.OpenSymbols(reader, instance.Assembly.Path)));
+                open.OpenSymbols(reader, assembly.Path)));
         }
 
         open.Assemblies = assemblies;
 
         return open;
     }
+    /// <summary>
+    /// Assembly simple name, then target framework: the deterministic order ordinals follow.
+    /// </summary>
+    private static IReadOnlyList<AssemblyInstance> InOrdinalOrder(IEnumerable<AssemblyInstance> instances) =>
+    [
+        .. instances
+            .OrderBy(instance => instance.Assembly.SimpleName, StringComparer.Ordinal)
+            .ThenBy(instance => instance.Expected.TargetFramework, StringComparer.Ordinal)
+    ];
 
-    /// <summary>Handles both a separate <c>.pdb</c> and symbols embedded in the image.</summary>
+    /// <summary>
+    /// Handles both a separate <c>.pdb</c> and symbols embedded in the image.
+    /// </summary>
     private MetadataReader? OpenSymbols(PEReader reader, string path)
     {
         try
@@ -80,7 +91,7 @@ internal sealed class OpenAssemblies : IDisposable
                 return null;
             }
 
-            symbols.Add(provider);
+            _symbols.Add(provider);
 
             return provider.GetMetadataReader();
         }
@@ -96,12 +107,12 @@ internal sealed class OpenAssemblies : IDisposable
 
     public void Dispose()
     {
-        foreach (var provider in symbols)
+        foreach (var provider in _symbols)
         {
             provider.Dispose();
         }
 
-        foreach (var reader in readers)
+        foreach (var reader in _readers)
         {
             reader.Dispose();
         }

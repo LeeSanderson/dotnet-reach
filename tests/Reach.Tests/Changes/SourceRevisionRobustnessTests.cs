@@ -1,4 +1,5 @@
 using Reach.Changes;
+using Reach.Tests.Fixtures;
 
 namespace Reach.Tests.Changes;
 
@@ -11,7 +12,7 @@ public class SourceRevisionRobustnessTests
     [Fact]
     public void Every_source_file_in_this_repository_parses_without_throwing()
     {
-        var root = RepositoryRoot();
+        var root = RepositoryRoot.Of();
         var failures = new List<string>();
 
         foreach (var file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
@@ -38,23 +39,10 @@ public class SourceRevisionRobustnessTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    [InlineData("﻿namespace N; public class C { public int M() => 1; }")]
+    [InlineData("\uFEFFnamespace N; public class C { public int M() => 1; }")]
     [InlineData("namespace N; public class C { public int M() => ")]
     [InlineData("<<<<<<< HEAD\nnamespace N;\n=======\nnamespace M;\n>>>>>>> other\n")]
     [InlineData("namespace N; public class C { public int M() => 1; } // no trailing newline")]
     public void Source_that_does_not_compile_is_still_read_without_throwing(string source) =>
-        SourceRevision.DeclaredTypes(source);
-
-    private static string RepositoryRoot()
-    {
-        var directory = AppContext.BaseDirectory;
-
-        while (directory is not null && !Directory.Exists(Path.Combine(directory, ".git")))
-        {
-            directory = Path.GetDirectoryName(directory);
-        }
-
-        Assert.NotNull(directory);
-        return directory;
-    }
+        Assert.Null(Record.Exception(() => SourceRevision.DeclaredTypes(source)));
 }

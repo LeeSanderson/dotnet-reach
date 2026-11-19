@@ -1,3 +1,4 @@
+using System.Globalization;
 using Reach.Cli;
 using Reach.Output;
 using Reach.Tests.Fixtures;
@@ -8,28 +9,30 @@ namespace Reach.Tests.Cli;
 /// The command line as a product surface: which invocations are refused, where each stream
 /// goes, and what Reach writes into the one directory it owns.
 /// </summary>
-public class CommandLineTests
+public sealed class CommandLineTests : IDisposable
 {
     private const string TestPackage = "xunit.v3";
 
-    private readonly Dictionary<string, string?> environment = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string?> _environment = new(StringComparer.Ordinal);
 
-    private readonly StringWriter standardOutput = new();
-    private readonly StringWriter standardError = new();
+    private readonly StringWriter _standardOutput = new();
+    private readonly StringWriter _standardError = new();
 
-    private Task<int> Run(string workingDirectory, params string[] arguments) =>
+    private Task<int> RunAsync(string workingDirectory, params string[] arguments) =>
         ReachCli.RunAsync(
             arguments,
             workingDirectory,
-            standardOutput,
-            standardError,
-            name => environment.GetValueOrDefault(name),
+            _standardOutput,
+            _standardError,
+            name => _environment.GetValueOrDefault(name),
             outputIsRedirected: false,
             TestContext.Current.CancellationToken);
 
-    private string Out => standardOutput.ToString();
+    private string Out => _standardOutput.ToString();
 
-    private string Error => standardError.ToString();
+    private string Error => _standardError.ToString();
+
+    private static int Numeric(ExitCode code) => Convert.ToInt32(code, CultureInfo.InvariantCulture);
 
     // ---- The verb -----------------------------------------------------------------------
 
@@ -38,13 +41,13 @@ public class CommandLineTests
     {
         using var tree = ProjectTree.Create();
 
-        var exitCode = await Run(tree.Root);
+        var exitCode = await RunAsync(tree.Root);
 
         // The default mode invokes dotnet build, so the one invocation a newcomer is
         // guaranteed to try must not trigger a multi-minute build and write files into their
         // repository — and a bare invocation writes no report, so exiting 0 would hand a
         // mis-wired pipeline "success" plus a missing report.
-        Assert.Equal((int)ExitCode.UsageError, exitCode);
+        Assert.Equal(Numeric(ExitCode.UsageError), exitCode);
         Assert.Contains("select", Out + Error);
     }
 
@@ -53,9 +56,9 @@ public class CommandLineTests
     {
         using var tree = ProjectTree.Create();
 
-        var exitCode = await Run(tree.Root, "--help");
+        var exitCode = await RunAsync(tree.Root, "--help");
 
-        Assert.Equal((int)ExitCode.Success, exitCode);
+        Assert.Equal(Numeric(ExitCode.Success), exitCode);
         Assert.Contains("select", Out);
     }
 
@@ -64,7 +67,7 @@ public class CommandLineTests
     {
         using var tree = ProjectTree.Create();
 
-        Assert.Equal((int)ExitCode.UsageError, await Run(tree.Root, "select", "--bogus"));
+        Assert.Equal(Numeric(ExitCode.UsageError), await RunAsync(tree.Root, "select", "--bogus"));
     }
 
     [Fact]
@@ -72,7 +75,7 @@ public class CommandLineTests
     {
         using var tree = ProjectTree.Create();
 
-        Assert.Equal((int)ExitCode.UsageError, await Run(tree.Root, "select", "-v", "loud"));
+        Assert.Equal(Numeric(ExitCode.UsageError), await RunAsync(tree.Root, "select", "-v", "loud"));
     }
 
     // ---- The -- boundary ----------------------------------------------------------------
@@ -89,10 +92,10 @@ public class CommandLineTests
     {
         using var tree = ProjectTree.Create();
 
-        var exitCode = await Run(tree.Root, "select", "--", forwarded, "somewhere");
+        var exitCode = await RunAsync(tree.Root, "select", "--", forwarded, "somewhere");
 
         // A forwarded output switch changes the layout through a channel Reach never read.
-        Assert.Equal((int)ExitCode.UsageError, exitCode);
+        Assert.Equal(Numeric(ExitCode.UsageError), exitCode);
         Assert.Contains(instead, Out + Error);
     }
 
@@ -102,8 +105,8 @@ public class CommandLineTests
         using var tree = ProjectTree.Create();
 
         Assert.Equal(
-            (int)ExitCode.UsageError,
-            await Run(tree.Root, "select", "--", "--output=somewhere"));
+            Numeric(ExitCode.UsageError),
+            await RunAsync(tree.Root, "select", "--", "--output=somewhere"));
     }
 
     [Fact]
@@ -144,10 +147,10 @@ public class CommandLineTests
     {
         using var tree = ProjectTree.Create();
 
-        var exitCode = await Run(tree.Root, "select", "--", "-o", "somewhere");
+        var exitCode = await RunAsync(tree.Root, "select", "--", "-o", "somewhere");
 
         // Exit 1 is the one case that writes no report.
-        Assert.Equal((int)ExitCode.UsageError, exitCode);
+        Assert.Equal(Numeric(ExitCode.UsageError), exitCode);
         Assert.False(Directory.Exists(Path.Combine(tree.Root, ReachDirectory.DefaultName)));
     }
 
@@ -156,13 +159,13 @@ public class CommandLineTests
     {
         using var tree = SolutionWithTests();
 
-        await Run(tree.Root, "select", "--base", "main");
+        await RunAsync(tree.Root, "select", "--base", "main");
 
         var gitignore = Path.Combine(tree.Root, ReachDirectory.DefaultName, ".gitignore");
 
         // So the first adopter to run Reach locally does not commit a report.
         Assert.True(File.Exists(gitignore));
-        Assert.Equal("*", File.ReadAllText(gitignore).Trim());
+        Assert.Equal("*", (await File.ReadAllTextAsync(gitignore, TestContext.Current.CancellationToken)).Trim());
     }
 
     [Fact]
@@ -187,7 +190,7 @@ public class CommandLineTests
     {
         using var tree = SolutionWithTests();
 
-        await Run(tree.Root, "select", "--base", "main", "--report-dir", "build/reach-output");
+        await RunAsync(tree.Root, "select", "--base", "main", "--report-dir", "build/reach-output");
 
         var relocated = Path.Combine(tree.Root, "build", "reach-output");
 
@@ -236,11 +239,11 @@ public class CommandLineTests
         using var tree = ProjectTree.Create();
 
         var destination = ReportDestination.Resolve("-", ReachDirectory.For(tree.Root, null), tree.Root);
-        var streams = Streams.For(destination, standardOutput, standardError, colour: false);
+        var streams = Streams.For(destination, _standardOutput, _standardError, colour: false);
 
         Assert.True(destination.ToStandardOutput);
-        Assert.Same(standardOutput, streams.Report);
-        Assert.Same(standardError, streams.Summary);
+        Assert.Same(_standardOutput, streams.Report);
+        Assert.Same(_standardError, streams.Summary);
     }
 
     [Fact]
@@ -249,18 +252,18 @@ public class CommandLineTests
         using var tree = ProjectTree.Create();
 
         var destination = ReportDestination.Resolve(null, ReachDirectory.For(tree.Root, null), tree.Root);
-        var streams = Streams.For(destination, standardOutput, standardError, colour: false);
+        var streams = Streams.For(destination, _standardOutput, _standardError, colour: false);
 
-        Assert.Same(standardOutput, streams.Summary);
-        Assert.Same(standardError, streams.Notices);
+        Assert.Same(_standardOutput, streams.Summary);
+        Assert.Same(_standardError, streams.Notices);
         Assert.Null(streams.Report);
     }
 
     [Fact]
     public void No_color_and_NO_COLOR_and_a_redirected_stdout_each_suppress_colour()
     {
-        string? Empty(string name) => null;
-        string? NoColor(string name) => name == "NO_COLOR" ? "1" : null;
+        static string? Empty(string name) => null;
+        static string? NoColor(string name) => name == "NO_COLOR" ? "1" : null;
 
         Assert.True(ColourSupport.Enabled(noColorOption: false, Empty, outputIsRedirected: false));
 
@@ -273,7 +276,7 @@ public class CommandLineTests
     public void An_empty_NO_COLOR_does_not_suppress_colour()
     {
         // no-color.org: present and *not an empty string*, whatever its value.
-        string? EmptyNoColor(string name) => name == "NO_COLOR" ? "" : null;
+        static string? EmptyNoColor(string name) => name == "NO_COLOR" ? "" : null;
 
         Assert.True(ColourSupport.Enabled(noColorOption: false, EmptyNoColor, outputIsRedirected: false));
     }
@@ -350,9 +353,9 @@ public class CommandLineTests
 
         tree.AddProject("Worker", targetFrameworks: "net10.0");
 
-        var exitCode = await Run(tree.Root, "select", "src/Worker/Worker.csproj");
+        var exitCode = await RunAsync(tree.Root, "select", "src/Worker/Worker.csproj");
 
-        Assert.Equal((int)ExitCode.UsageError, exitCode);
+        Assert.Equal(Numeric(ExitCode.UsageError), exitCode);
         Assert.Contains("Worker.csproj", Out + Error);
     }
 
@@ -363,9 +366,9 @@ public class CommandLineTests
 
         // No --base, no CI variables, and the temporary directory is no git repository at
         // all, so the shallow probe fails and resolution stops.
-        var exitCode = await Run(tree.Root, "select");
+        var exitCode = await RunAsync(tree.Root, "select");
 
-        Assert.Equal((int)ExitCode.BaselineUnresolvable, exitCode);
+        Assert.Equal(Numeric(ExitCode.BaselineUnresolvable), exitCode);
     }
 
     [Fact]
@@ -373,9 +376,9 @@ public class CommandLineTests
     {
         using var tree = SolutionWithTests();
 
-        environment["GITHUB_ACTIONS"] = "true";
+        _environment["GITHUB_ACTIONS"] = "true";
 
-        Assert.Equal((int)ExitCode.BaselineUnresolvable, await Run(tree.Root, "select"));
+        Assert.Equal(Numeric(ExitCode.BaselineUnresolvable), await RunAsync(tree.Root, "select"));
         Assert.Contains("fetch-depth: 0", Out + Error);
     }
 
@@ -384,16 +387,17 @@ public class CommandLineTests
     {
         using var repository = SolutionRepository();
 
-        var exitCode = await Run(repository.Path, "select", "--base", "main", "--no-build");
+        var exitCode = await RunAsync(repository.Path, "select", "--base", "main", "--no-build");
 
         // Absence is unambiguous when the tree was searched rather than a path predicted.
-        Assert.Equal((int)ExitCode.AssemblyDiscoveryFailed, exitCode);
+        Assert.Equal(Numeric(ExitCode.AssemblyDiscoveryFailed), exitCode);
         Assert.Contains("No assembly was found", Out + Error);
 
         // A tool that writes nothing when it fails is one you debug by re-running it with more
         // flags, on CI, which is the worst place to need a second run.
-        var report = File.ReadAllText(
-            Path.Combine(repository.Path, ReachDirectory.DefaultName, "report.json"));
+        var report = await File.ReadAllTextAsync(
+            Path.Combine(repository.Path, ReachDirectory.DefaultName, "report.json"),
+            TestContext.Current.CancellationToken);
 
         Assert.Contains("\"outcome\": \"failed\"", report);
         Assert.Contains("\"baseline\"", report);
@@ -415,22 +419,25 @@ public class CommandLineTests
                 .WriteTo(Path.Combine(repository.Path, "src", project, "bin", "Debug", "net10.0"));
         }
 
-        var exitCode = await Run(repository.Path, "select", "--base", "main", "--no-build");
+        var exitCode = await RunAsync(repository.Path, "select", "--base", "main", "--no-build");
 
-        Assert.Equal((int)ExitCode.Success, exitCode);
+        Assert.Equal(Numeric(ExitCode.Success), exitCode);
 
         // Nothing changed since the baseline, which is a different piece of news from an empty
         // selection and gets a visibly different verdict.
         Assert.Contains("No changes to analyse", Out);
         Assert.Contains("Baseline ", Out);
 
-        var report = File.ReadAllText(
-            Path.Combine(repository.Path, ReachDirectory.DefaultName, "report.json"));
+        var report = await File.ReadAllTextAsync(
+            Path.Combine(repository.Path, ReachDirectory.DefaultName, "report.json"),
+            TestContext.Current.CancellationToken);
 
         Assert.Contains("\"outcome\": \"no-changes\"", report);
     }
 
-    /// <summary>The fixture solution inside a real repository, committed as the baseline.</summary>
+    /// <summary>
+    /// The fixture solution inside a real repository, committed as the baseline.
+    /// </summary>
     private static TempRepository SolutionRepository()
     {
         var repository = TempRepository.Create();
@@ -460,5 +467,11 @@ public class CommandLineTests
         tree.AddSlnx("Solution", core, tests);
 
         return tree;
+    }
+
+    public void Dispose()
+    {
+        _standardOutput.Dispose();
+        _standardError.Dispose();
     }
 }

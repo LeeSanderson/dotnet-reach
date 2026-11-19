@@ -9,20 +9,22 @@ namespace Reach.Output;
 /// pipeline step, so deleting them on exit would break the contract Reach just published. The
 /// lifecycle is the caller's, and the documentation says so.
 /// </remarks>
-internal sealed class ReachDirectory
+public sealed class ReachDirectory
 {
-    internal const string DefaultName = ".reach";
-
     private const string GitIgnoreName = ".gitignore";
 
     private ReachDirectory(string path) => Path = path;
 
-    internal string Path { get; }
+    public static string DefaultName { get; } = ".reach";
+
+    public string Path { get; }
 
     internal bool Exists => Directory.Exists(Path);
 
-    /// <summary><c>--report-dir</c> moves the whole directory; the default sits under the working directory.</summary>
-    internal static ReachDirectory For(string workingDirectory, string? reportDirectory) =>
+    /// <summary>
+    /// <c>--report-dir</c> moves the whole directory; the default sits under the working directory.
+    /// </summary>
+    public static ReachDirectory For(string workingDirectory, string? reportDirectory) =>
         new(System.IO.Path.GetFullPath(
             reportDirectory is { Length: > 0 } ? reportDirectory : DefaultName,
             workingDirectory));

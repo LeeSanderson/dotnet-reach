@@ -15,6 +15,28 @@ namespace Reach.Graph;
 /// </remarks>
 internal sealed class SignatureNames : ISignatureTypeProvider<string, object?>
 {
+    private static readonly Dictionary<PrimitiveTypeCode, string> PrimitiveNames = new()
+    {
+        [PrimitiveTypeCode.Boolean] = "System.Boolean",
+        [PrimitiveTypeCode.Byte] = "System.Byte",
+        [PrimitiveTypeCode.Char] = "System.Char",
+        [PrimitiveTypeCode.Double] = "System.Double",
+        [PrimitiveTypeCode.Int16] = "System.Int16",
+        [PrimitiveTypeCode.Int32] = "System.Int32",
+        [PrimitiveTypeCode.Int64] = "System.Int64",
+        [PrimitiveTypeCode.IntPtr] = "System.IntPtr",
+        [PrimitiveTypeCode.Object] = "System.Object",
+        [PrimitiveTypeCode.SByte] = "System.SByte",
+        [PrimitiveTypeCode.Single] = "System.Single",
+        [PrimitiveTypeCode.String] = "System.String",
+        [PrimitiveTypeCode.TypedReference] = "System.TypedReference",
+        [PrimitiveTypeCode.UInt16] = "System.UInt16",
+        [PrimitiveTypeCode.UInt32] = "System.UInt32",
+        [PrimitiveTypeCode.UInt64] = "System.UInt64",
+        [PrimitiveTypeCode.UIntPtr] = "System.UIntPtr",
+        [PrimitiveTypeCode.Void] = "System.Void",
+    };
+
     /// <summary>
     /// The first type handle the decoder reached. A member reference against a generic type
     /// instance names its parent by a <c>TypeSpecification</c>, which carries no assembly of
@@ -22,28 +44,7 @@ internal sealed class SignatureNames : ISignatureTypeProvider<string, object?>
     /// </summary>
     internal EntityHandle FirstType { get; private set; }
 
-    public string GetPrimitiveType(PrimitiveTypeCode typeCode) => typeCode switch
-    {
-        PrimitiveTypeCode.Boolean => "System.Boolean",
-        PrimitiveTypeCode.Byte => "System.Byte",
-        PrimitiveTypeCode.Char => "System.Char",
-        PrimitiveTypeCode.Double => "System.Double",
-        PrimitiveTypeCode.Int16 => "System.Int16",
-        PrimitiveTypeCode.Int32 => "System.Int32",
-        PrimitiveTypeCode.Int64 => "System.Int64",
-        PrimitiveTypeCode.IntPtr => "System.IntPtr",
-        PrimitiveTypeCode.Object => "System.Object",
-        PrimitiveTypeCode.SByte => "System.SByte",
-        PrimitiveTypeCode.Single => "System.Single",
-        PrimitiveTypeCode.String => "System.String",
-        PrimitiveTypeCode.TypedReference => "System.TypedReference",
-        PrimitiveTypeCode.UInt16 => "System.UInt16",
-        PrimitiveTypeCode.UInt32 => "System.UInt32",
-        PrimitiveTypeCode.UInt64 => "System.UInt64",
-        PrimitiveTypeCode.UIntPtr => "System.UIntPtr",
-        PrimitiveTypeCode.Void => "System.Void",
-        _ => "?",
-    };
+    public string GetPrimitiveType(PrimitiveTypeCode typeCode) => PrimitiveNames.GetValueOrDefault(typeCode, "?");
 
     public string GetTypeFromDefinition(MetadataReader reader, TypeDefinitionHandle handle, byte rawTypeKind)
     {
@@ -96,12 +97,6 @@ internal sealed class SignatureNames : ISignatureTypeProvider<string, object?>
     public string GetFunctionPointerType(MethodSignature<string> signature) =>
         "delegate*<" + string.Join(",", signature.ParameterTypes.Append(signature.ReturnType)) + ">";
 
-    public string GetTypeFromSerializedName(string name) => name;
-
-    public PrimitiveTypeCode GetUnderlyingEnumType(string type) => PrimitiveTypeCode.Int32;
-
-    public bool IsSystemType(string type) => type == "System.Type";
-
     private void Remember(EntityHandle handle)
     {
         if (FirstType.IsNil)
@@ -111,7 +106,9 @@ internal sealed class SignatureNames : ISignatureTypeProvider<string, object?>
     }
 }
 
-/// <summary>Full names for types and the canonical key a method is looked up by.</summary>
+/// <summary>
+/// Full names for types and the canonical key a method is looked up by.
+/// </summary>
 internal static class MetadataNames
 {
     /// <summary>
@@ -166,7 +163,9 @@ internal static class MetadataNames
         return containing.Length == 0 ? name : containing + "." + name;
     }
 
-    /// <summary>The name of the assembly a type reference resolves into, or null when it is this one.</summary>
+    /// <summary>
+    /// The name of the assembly a type reference resolves into, or null when it is this one.
+    /// </summary>
     internal static string? AssemblyOf(MetadataReader reader, TypeReferenceHandle handle)
     {
         var scope = reader.GetTypeReference(handle).ResolutionScope;
@@ -211,15 +210,59 @@ internal static class MetadataNames
             {
                 return index == 0 ? typeName : typeName[..index];
             }
+            else
+            {
+                // Part of a type argument, or a '<' closing a nested one.
+            }
         }
 
         return typeName;
     }
 
-    /// <summary>How many generic parameters a method declares. Part of what tells overloads apart.</summary>
+    /// <summary>
+    /// The declaring type's canonical name, and the assembly it lives in.
+    /// </summary>
+    internal static (string? Type, string? Assembly) ParentOf(
+        MetadataReader reader,
+        EntityHandle parent,
+        SignatureNames names)
+    {
+        switch (parent.Kind)
+        {
+            case HandleKind.TypeReference:
+                var reference = (TypeReferenceHandle)parent;
+                return (MetadataNames.FullNameOf(reader, reference), MetadataNames.AssemblyOf(reader, reference));
+
+            case HandleKind.TypeDefinition:
+                return (MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)parent), null);
+
+            case HandleKind.TypeSpecification:
+                // A member reference against a generic instance carries the definition's own
+                // signature, so the instantiation is dropped and the definition is what to
+                // look the member up under.
+                var specification = reader
+                    .GetTypeSpecification((TypeSpecificationHandle)parent)
+                    .DecodeSignature(names, genericContext: null);
+
+                // The specification names no assembly of its own; the first type handle the
+                // decoder reached does.
+                var scope = names.FirstType.Kind == HandleKind.TypeReference
+                    ? MetadataNames.AssemblyOf(reader, (TypeReferenceHandle)names.FirstType)
+                    : null;
+
+                return (MetadataNames.WithoutInstantiation(specification), scope);
+
+            default:
+                return (null, null);
+        }
+    }
+
+    /// <summary>
+    /// How many generic parameters a method declares. Part of what tells overloads apart.
+    /// </summary>
     internal static int GenericArityOf(MetadataReader reader, MethodDefinition method) =>
         method.GetGenericParameters().Count;
 
     internal static bool IsStatic(MethodDefinition method) =>
-        (method.Attributes & MethodAttributes.Static) != 0;
+        method.Attributes.HasFlag(MethodAttributes.Static);
 }

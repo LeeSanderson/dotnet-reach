@@ -5,17 +5,25 @@ namespace Reach.Reporting;
 /// this could only ever disagree with it, and a pipeline that wants to gate gates on
 /// <see cref="BlindSpot"/>.
 /// </summary>
-internal enum NoticeKind
+public enum NoticeKind
 {
-    /// <summary>May under-select. Every code of this kind has an entry in the limitations register.</summary>
+    /// <summary>
+    /// May under-select. Every code of this kind has an entry in the limitations register.
+    /// </summary>
     BlindSpot,
 
-    /// <summary>May over-select — a deliberate widening, disclosed so its cost can be measured.</summary>
+    /// <summary>
+    /// May over-select — a deliberate widening, disclosed so its cost can be measured.
+    /// </summary>
     Widening,
 
-    /// <summary>Something fell outside the analysis scope.</summary>
+    /// <summary>
+    /// Something fell outside the analysis scope.
+    /// </summary>
     Scope,
 
-    /// <summary>A fact about the environment the run happened in.</summary>
+    /// <summary>
+    /// A fact about the environment the run happened in.
+    /// </summary>
     Environment,
 }

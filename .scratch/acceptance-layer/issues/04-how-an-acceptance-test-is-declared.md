@@ -129,3 +129,10 @@ lives in the map's Notes.
   determinism, `Expect` checks two invariants on every test. A project with nothing selected that
   does not run in full has mode `skip` and zero invocations. A project run in full serialises
   `"total": "unknown"`, never `0`.
+- **Amended by [coding-standards](../../coding-standards/spec.md):** every sample solution's
+  projects are in `Reach.slnx` under a `/samples/` solution folder, and build clean under the
+  coding standard. When a sample moves to `tests/samples/<Name>/`, its entries move with it. So a
+  sample *is* now built in place, by the main solution's build; what still holds is that an
+  acceptance test never runs Reach over the in-place tree. The harness copies only git-tracked
+  files, so that build's output never reaches a test. Sample test projects are compiled there but
+  never run by `dotnet test`.

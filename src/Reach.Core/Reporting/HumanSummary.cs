@@ -11,9 +11,14 @@ namespace Reach.Reporting;
 /// not run tests and a second verb would create two code paths obliged to agree. So three
 /// things have to be right here, not only in the JSON.
 /// </remarks>
-internal static class HumanSummary
+public static class HumanSummary
 {
-    internal static string Write(Report report, string? reportPath, string? reachDirectory)
+    /// <summary>
+    /// How much of a baseline SHA the summary shows; the report carries it in full.
+    /// </summary>
+    private const int ShortShaLength = 10;
+
+    public static string Write(Report report, string? reportPath, string? reachDirectory)
     {
         var text = new StringBuilder();
 
@@ -157,7 +162,7 @@ internal static class HumanSummary
         }
     }
 
-    private static string Short(string sha) => sha.Length > 10 ? sha[..10] : sha;
+    private static string Short(string sha) => sha.Length > ShortShaLength ? sha[..ShortShaLength] : sha;
 
     private static string Name(string path) => Path.GetFileNameWithoutExtension(path);
 }

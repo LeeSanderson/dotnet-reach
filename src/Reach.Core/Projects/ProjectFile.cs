@@ -16,20 +16,24 @@ namespace Reach.Projects;
 /// metadata closure is narrower than the real one.
 /// </param>
 /// <param name="PackageReferences">Package ids only. What test-framework recognition reads.</param>
-internal sealed record ProjectFile(
+public sealed record ProjectFile(
     string Path,
     string AssemblyName,
     IReadOnlyList<string> TargetFrameworks,
     IReadOnlyList<ProjectReference> References,
     IReadOnlyList<string> PackageReferences)
 {
-    /// <summary>The file's base name, which is how a project is named in messages.</summary>
+    /// <summary>
+    /// The file's base name, which is how a project is named in messages.
+    /// </summary>
     internal string Name => System.IO.Path.GetFileNameWithoutExtension(Path);
 
     internal string Directory => System.IO.Path.GetDirectoryName(Path)!;
 }
 
-/// <summary>A <c>ProjectReference</c>, with the two attributes that change what it means.</summary>
+/// <summary>
+/// A <c>ProjectReference</c>, with the two attributes that change what it means.
+/// </summary>
 /// <param name="Path">Absolute and full, resolved against the referencing project's directory.</param>
 /// <param name="ReferenceOutputAssembly">
 /// <c>false</c> produces neither a metadata reference nor a copy — <c>Private</c> is the
@@ -41,4 +45,4 @@ internal sealed record ProjectFile(
 /// <c>OutputItemType="Analyzer"</c> — a source generator or analyser, whose output is loaded
 /// by the compiler and never lands beside the consumer's own assemblies.
 /// </param>
-internal sealed record ProjectReference(string Path, bool ReferenceOutputAssembly, bool IsAnalyzer);
+public sealed record ProjectReference(string Path, bool ReferenceOutputAssembly, bool IsAnalyzer);

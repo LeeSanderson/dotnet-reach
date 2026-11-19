@@ -19,12 +19,14 @@ namespace Reach.Tests.Fixtures;
 /// </remarks>
 internal sealed class ScriptedProcessRunner : IProcessRunner
 {
-    private readonly List<(string[] Arguments, ProcessResult Result)> scripts = [];
-    private readonly List<(string[] Arguments, Action Effect)> effects = [];
-    private readonly List<ProcessRequest> requests = [];
+    private readonly List<(string[] Arguments, ProcessResult Result)> _scripts = [];
+    private readonly List<(string[] Arguments, Action Effect)> _effects = [];
+    private readonly List<ProcessRequest> _requests = [];
 
-    /// <summary>Every request made, in order, exactly as issued.</summary>
-    internal IReadOnlyList<ProcessRequest> Requests => requests;
+    /// <summary>
+    /// Every request made, in order, exactly as issued.
+    /// </summary>
+    internal IReadOnlyList<ProcessRequest> Requests => _requests;
 
     internal ScriptedProcessRunner Succeeds(string standardOutput, params string[] arguments) =>
         Returns(new ProcessResult(0, standardOutput, string.Empty), arguments);
@@ -34,7 +36,7 @@ internal sealed class ScriptedProcessRunner : IProcessRunner
 
     internal ScriptedProcessRunner Returns(ProcessResult result, params string[] arguments)
     {
-        scripts.Add((arguments, result));
+        _scripts.Add((arguments, result));
         return this;
     }
 
@@ -44,18 +46,18 @@ internal sealed class ScriptedProcessRunner : IProcessRunner
     /// </summary>
     internal ScriptedProcessRunner Performs(Action effect, params string[] arguments)
     {
-        effects.Add((arguments, effect));
+        _effects.Add((arguments, effect));
         return Succeeds(string.Empty, arguments);
     }
 
     public Task<ProcessResult> RunAsync(
         ProcessRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        requests.Add(request);
+        _requests.Add(request);
 
-        foreach (var (arguments, effect) in effects)
+        foreach (var (arguments, effect) in _effects)
         {
             if (Matches(request.Arguments, arguments))
             {
@@ -63,7 +65,7 @@ internal sealed class ScriptedProcessRunner : IProcessRunner
             }
         }
 
-        foreach (var (arguments, result) in Enumerable.Reverse(scripts))
+        foreach (var (arguments, result) in Enumerable.Reverse(_scripts))
         {
             if (Matches(request.Arguments, arguments))
             {
@@ -75,7 +77,7 @@ internal sealed class ScriptedProcessRunner : IProcessRunner
         // command turns the test above it into decoration.
         throw new InvalidOperationException(
             $"No script matches: {request}. Scripted: "
-            + string.Join("; ", scripts.Select(script => string.Join(' ', script.Arguments))));
+            + string.Join("; ", _scripts.Select(script => string.Join(' ', script.Arguments))));
     }
 
     private static bool Matches(IReadOnlyList<string> issued, IReadOnlyList<string> wanted)

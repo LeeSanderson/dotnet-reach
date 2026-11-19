@@ -10,7 +10,7 @@ namespace Reach.Tests.Build;
 /// </summary>
 public class BuildAdapterTests
 {
-    private readonly ScriptedProcessRunner runner = new();
+    private readonly ScriptedProcessRunner _runner = new();
 
     private static DiscoveredTarget Target { get; } =
         new(Path.Combine("C:", "work", "Solution.slnx"), TargetKind.Solution);
@@ -18,37 +18,37 @@ public class BuildAdapterTests
     private static SelectRequest Request { get; } =
         new() { WorkingDirectory = Path.Combine("C:", "work") };
 
-    private Task<BuildOutcome> Build(SelectRequest request) =>
-        new BuildAdapter(runner).BuildAsync(Target, request, TestContext.Current.CancellationToken);
+    private Task<BuildOutcome> BuildAsync(SelectRequest request) =>
+        new BuildAdapter(_runner).BuildAsync(Target, request, TestContext.Current.CancellationToken);
 
     [Fact]
     public async Task The_default_mode_invokes_dotnet_build_on_the_target()
     {
-        runner.Succeeds("Build succeeded.", "build");
+        _runner.Succeeds("Build succeeded.", "build");
 
-        var outcome = await Build(Request);
+        var outcome = await BuildAsync(Request);
 
         Assert.True(outcome.Succeeded);
-        Assert.Equal("dotnet", Assert.Single(runner.Requests).Executable);
-        Assert.Equal(["build", Target.Path], runner.Requests[0].Arguments);
+        Assert.Equal("dotnet", Assert.Single(_runner.Requests).Executable);
+        Assert.Equal(["build", Target.Path], _runner.Requests[0].Arguments);
     }
 
     [Fact]
     public async Task No_build_never_invokes_the_build_adapter()
     {
-        var outcome = await Build(Request with { NoBuild = true });
+        var outcome = await BuildAsync(Request with { NoBuild = true });
 
         Assert.True(outcome.Succeeded);
         Assert.Null(outcome.Request);
-        Assert.Empty(runner.Requests);
+        Assert.Empty(_runner.Requests);
     }
 
     [Fact]
     public async Task The_layout_options_reach_the_build()
     {
-        runner.Succeeds("", "build");
+        _runner.Succeeds("", "build");
 
-        await Build(Request with
+        await BuildAsync(Request with
         {
             Configuration = "Release",
             Output = "out",
@@ -59,15 +59,15 @@ public class BuildAdapterTests
         // a forwarded copy of one after `--` is refused.
         Assert.Equal(
             ["build", Target.Path, "--configuration", "Release", "--output", "out", "--artifacts-path", "artifacts"],
-            runner.Requests[0].Arguments);
+            _runner.Requests[0].Arguments);
     }
 
     [Fact]
     public async Task Forwarded_tokens_reach_the_build_verbatim_and_last()
     {
-        runner.Succeeds("", "build");
+        _runner.Succeeds("", "build");
 
-        await Build(Request with
+        await BuildAsync(Request with
         {
             Configuration = "Release",
             ForwardedBuildArguments = ["-p:ContinuousIntegrationBuild=true", "--no-restore"],
@@ -75,15 +75,15 @@ public class BuildAdapterTests
 
         Assert.Equal(
             ["build", Target.Path, "--configuration", "Release", "-p:ContinuousIntegrationBuild=true", "--no-restore"],
-            runner.Requests[0].Arguments);
+            _runner.Requests[0].Arguments);
     }
 
     [Fact]
     public async Task A_failed_build_is_a_result_carrying_what_the_build_said()
     {
-        runner.Fails(1, "error CS1002: ; expected", "build");
+        _runner.Fails(1, "error CS1002: ; expected", "build");
 
-        var outcome = await Build(Request);
+        var outcome = await BuildAsync(Request);
 
         // There is no degraded mode: a failed build already fails the pipeline, so a clever
         // selection over a broken tree has no consumer.
@@ -95,11 +95,11 @@ public class BuildAdapterTests
     [Fact]
     public async Task The_command_that_ran_is_recorded()
     {
-        runner.Succeeds("", "build");
+        _runner.Succeeds("", "build");
 
-        var outcome = await Build(Request);
+        var outcome = await BuildAsync(Request);
 
         // So a surprising run stays reproducible from the report envelope alone.
-        Assert.Equal(runner.Requests[0], outcome.Request);
+        Assert.Equal(_runner.Requests[0], outcome.Request);
     }
 }

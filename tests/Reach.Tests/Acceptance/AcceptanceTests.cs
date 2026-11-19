@@ -20,10 +20,10 @@ namespace Reach.Tests.Acceptance;
 /// </remarks>
 public sealed class AcceptanceTests : IDisposable
 {
-    private readonly FixtureSolution fixture;
-    private readonly string baseline;
+    private readonly FixtureSolution _fixture;
+    private readonly string _baseline;
 
-    public AcceptanceTests() => fixture = FixtureSolution.Build(out baseline);
+    public AcceptanceTests() => _fixture = FixtureSolution.Build(out _baseline);
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -35,10 +35,10 @@ public sealed class AcceptanceTests : IDisposable
     [Fact]
     public async Task The_NUnit_filter_renders_with_contains_and_reports_the_extra_it_will_run()
     {
-        Touch("src/Contoso.Core/Invoice.cs", "public int Tax(int net) => net * StandardRate / 100;",
-            "public int Tax(int net) => (net * StandardRate / 100) + 0;");
+        Touch("src/Contoso.Core/Invoice.cs", "public static int Tax(int net) => net * StandardRate / Percent;",
+            "public static int Tax(int net) => (net * StandardRate / Percent) + 0;");
 
-        var report = await fixture.SelectAsync(baseline, Token);
+        var report = await _fixture.SelectAsync(_baseline, Token);
         var entry = EntryFor(report, "Contoso.Tests.NUnit");
 
         // The parameterised test survives the rendered filter, which is the whole reason the
@@ -74,10 +74,10 @@ public sealed class AcceptanceTests : IDisposable
         // A comment-only change: real paths in the diff, no changed member anywhere.
         Touch(
             "src/Contoso.Core/Invoice.cs",
-            "public int Untouched() => 0;",
-            "// nothing here changes what compiles\n    public int Untouched() => 0;");
+            "public static int Untouched(int net) => net;",
+            "// nothing here changes what compiles\n    public static int Untouched(int net) => net;");
 
-        var report = await fixture.SelectAsync(baseline, Token);
+        var report = await _fixture.SelectAsync(_baseline, Token);
 
         // Every project Reach could analyse. The unrecognised-framework project is not among
         // them and runs in full whatever the change was, because Reach cannot show it is
@@ -99,7 +99,7 @@ public sealed class AcceptanceTests : IDisposable
             issued++;
 
             await runner.RunAsync(
-                new ProcessRequest(invocation[0], [.. invocation.Skip(1)], fixture.Path),
+                new ProcessRequest(invocation[0], [.. invocation.Skip(1)], _fixture.Path),
                 Token);
         }
 
@@ -114,7 +114,7 @@ public sealed class AcceptanceTests : IDisposable
     {
         Touch("src/Contoso.Core/Invoice.cs", "=> net + Tax(net);", "=> net + Tax(net) + 0;");
 
-        var report = await fixture.SelectAsync(baseline, Token);
+        var report = await _fixture.SelectAsync(_baseline, Token);
         var entry = EntryFor(report, "Contoso.Tests.Unrecognised");
 
         Assert.Equal("run-all", entry.Mode);
@@ -134,8 +134,8 @@ public sealed class AcceptanceTests : IDisposable
     {
         Touch("src/Contoso.Core/Invoice.cs", "=> net + Tax(net);", "=> net + Tax(net) + 0;");
 
-        var first = ReportWriter.Serialise(await fixture.SelectAsync(baseline, Token));
-        var second = ReportWriter.Serialise(await fixture.SelectAsync(baseline, Token));
+        var first = ReportWriter.Serialise(await _fixture.SelectAsync(_baseline, Token));
+        var second = ReportWriter.Serialise(await _fixture.SelectAsync(_baseline, Token));
 
         // This is what makes exact expected selections the cheap option rather than the brittle
         // one, which is why it is mandatory despite proving nothing about selection.
@@ -147,10 +147,10 @@ public sealed class AcceptanceTests : IDisposable
     [Fact]
     public async Task A_change_selects_exactly_the_tests_that_reach_it()
     {
-        Touch("src/Contoso.Core/Invoice.cs", "public int Tax(int net) => net * StandardRate / 100;",
-            "public int Tax(int net) => (net * StandardRate / 100) + 0;");
+        Touch("src/Contoso.Core/Invoice.cs", "public static int Tax(int net) => net * StandardRate / Percent;",
+            "public static int Tax(int net) => (net * StandardRate / Percent) + 0;");
 
-        var report = await fixture.SelectAsync(baseline, Token);
+        var report = await _fixture.SelectAsync(_baseline, Token);
         var xunit = EntryFor(report, "Contoso.Tests.Xunit");
 
         // Exact, not an in/out set: Totals_include_tax reaches Tax, Untouched_is_zero does not.
@@ -164,7 +164,7 @@ public sealed class AcceptanceTests : IDisposable
     {
         Touch("src/Contoso.Core/Invoice.cs", "=> net + Tax(net);", "=> net + Tax(net) + 0;");
 
-        var report = await fixture.SelectAsync(baseline, Token);
+        var report = await _fixture.SelectAsync(_baseline, Token);
 
         // Contoso.Core is net8.0;net10.0, so discovery resolved two assembly instances for it.
         Assert.Equal(
@@ -180,7 +180,7 @@ public sealed class AcceptanceTests : IDisposable
     {
         Touch("src/Contoso.Core/Invoice.cs", "=> net + Tax(net);", "=> net + Tax(net) + 0;");
 
-        var report = await fixture.SelectAsync(baseline, Token);
+        var report = await _fixture.SelectAsync(_baseline, Token);
 
         // Referenced with ReferenceOutputAssembly="false", so it produces neither a metadata
         // reference nor a copy — in the closure, and not in the expected assembly set. A wrong
@@ -193,7 +193,7 @@ public sealed class AcceptanceTests : IDisposable
     {
         Touch("src/Contoso.Core/Invoice.cs", "StandardRate = 20;", "StandardRate = 25;");
 
-        var report = await fixture.SelectAsync(baseline, Token);
+        var report = await _fixture.SelectAsync(_baseline, Token);
 
         // After inlining the consumer's source is byte-identical and its IL is different, so
         // nothing on the declaring side reaches this.
@@ -207,7 +207,7 @@ public sealed class AcceptanceTests : IDisposable
         // generator's marker reaches nothing at all.
         Touch("src/Contoso.Generator/Marker.cs", "\"contoso\"", "\"contoso-2\"");
 
-        var report = await fixture.SelectAsync(baseline, Token);
+        var report = await _fixture.SelectAsync(_baseline, Token);
 
         // The field that makes an under-selection visible, and only trustworthy if something
         // proves it fires.
@@ -222,7 +222,7 @@ public sealed class AcceptanceTests : IDisposable
             "    [Fact]\n    public void Untouched_is_zero()",
             "    [Fact]\n    [Trait(\"kind\", \"new\")]\n    public void Untouched_is_zero()");
 
-        var report = await fixture.SelectAsync(baseline, Token);
+        var report = await _fixture.SelectAsync(_baseline, Token);
 
         // The cheapest test of the most expensive regression in the set.
         Assert.Contains(
@@ -235,7 +235,7 @@ public sealed class AcceptanceTests : IDisposable
     {
         Touch("src/Contoso.Core/Invoice.cs", "=> net + Tax(net);", "=> net + Tax(net) + 0;");
 
-        var report = await fixture.SelectAsync(baseline, Token);
+        var report = await _fixture.SelectAsync(_baseline, Token);
 
         // The fixture has no global.json, and its xUnit project is on xunit.v3 4.0.0 — where
         // `dotnet test` is a hard build error whose message names nothing Reach-shaped. Reach
@@ -251,14 +251,24 @@ public sealed class AcceptanceTests : IDisposable
     /// --no-build is a correspondence failure by design, which is a different assertion from
     /// every one in this file.
     /// </summary>
+    /// <remarks>
+    /// <paramref name="find"/> and <paramref name="replace"/> are written with <c>\n</c>; they are
+    /// translated to the line ending the fixture file was checked out with, so the edit matches
+    /// on a CRLF checkout as well as an LF one.
+    /// </remarks>
     private void Touch(string relativePath, string find, string replace)
     {
-        var contents = fixture.ReadFile(relativePath);
+        var contents = _fixture.ReadFile(relativePath);
+        var newline = contents.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
 
-        Assert.Contains(find, contents);
+        var matched = find.ReplaceLineEndings(newline);
 
-        fixture.WriteFile(relativePath, contents.Replace(find, replace, StringComparison.Ordinal));
-        fixture.Rebuild();
+        Assert.Contains(matched, contents);
+
+        _fixture.WriteFile(
+            relativePath,
+            contents.Replace(matched, replace.ReplaceLineEndings(newline), StringComparison.Ordinal));
+        _fixture.Rebuild();
     }
 
     private static string WithoutTimings(string json)
@@ -279,5 +289,5 @@ public sealed class AcceptanceTests : IDisposable
         return System.Text.Json.JsonSerializer.Serialize(kept);
     }
 
-    public void Dispose() => fixture.Dispose();
+    public void Dispose() => _fixture.Dispose();
 }

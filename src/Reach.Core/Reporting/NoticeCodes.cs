@@ -11,13 +11,19 @@ namespace Reach.Reporting;
 /// </remarks>
 internal static class NoticeCodes
 {
-    /// <summary>How the baseline was arrived at, and what SHA it resolved to.</summary>
+    /// <summary>
+    /// How the baseline was arrived at, and what SHA it resolved to.
+    /// </summary>
     internal const string BaselineResolved = "baseline-resolved";
 
-    /// <summary>The baseline resolved to <c>HEAD</c>, so the change set can only be the working tree.</summary>
+    /// <summary>
+    /// The baseline resolved to <c>HEAD</c>, so the change set can only be the working tree.
+    /// </summary>
     internal const string BaselineIsHead = "baseline-is-head";
 
-    /// <summary>No baseline could be resolved. The run failed; the message says how to fix it.</summary>
+    /// <summary>
+    /// No baseline could be resolved. The run failed; the message says how to fix it.
+    /// </summary>
     internal const string BaselineUnresolvable = "baseline-unresolvable";
 
     /// <summary>
@@ -37,6 +43,13 @@ internal static class NoticeCodes
     /// change to it is invisible to Reach. A blind spot, with an entry in the register.
     /// </summary>
     internal const string IgnoredUntrackedAssembly = "ignored-untracked-assembly";
+
+    /// <summary>
+    /// An assembly's debug symbols record source under a deterministic root other than
+    /// <c>/_/</c> (<c>/_1/</c>, ...), which nothing Reach reads maps back to a directory. Those
+    /// files are neither verified nor joined. A blind spot, with an entry in the register.
+    /// </summary>
+    internal const string UnmappedDeterministicSourceRoot = "unmapped-deterministic-source-root";
 
     /// <summary>
     /// A call site names a member of a first-party assembly that is not in it. A build
@@ -60,10 +73,14 @@ internal static class NoticeCodes
     // when the outcome is nothing-selected — so every cause of emptiness is documented and
     // register-linked, and nobody adds one as an ad-hoc string.
 
-    /// <summary>There were changes, they joined, and no test could reach any of them.</summary>
+    /// <summary>
+    /// There were changes, they joined, and no test could reach any of them.
+    /// </summary>
     internal const string NoChangedMemberReachedATest = "no-changed-member-reached-a-test";
 
-    /// <summary>Every change was outside the union of the test projects' closures.</summary>
+    /// <summary>
+    /// Every change was outside the union of the test projects' closures.
+    /// </summary>
     internal const string AllChangesOutsideAnalysisScope = "all-changes-outside-analysis-scope";
 
     /// <summary>

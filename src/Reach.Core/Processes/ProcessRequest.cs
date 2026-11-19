@@ -8,12 +8,14 @@ namespace Reach.Processes;
 /// <param name="Executable">The program to run, resolved through <c>PATH</c> if not rooted.</param>
 /// <param name="Arguments">The argument vector, one element per argument, already unquoted.</param>
 /// <param name="WorkingDirectory">The directory the child starts in.</param>
-internal sealed record ProcessRequest(
+public sealed record ProcessRequest(
     string Executable,
     IReadOnlyList<string> Arguments,
     string WorkingDirectory)
 {
-    /// <summary>The command as a human would type it. For notices and report entries only.</summary>
+    /// <summary>
+    /// The command as a human would type it. For notices and report entries only.
+    /// </summary>
     public override string ToString() =>
         string.Join(' ', new[] { Executable }.Concat(Arguments).Select(Quote));
 

@@ -1,13 +1,21 @@
 {
   "$schema": "https://alirezanet.github.io/Husky.Net/schema.json",
+  "variables": [
+    {
+      "//": "The staged paths, without Husky.Net's partial-staging copies. Built-in `${staged}` writes the index version of a partly staged file to a temporary `<hash>_File.cs` inside the project, with the index's LF endings, and `dotnet format` then fails it on ENDOFLINE, SA1649 and SA1653. This lists the same paths (deleted files left out), so the task checks the working-tree files at those paths.",
+      "name": "staged-paths",
+      "command": "git",
+      "args": ["diff", "--cached", "--name-only", "--diff-filter=d"]
+    }
+  ],
   "tasks": [
     {
       "name": "format-staged",
       "group": "pre-commit",
-      "//": "relative, not absolute: `dotnet format --include` silently matches nothing when given a rooted Windows path and exits 0, which is a hook that always passes.",
+      "//": "Checks the working-tree version of each staged C# file, not the staged version: for a partly staged file, unstaged edits are checked too. relative, not absolute: `dotnet format --include` silently matches nothing when given a rooted Windows path and exits 0, which is a hook that always passes.",
       "pathMode": "relative",
       "command": "dotnet",
-      "args": ["format", "--verify-no-changes", "--include", "${staged}"],
+      "args": ["format", "--verify-no-changes", "--include", "${staged-paths}"],
       "include": ["**/*.cs"]
     }
   ]

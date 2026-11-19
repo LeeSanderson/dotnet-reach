@@ -17,7 +17,7 @@ namespace Reach.Reporting;
 /// the only place it can live.
 /// </para>
 /// </remarks>
-internal static class NoticeCatalogue
+public static class NoticeCatalogue
 {
     internal static IReadOnlyDictionary<string, NoticeKind> All { get; } =
         new Dictionary<string, NoticeKind>(StringComparer.Ordinal)
@@ -49,6 +49,7 @@ internal static class NoticeCatalogue
             // Blind spots — may under-select. Every one of these needs a register entry, and
             // the parity test is what makes that true rather than aspirational.
             [NoticeCodes.IgnoredUntrackedAssembly] = NoticeKind.BlindSpot,
+            [NoticeCodes.UnmappedDeterministicSourceRoot] = NoticeKind.BlindSpot,
             [NoticeCodes.UnmappedFileNoProject] = NoticeKind.BlindSpot,
             [NoticeCodes.ParseFailed] = NoticeKind.BlindSpot,
             [NoticeCodes.CalliUnresolved] = NoticeKind.BlindSpot,
@@ -62,6 +63,8 @@ internal static class NoticeCatalogue
             .Order(StringComparer.Ordinal)
     ];
 
-    /// <summary>Whether a code is one Reach knows about. Nothing outside the catalogue may be emitted.</summary>
+    /// <summary>
+    /// Whether a code is one Reach knows about. Nothing outside the catalogue may be emitted.
+    /// </summary>
     internal static bool Knows(string code) => All.ContainsKey(code);
 }

@@ -18,12 +18,28 @@ namespace Reach.Rendering;
 internal static class CommandLineCeiling
 {
     /// <summary>
+    /// Under <c>cmd</c>'s documented 8,191-character limit, with room to spare (ADR-0009).
+    /// </summary>
+    private const int WindowsCharacters = 8_000;
+
+    /// <summary>
+    /// Clear of Linux's 128 KiB <c>MAX_ARG_STRLEN</c> for a single argument, with headroom for
+    /// the rest of the command line (ADR-0009).
+    /// </summary>
+    private const int ElsewhereCharacters = 100_000;
+
+    /// <summary>
+    /// What an argument costs beyond its own text: a separating space and a pair of quotes.
+    /// </summary>
+    private const int PerArgumentOverhead = 3;
+
+    /// <summary>
     /// Windows takes the lower of the two limits, because Reach cannot know whether the argv it
     /// emits will be issued through <c>cmd</c> — and being wrong the other way is a build that
     /// fails at the test step with a message about the command line being too long.
     /// </summary>
-    internal static int Characters { get; } = OperatingSystem.IsWindows() ? 8_000 : 100_000;
+    internal static int Characters { get; } = OperatingSystem.IsWindows() ? WindowsCharacters : ElsewhereCharacters;
 
     internal static bool Fits(IReadOnlyList<string> arguments) =>
-        arguments.Sum(argument => argument.Length + 3) <= Characters;
+        arguments.Sum(argument => argument.Length + PerArgumentOverhead) <= Characters;
 }

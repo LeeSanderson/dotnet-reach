@@ -12,15 +12,18 @@ namespace Reach.Selection;
 /// exists; a test reachable only through widening is <see cref="Widened"/>, which is where
 /// over-selection is plausible and the only class narrowing may ever touch.
 /// </remarks>
-internal enum PathClass
+public enum PathClass
 {
     /// <summary>
-    /// Reachable without a widened edge. Synthesised edges count here: containment and type
-    /// initialization are invented by Reach, but the control flow they describe is not in doubt.
+    /// Reachable without a widened edge. Synthesised edges count here: containment, type
+    /// initialization and test lifecycle are invented by Reach, but the control flow they
+    /// describe is not in doubt.
     /// </summary>
     Compiled,
 
-    /// <summary>Reachable only through a dispatch site whose implementation is not knowable.</summary>
+    /// <summary>
+    /// Reachable only through a dispatch site whose implementation is not knowable.
+    /// </summary>
     Widened,
 }
 
@@ -30,6 +33,11 @@ internal enum PathClass
 /// </summary>
 internal static class ReverseWalk
 {
+    /// <summary>
+    /// The longest path <see cref="PathFrom"/> reconstructs before giving up on it as a cycle.
+    /// </summary>
+    private const int MaxPathHops = 4096;
+
     /// <summary>
     /// Every method that can reach one of <paramref name="roots"/>, with the strongest path
     /// class each was reached by.
@@ -93,17 +101,12 @@ internal static class ReverseWalk
         var hops = new List<MethodId> { test };
         var current = test;
 
-        while (predecessors.TryGetValue(current, out var next))
+        // Hop-by-hop paths are the one genuinely unbounded thing in the design, which is why
+        // they are opt-in. A cycle would otherwise never terminate.
+        while (hops.Count <= MaxPathHops && predecessors.TryGetValue(current, out var next))
         {
             hops.Add(next);
             current = next;
-
-            if (hops.Count > 4096)
-            {
-                // Hop-by-hop paths are the one genuinely unbounded thing in the design, which
-                // is why they are opt-in. A cycle would otherwise never terminate.
-                break;
-            }
         }
 
         return hops;

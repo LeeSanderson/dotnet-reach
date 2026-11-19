@@ -8,12 +8,16 @@ namespace Reach.Selection;
 /// Why a test was selected. The rules are not interchangeable and only the first is an
 /// analysis result, so each selected test records which of them applied.
 /// </summary>
-internal enum SelectionRule
+public enum SelectionRule
 {
-    /// <summary>Reachable backwards along call edges from a change somewhere else.</summary>
+    /// <summary>
+    /// Reachable backwards along call edges from a change somewhere else.
+    /// </summary>
     ReverseReachable,
 
-    /// <summary>Its own declaration changed.</summary>
+    /// <summary>
+    /// Its own declaration changed.
+    /// </summary>
     OwnSourceChanged,
 
     /// <summary>
@@ -24,30 +28,64 @@ internal enum SelectionRule
     NewSinceBaseline,
 }
 
-/// <summary>What a test project is going to be asked to run.</summary>
-internal enum SelectionMode
+/// <summary>
+/// What a test project is going to be asked to run.
+/// </summary>
+public enum SelectionMode
 {
-    /// <summary>Some of its tests, named by a filter.</summary>
+    /// <summary>
+    /// Some of its tests, named by a filter.
+    /// </summary>
     Filtered,
 
-    /// <summary>All of them, because Reach could not analyse the project.</summary>
+    /// <summary>
+    /// All of them, because Reach could not analyse the project.
+    /// </summary>
     RunAll,
 
-    /// <summary>None of them. An empty filter would run everything, so nothing is emitted at all.</summary>
+    /// <summary>
+    /// None of them. An empty filter would run everything, so nothing is emitted at all.
+    /// </summary>
     Skip,
 }
 
-/// <summary>How a change was attributed. The tier lives on the change, not on the pair.</summary>
-internal enum ChangeTier
+/// <summary>
+/// How a change was attributed. The tier lives on the change, not on the pair.
+/// </summary>
+public enum ChangeTier
 {
-    /// <summary>Attributed to one or more methods.</summary>
+    /// <summary>
+    /// Attributed to one or more methods.
+    /// </summary>
     Member,
 
-    /// <summary>Every surviving member of a type.</summary>
+    /// <summary>
+    /// Every surviving member of a type.
+    /// </summary>
     WholeType,
 
-    /// <summary>Every method of an assembly.</summary>
+    /// <summary>
+    /// Every method of an assembly.
+    /// </summary>
     WholeAssembly,
+}
+
+/// <summary>
+/// The whole selection, plus the forward change list and anything it had to disclose.
+/// </summary>
+public sealed record SelectionResult(
+    IReadOnlyList<ProjectSelection> Projects,
+    IReadOnlyList<ChangeEntry> Changes,
+    IReadOnlyList<Notice> Notices)
+{
+    internal int SelectedCount => Projects.Sum(project => project.Selected.Count);
+
+    /// <summary>
+    /// A selection was made, nothing was selected, or there was nothing to analyse. The fourth
+    /// outcome — failure — never reaches here.
+    /// </summary>
+    internal bool AnythingSelected =>
+        Projects.Any(project => project.Mode != SelectionMode.Skip);
 }
 
 /// <summary>
@@ -65,15 +103,20 @@ internal enum ChangeTier
 /// nothing runs" a line you read rather than an absence you have to notice.
 /// </para>
 /// </remarks>
-internal sealed record ChangeEntry(int Index, string Display, ChangeTier Tier, string Reason)
+public sealed record ChangeEntry(int Index, string Display, ChangeTier Tier, string Reason)
 {
     internal int TestsReached { get; set; }
 }
 
+/// <summary>
+/// One selected test, and why.
+/// </summary>
+/// <param name="Test">The test method.</param>
+/// <param name="Rules">Every rule that selected it.</param>
 /// <param name="Changes">Indices into the forward change list. Empty exactly when the test is not reverse-reachable.</param>
 /// <param name="Class">Null exactly when the test is not reverse-reachable.</param>
 /// <param name="Paths">Hop-by-hop, only under <c>--paths</c>.</param>
-internal sealed record SelectedTest(
+public sealed record SelectedTest(
     TestMethod Test,
     IReadOnlyList<SelectionRule> Rules,
     IReadOnlyList<int> Changes,
@@ -83,16 +126,21 @@ internal sealed record SelectedTest(
 /// <summary>
 /// One entry of the report, keyed on (test project, target framework).
 /// </summary>
+/// <param name="Project">The test project.</param>
+/// <param name="TargetFramework">The target framework this entry's assembly was built for.</param>
+/// <param name="Mode">Whether the project runs some, all or none of its tests.</param>
+/// <param name="Selected">The tests selected, each with its reasons.</param>
 /// <param name="Total">
 /// Null means <em>unknown</em>, never zero. Reporting zero for a project Reach could not
 /// analyse would silently corrupt the over-selection ratio in exactly the case where Reach is
 /// running an entire project.
 /// </param>
+/// <param name="Dialect">The filter dialect its test framework speaks; null when Reach could not analyse the project.</param>
 /// <param name="AllTests">
 /// Every test method in the project, not only the selected ones. The rendered-match
 /// computation reads it, and so does the over-selection measurement.
 /// </param>
-internal sealed record ProjectSelection(
+public sealed record ProjectSelection(
     ProjectFile Project,
     string TargetFramework,
     SelectionMode Mode,
@@ -100,19 +148,3 @@ internal sealed record ProjectSelection(
     int? Total,
     string? Dialect,
     IReadOnlyList<TestMethod> AllTests);
-
-/// <summary>The whole selection, plus the forward change list and anything it had to disclose.</summary>
-internal sealed record SelectionResult(
-    IReadOnlyList<ProjectSelection> Projects,
-    IReadOnlyList<ChangeEntry> Changes,
-    IReadOnlyList<Notice> Notices)
-{
-    internal int SelectedCount => Projects.Sum(project => project.Selected.Count);
-
-    /// <summary>
-    /// A selection was made, nothing was selected, or there was nothing to analyse. The fourth
-    /// outcome — failure — never reaches here.
-    /// </summary>
-    internal bool AnythingSelected =>
-        Projects.Any(project => project.Mode != SelectionMode.Skip);
-}

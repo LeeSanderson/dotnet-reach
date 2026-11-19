@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Reach.Output;
 using Reach.Reporting;
 using Reach.Tests.Fixtures;
 
@@ -33,6 +32,13 @@ public class ReportTests
             public void Untouched() => new N.Widget().Untouched();
         }
         """;
+
+    private static readonly JsonSerializerOptions Indented = new()
+    {
+        WriteIndented = true,
+        RespectNullableAnnotations = true,
+        RespectRequiredConstructorParameters = true,
+    };
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -69,7 +75,6 @@ public class ReportTests
     {
         using var document = JsonDocument.Parse(json);
 
-        var options = new JsonSerializerOptions { WriteIndented = true };
         var root = document.RootElement.Clone();
 
         var rewritten = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
@@ -81,7 +86,7 @@ public class ReportTests
                 : property.Value;
         }
 
-        return JsonSerializer.Serialize(rewritten, options);
+        return JsonSerializer.Serialize(rewritten, Indented);
     }
 
     private static JsonElement Strip(JsonElement envelope)

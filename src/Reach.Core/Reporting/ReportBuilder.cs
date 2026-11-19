@@ -1,6 +1,5 @@
+using System.Text.Json;
 using Reach.Assemblies;
-using Reach.Baselines;
-using Reach.Changes;
 using Reach.Rendering;
 using Reach.Selection;
 
@@ -15,9 +14,9 @@ namespace Reach.Reporting;
 /// which is the worst place to need a second run. The one exception is a usage error, whose
 /// arguments were never valid enough to establish where to write one.
 /// </remarks>
-internal static class ReportBuilder
+public static class ReportBuilder
 {
-    internal static Report Build(SelectRun run, SelectRequest request, PhaseTimings timings)
+    public static Report Build(SelectRun run, SelectRequest request, PhaseTimings timings)
     {
         var outcome = OutcomeOf(run);
         var entries = EntriesOf(run);
@@ -97,9 +96,7 @@ internal static class ReportBuilder
             ChangeSources = ["committed", "staged", "unstaged", "untracked"],
             BuildMode = request.NoBuild ? "no-build" : "build",
             ForwardedBuildArguments = request.ForwardedBuildArguments,
-            Correspondence = (run.Correspondence?.Verdict ?? CorrespondenceVerdict.Skipped)
-                .ToString()
-                .ToLowerInvariant(),
+            Correspondence = Kebab((run.Correspondence?.Verdict ?? CorrespondenceVerdict.Skipped).ToString()),
             Timings = timings.ToReport(),
         };
 
@@ -133,7 +130,9 @@ internal static class ReportBuilder
             ],
         };
 
-    /// <summary>Sorted by display form, which is the documented key.</summary>
+    /// <summary>
+    /// Sorted by display form, which is the documented key.
+    /// </summary>
     private static IReadOnlyList<ReportChange> ChangesOf(SelectRun run) =>
     [
         .. (run.Selection?.Changes ?? [])
@@ -195,13 +194,15 @@ internal static class ReportBuilder
             Id = test.Test.Id.ToString(),
             Rules = [.. test.Rules.Select(rule => Kebab(rule.ToString())).Order(StringComparer.Ordinal)],
             Changes = test.Changes,
-            PathClass = test.Class?.ToString().ToLowerInvariant(),
+            PathClass = test.Class is { } pathClass ? Kebab(pathClass.ToString()) : null,
             Paths = test.Paths is null
                 ? null
-                : [.. test.Paths.Select(path => (IReadOnlyList<string>)[.. path.Select(hop => hop.ToString())])],
+                : [.. test.Paths.Select(IReadOnlyList<string> (path) => [.. path.Select(hop => hop.ToString())])],
         };
 
-    /// <summary>Sorted by code, then by the locator its data carries. The documented key.</summary>
+    /// <summary>
+    /// Sorted by code, then by the locator its data carries. The documented key.
+    /// </summary>
     private static IReadOnlyList<ReportNotice> NoticesOf(SelectRun run) =>
     [
         .. run.Notices
@@ -223,21 +224,8 @@ internal static class ReportBuilder
     private static string Locator(ReportNotice notice) =>
         notice.Data is null ? string.Empty : string.Join(",", notice.Data.Keys);
 
-    /// <summary><c>NothingSelected</c> becomes <c>nothing-selected</c>. Wire names are kebab-case.</summary>
-    private static string Kebab(string name)
-    {
-        var builder = new System.Text.StringBuilder(name.Length + 4);
-
-        for (var index = 0; index < name.Length; index++)
-        {
-            if (index > 0 && char.IsUpper(name[index]))
-            {
-                builder.Append('-');
-            }
-
-            builder.Append(char.ToLowerInvariant(name[index]));
-        }
-
-        return builder.ToString();
-    }
+    /// <summary>
+    /// <c>NothingSelected</c> becomes <c>nothing-selected</c>. Wire names are kebab-case.
+    /// </summary>
+    private static string Kebab(string name) => JsonNamingPolicy.KebabCaseLower.ConvertName(name);
 }

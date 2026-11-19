@@ -3,12 +3,14 @@ using System.Text;
 
 namespace Reach.Processes;
 
-/// <summary>The one implementation of <see cref="IProcessRunner"/>: a real child process.</summary>
-internal sealed class ProcessRunner : IProcessRunner
+/// <summary>
+/// The one implementation of <see cref="IProcessRunner"/>: a real child process.
+/// </summary>
+public sealed class ProcessRunner : IProcessRunner
 {
     public async Task<ProcessResult> RunAsync(
         ProcessRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         using var process = new Process { StartInfo = StartInfoFor(request) };
 
@@ -34,7 +36,7 @@ internal sealed class ProcessRunner : IProcessRunner
 
             // The child is gone, so both reads complete; awaiting them releases the pipes
             // instead of leaving two orphaned tasks holding handles for the run's lifetime.
-            await Drain(standardOutput, standardError).ConfigureAwait(false);
+            await DrainAsync(standardOutput, standardError).ConfigureAwait(false);
             throw;
         }
 
@@ -113,16 +115,11 @@ internal sealed class ProcessRunner : IProcessRunner
         }
     }
 
-    private static async Task Drain(params Task<string>[] reads)
-    {
-        try
-        {
-            await Task.WhenAll(reads).ConfigureAwait(false);
-        }
-        catch (Exception)
-        {
-            // The pipes were closed under the reader when the child was killed. The
-            // cancellation is the news; whatever the child had written is not.
-        }
-    }
+    /// <summary>
+    /// Waits for every read and ignores how it ended. The pipes were closed under the reader
+    /// when the child was killed: the cancellation is the news, and whatever the child had
+    /// written is not.
+    /// </summary>
+    private static async Task DrainAsync(params Task[] reads) =>
+        await Task.WhenAll(reads).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 }

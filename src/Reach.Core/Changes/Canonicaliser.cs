@@ -25,8 +25,21 @@ namespace Reach.Changes;
 /// </remarks>
 internal static class Canonicaliser
 {
-    /// <summary>Separates tokens, so that <c>ab</c> and <c>a b</c> can never canonicalise alike.</summary>
-    private const char Separator = '';
+    /// <summary>
+    /// Separates tokens, so that <c>ab</c> and <c>a b</c> can never canonicalise alike.
+    /// </summary>
+    private const char Separator = '\u0001';
+
+    private static readonly HashSet<SyntaxKind> SignificantTrivia =
+    [
+        SyntaxKind.DisabledTextTrivia,
+        SyntaxKind.IfDirectiveTrivia,
+        SyntaxKind.ElifDirectiveTrivia,
+        SyntaxKind.ElseDirectiveTrivia,
+        SyntaxKind.EndIfDirectiveTrivia,
+        SyntaxKind.DefineDirectiveTrivia,
+        SyntaxKind.UndefDirectiveTrivia,
+    ];
 
     internal static string Of(IReadOnlyList<SyntaxNodeOrToken> parts)
     {
@@ -64,30 +77,17 @@ internal static class Canonicaliser
     /// </summary>
     private static void AppendSignificant(StringBuilder builder, SyntaxTriviaList trivia)
     {
-        foreach (var item in trivia)
+        foreach (var item in trivia.Where(IsSignificant))
         {
-            if (IsSignificant(item))
-            {
-                builder.Append(item.ToString()).Append(Separator);
-            }
+            builder.Append(item.ToString()).Append(Separator);
         }
     }
 
-    private static bool IsSignificant(SyntaxTrivia trivia) => trivia.Kind() switch
-    {
-        // The branch the parser did not take. Invisible to the token stream, and a change to
-        // it changes what another configuration compiles.
-        SyntaxKind.DisabledTextTrivia => true,
-
-        SyntaxKind.IfDirectiveTrivia
-            or SyntaxKind.ElifDirectiveTrivia
-            or SyntaxKind.ElseDirectiveTrivia
-            or SyntaxKind.EndIfDirectiveTrivia
-            or SyntaxKind.DefineDirectiveTrivia
-            or SyntaxKind.UndefDirectiveTrivia => true,
-
-        // #region, #pragma, #nullable, #line and every comment form are formatting or
-        // tooling, not compilation.
-        _ => false,
-    };
+    /// <summary>
+    /// The branch the parser did not take is invisible to the token stream, and a change to it
+    /// changes what another configuration compiles; the conditional directives decide which
+    /// branch that is. <c>#region</c>, <c>#pragma</c>, <c>#nullable</c>, <c>#line</c> and every
+    /// comment form are formatting or tooling, not compilation.
+    /// </summary>
+    private static bool IsSignificant(SyntaxTrivia trivia) => SignificantTrivia.Contains(trivia.Kind());
 }

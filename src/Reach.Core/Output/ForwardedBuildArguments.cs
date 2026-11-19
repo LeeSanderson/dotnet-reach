@@ -9,7 +9,7 @@ namespace Reach.Output;
 /// <c>--no-restore</c> or a binlog is pushed onto <c>--no-build</c> permanently, quietly
 /// making the documented default the minority path.
 /// </remarks>
-internal static class ForwardedBuildArguments
+public static class ForwardedBuildArguments
 {
     /// <summary>
     /// Each owned switch, with the Reach option that replaces it. A forwarded <c>-o</c>
@@ -30,7 +30,7 @@ internal static class ForwardedBuildArguments
     /// leaving it to the parser, whose positional argument would otherwise swallow the first
     /// forwarded token when no target was given.
     /// </summary>
-    internal static (IReadOnlyList<string> Reach, IReadOnlyList<string> Build) Split(IReadOnlyList<string> arguments)
+    public static (IReadOnlyList<string> Reach, IReadOnlyList<string> Build) Split(IReadOnlyList<string> arguments)
     {
         for (var index = 0; index < arguments.Count; index++)
         {
@@ -43,12 +43,14 @@ internal static class ForwardedBuildArguments
         return (arguments, []);
     }
 
-    /// <summary>The usage-error message, or <c>null</c> when every forwarded token is the build's business.</summary>
+    /// <summary>
+    /// The usage-error message, or <c>null</c> when every forwarded token is the build's business.
+    /// </summary>
     internal static string? Refuse(IReadOnlyList<string> forwarded)
     {
         foreach (var token in forwarded)
         {
-            var match = Owned.FirstOrDefault(owned => Matches(token, owned.Switch));
+            var match = Array.Find(Owned, owned => Matches(token, owned.Switch));
 
             if (match.Switch is not null)
             {
@@ -61,10 +63,10 @@ internal static class ForwardedBuildArguments
         return null;
     }
 
-    /// <summary>Matches <c>--output x</c>, <c>--output=x</c> and <c>--output:x</c> alike.</summary>
+    /// <summary>
+    /// Matches <c>--output x</c>, <c>--output=x</c> and <c>--output:x</c> alike.
+    /// </summary>
     private static bool Matches(string token, string owned) =>
         token.Equals(owned, StringComparison.Ordinal)
-        || (token.StartsWith(owned, StringComparison.Ordinal)
-            && token.Length > owned.Length
-            && (token[owned.Length] == '=' || token[owned.Length] == ':'));
+        || (token.StartsWith(owned, StringComparison.Ordinal) && token.AsSpan(owned.Length) is ['=' or ':', ..]);
 }

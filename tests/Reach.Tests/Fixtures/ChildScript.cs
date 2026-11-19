@@ -12,16 +12,19 @@ internal sealed class ChildScript : IDisposable
 {
     private static readonly bool OnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
-    private readonly TempDirectory directory;
-    private readonly string scriptPath;
+    private readonly TempDirectory _directory;
+    private readonly string _scriptPath;
 
     private ChildScript(TempDirectory directory, string scriptPath)
     {
-        this.directory = directory;
-        this.scriptPath = scriptPath;
+        _directory = directory;
+        _scriptPath = scriptPath;
     }
 
-    /// <summary>Writes <paramref name="lines"/> long lines to standard output and the same to standard error.</summary>
+    /// <summary>
+    /// Writes as many long lines as its first argument says to standard output, and the same to
+    /// standard error.
+    /// </summary>
     internal static ChildScript Chatty() => Write("chatty", ChattyBody);
 
     /// <summary>
@@ -30,12 +33,14 @@ internal sealed class ChildScript : IDisposable
     /// </summary>
     internal static ChildScript Spawner() => Write("spawner", SpawnerBody);
 
-    /// <summary>The argument vector that runs this script, through the platform's shell.</summary>
+    /// <summary>
+    /// The argument vector that runs this script, through the platform's shell.
+    /// </summary>
     internal ProcessRequest Invoke(params string[] arguments) =>
         new(
             OnWindows ? "cmd.exe" : "/bin/sh",
-            OnWindows ? ["/c", scriptPath, .. arguments] : [scriptPath, .. arguments],
-            directory.Path);
+            OnWindows ? ["/c", _scriptPath, .. arguments] : [_scriptPath, .. arguments],
+            _directory.Path);
 
     private static ChildScript Write(string name, string body)
     {
@@ -101,5 +106,5 @@ internal sealed class ChildScript : IDisposable
           done
           """;
 
-    public void Dispose() => directory.Dispose();
+    public void Dispose() => _directory.Dispose();
 }

@@ -1,5 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using Reach.Assemblies;
+using Reach.Tests.Fixtures;
 
 namespace Reach.Tests.Assemblies;
 
@@ -20,14 +22,18 @@ public class PortablePdbChecksumTests
     private static readonly Guid Sha256 = new("8829d00f-11b8-4213-878b-770e8597ac16");
     private static readonly Guid Sha1 = new("ff1816ec-aa5e-4d10-87f7-6f4963833460");
 
-    /// <summary>The assembly under test is the one this test is compiled into.</summary>
+    /// <summary>
+    /// The assembly under test is the one this test is compiled into.
+    /// </summary>
     private static ScannedAssembly Subject()
     {
         var path = typeof(Reach.Product).Assembly.Location;
 
         Assert.True(File.Exists(path), $"Reach.Core was expected at {path}.");
 
-        var scanned = AssemblyScanner.Read(path, Path.GetPathRoot(path)!);
+        // The working tree it was built from. A CI build records it as /_/, which Reach maps
+        // back to this root, so the claims below hold for a local and a CI build alike.
+        var scanned = AssemblyScanner.Read(path, RepositoryRoot.Of());
 
         Assert.NotNull(scanned);
         return scanned;
@@ -66,6 +72,7 @@ public class PortablePdbChecksumTests
     }
 
     [Fact]
+    [SuppressMessage("Security", "CA5350:Do Not Use Weak Cryptographic Algorithms", Justification = "The hash must match the algorithm the compiler recorded in the PDB; it is not used for security.")]
     public void Recomputing_the_checksum_over_the_file_on_disk_reproduces_it()
     {
         var subject = Subject();

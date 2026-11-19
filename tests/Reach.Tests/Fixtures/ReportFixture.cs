@@ -3,7 +3,9 @@ using Reach.Reporting;
 
 namespace Reach.Tests.Fixtures;
 
-/// <summary>Builds a report from a <see cref="Selections"/> fixture, or from a real run.</summary>
+/// <summary>
+/// Builds a report from a <see cref="Selections"/> fixture, or from a real run.
+/// </summary>
 internal static class ReportFixture
 {
     internal static Report Build(Selections selections, bool noChanges = false, SelectRequest? request = null)
@@ -50,7 +52,9 @@ internal static class ReportFixture
             Changes = [],
         };
 
-    /// <summary>The smallest report that serialises, for assertions about the shape itself.</summary>
+    /// <summary>
+    /// The smallest report that serialises, for assertions about the shape itself.
+    /// </summary>
     internal static Report Minimal(ReportCounts? counts = null) =>
         new()
         {
@@ -71,23 +75,24 @@ internal static class ReportFixture
             },
             Scope = new ReportScope { TestProjects = [], Assemblies = [] },
             Changes = [],
-            Entries = counts is null
-                ? []
-                : [
-                    new ReportEntry
-                    {
-                        Project = "tests/T/T.csproj",
-                        TargetFramework = "net10.0",
-                        Mode = "run-all",
-                        Counts = counts,
-                        Tests = [],
-                        Invocations = [],
-                    },
-                ],
+            Entries = counts is null ? [] : [RunAllEntry(counts)],
             Notices = [],
         };
 
-    /// <summary>A real repository with real assemblies, for the determinism assertion.</summary>
+    private static ReportEntry RunAllEntry(ReportCounts counts) =>
+        new()
+        {
+            Project = "tests/T/T.csproj",
+            TargetFramework = "net10.0",
+            Mode = "run-all",
+            Counts = counts,
+            Tests = [],
+            Invocations = [],
+        };
+
+    /// <summary>
+    /// A real repository with real assemblies, for the determinism assertion.
+    /// </summary>
     internal static TempRepository Repository()
     {
         var repository = TempRepository.Create("reach-report");
@@ -122,20 +127,20 @@ internal static class ReportFixture
         var corePath = repository.Combine("src", "Core", "Widget.cs");
         var testsPath = repository.Combine("tests", "Tests", "WidgetTests.cs");
 
-        const string CoreSource = "namespace N; public class Widget { public int Spin() => 1; }";
-        const string TestsSource =
+        const string coreSource = "namespace N; public class Widget { public int Spin() => 1; }";
+        const string testsSource =
             "namespace N.Tests; public class WidgetTests { [Xunit.Fact] public void Spins() => new N.Widget().Spin(); }";
 
-        File.WriteAllText(corePath, CoreSource);
-        File.WriteAllText(testsPath, TestsSource);
+        File.WriteAllText(corePath, coreSource);
+        File.WriteAllText(testsPath, testsSource);
 
         repository.Commit("baseline");
 
-        var core = Compiled.Assembly("Core", CoreSource, corePath);
+        var core = Compiled.Assembly("Core", coreSource, corePath);
         core.WriteTo(repository.Combine("src", "Core", "bin", "Debug", "net10.0"));
 
         Compiled
-            .Assembly("Tests", TestsSource, testsPath, references: [core])
+            .Assembly("Tests", testsSource, testsPath, references: [core])
             .WriteTo(repository.Combine("tests", "Tests", "bin", "Debug", "net10.0"));
 
         // A change after the baseline, so the run has something to analyse.
@@ -151,7 +156,9 @@ internal static class ReportFixture
         return repository;
     }
 
-    /// <summary>Runs the pipeline over <paramref name="repository"/> and returns the report's JSON.</summary>
+    /// <summary>
+    /// Runs the pipeline over <paramref name="repository"/> and returns the report's JSON.
+    /// </summary>
     internal static async Task<string> RunAsync(TempRepository repository, CancellationToken cancellationToken)
     {
         var run = await new ReachPipeline(new Reach.Processes.ProcessRunner())

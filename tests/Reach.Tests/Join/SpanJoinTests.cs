@@ -334,11 +334,11 @@ public class SpanJoinTests
     [Fact]
     public void A_declaration_in_a_file_the_symbols_never_saw_does_not_join()
     {
-        const string Source = "namespace N; public class Subject { public int M() => 1; }";
+        const string source = "namespace N; public class Subject { public int M() => 1; }";
 
-        using var subject = Subject.Compile(Source);
+        using var subject = Subject.Compile(source);
 
-        var declaration = Declaration(Source, "N.Subject", "M") with { Path = "src/Never.cs" };
+        var declaration = Declaration(source, "N.Subject", "M") with { Path = "src/Never.cs" };
         var result = new SpanJoin(subject.Assemblies, "/repo").Resolve(declaration);
 
         Assert.False(result.Joined);
@@ -347,13 +347,48 @@ public class SpanJoinTests
     [Fact]
     public void A_declaration_with_no_span_does_not_join()
     {
-        const string Source = "namespace N; public class Subject { public int M() => 1; }";
+        const string source = "namespace N; public class Subject { public int M() => 1; }";
 
-        using var subject = Subject.Compile(Source);
+        using var subject = Subject.Compile(source);
 
-        var declaration = Declaration(Source, "N.Subject", "M") with { Span = default };
+        var declaration = Declaration(source, "N.Subject", "M") with { Span = default };
 
         Assert.False(new SpanJoin(subject.Assemblies, "/repo").Resolve(declaration).Joined);
+    }
+
+    [Fact]
+    public void A_declaration_joins_when_the_symbols_record_its_file_with_mixed_separators()
+    {
+        const string source = "namespace N; public class Subject { public int M() => 1; }";
+
+        // As a solution built on Windows and read on Linux would carry it.
+        using var subject = Subject.Compile(source, documentPath: "/repo/src\\deep/Subject.cs");
+
+        var declaration = Declaration(source, "N.Subject", "M") with { Path = "src/deep/Subject.cs" };
+        var result = new SpanJoin(subject.Assemblies, "/repo").Resolve(declaration);
+
+        // Missing the join is silent under-selection, not a crash.
+        Assert.Equal(["Subject::M"], result.Methods.Select(subject.NameOf));
+    }
+
+    [Fact]
+    public void A_declaration_joins_when_a_ci_build_recorded_the_repository_root_as_a_deterministic_prefix()
+    {
+        const string source = "namespace N; public class Subject { public int M() => 1; }";
+
+        // A real directory, because the compiler only maps paths it can resolve; nothing is
+        // written to it.
+        var repository = Path.Combine(Path.GetTempPath(), "reach-deterministic-join");
+
+        // What ContinuousIntegrationBuild does: the SDK maps the git top-level to /_/.
+        using var subject = Subject.Compile(
+            source,
+            documentPath: Path.Combine(repository, "src", "Subject.cs"),
+            pathMap: [(repository + Path.DirectorySeparatorChar, "/_/")]);
+
+        var result = new SpanJoin(subject.Assemblies, repository).Resolve(Declaration(source, "N.Subject", "M"));
+
+        Assert.Equal(["Subject::M"], result.Methods.Select(subject.NameOf));
     }
 
     // ---- Multi-targeting ------------------------------------------------------------------------
@@ -361,11 +396,11 @@ public class SpanJoinTests
     [Fact]
     public void One_declaration_joins_into_every_assembly_instance_compiled_from_it()
     {
-        const string Source = "namespace N; public class Subject { public int M() => 1; }";
+        const string source = "namespace N; public class Subject { public int M() => 1; }";
 
-        using var subject = Subject.Compile(Source, instances: 2);
+        using var subject = Subject.Compile(source, instances: 2);
 
-        var result = new SpanJoin(subject.Assemblies, "/repo").Resolve(Declaration(Source, "N.Subject", "M"));
+        var result = new SpanJoin(subject.Assemblies, "/repo").Resolve(Declaration(source, "N.Subject", "M"));
 
         // A multi-targeted project contributes several assembly instances, and a change to the
         // source changes all of them.
@@ -373,29 +408,35 @@ public class SpanJoinTests
         Assert.Equal(2, result.Methods.Select(method => method.Ordinal).Distinct().Count());
     }
 
-    /// <summary>The fixture compiled once, with a way to read back a method's name.</summary>
+    /// <summary>
+    /// The fixture compiled once, with a way to read back a method's name.
+    /// </summary>
     private sealed class Subject : IDisposable
     {
-        private readonly List<IDisposable> open = [];
+        private readonly List<IDisposable> _open = [];
 
         private Subject(IReadOnlyList<GraphAssembly> assemblies) => Assemblies = assemblies;
 
         internal IReadOnlyList<GraphAssembly> Assemblies { get; private set; }
 
-        internal static Subject Compile(string source, int instances = 1)
+        internal static Subject Compile(
+            string source,
+            int instances = 1,
+            string documentPath = DocumentPath,
+            IEnumerable<(string Prefix, string Replacement)>? pathMap = null)
         {
             var subject = new Subject([]);
             var assemblies = new List<GraphAssembly>();
 
             for (var index = 0; index < instances; index++)
             {
-                var compiled = Compiled.Assembly("Subject", source, DocumentPath);
+                var compiled = Compiled.Assembly("Subject", [(source, documentPath)], pathMap: pathMap);
 
                 var reader = new PEReader(ImmutableArray.Create(compiled.Image));
                 var symbols = MetadataReaderProvider.FromPortablePdbImage(ImmutableArray.Create(compiled.Symbols));
 
-                subject.open.Add(reader);
-                subject.open.Add(symbols);
+                subject._open.Add(reader);
+                subject._open.Add(symbols);
 
                 assemblies.Add(new GraphAssembly(
                     index,
@@ -435,7 +476,7 @@ public class SpanJoinTests
 
         public void Dispose()
         {
-            foreach (var item in open)
+            foreach (var item in _open)
             {
                 item.Dispose();
             }

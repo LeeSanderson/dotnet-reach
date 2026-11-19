@@ -9,13 +9,15 @@ namespace Reach.Tests.Fixtures;
 /// </summary>
 internal sealed class TempRepository : IDisposable
 {
-    private readonly TempDirectory directory;
+    private readonly TempDirectory _directory;
 
-    private TempRepository(TempDirectory directory) => this.directory = directory;
+    private TempRepository(TempDirectory directory) => _directory = directory;
 
-    internal string Path => directory.Path;
+    internal string Path => _directory.Path;
 
-    /// <summary>Creates an initialised repository with no commits yet.</summary>
+    /// <summary>
+    /// Creates an initialised repository with no commits yet.
+    /// </summary>
     internal static TempRepository Create(string name = "reach-repo")
     {
         var directory = TempDirectory.Create(name);
@@ -33,11 +35,13 @@ internal sealed class TempRepository : IDisposable
     }
 
     internal string WriteFile(string relativePath, string contents) =>
-        directory.WriteFile(relativePath, contents);
+        _directory.WriteFile(relativePath, contents);
 
-    internal string Combine(params string[] parts) => directory.Combine(parts);
+    internal string Combine(params string[] parts) => _directory.Combine(parts);
 
-    /// <summary>Stages everything and commits, returning the new commit's SHA.</summary>
+    /// <summary>
+    /// Stages everything and commits, returning the new commit's SHA.
+    /// </summary>
     internal string Commit(string message)
     {
         Git("add", "--all");
@@ -49,7 +53,9 @@ internal sealed class TempRepository : IDisposable
 
     internal void CheckoutNewBranch(string name) => Git("checkout", "-b", name);
 
-    /// <summary>Runs git and returns standard output, throwing on a non-zero exit.</summary>
+    /// <summary>
+    /// Runs git and returns standard output, throwing on a non-zero exit.
+    /// </summary>
     internal string Git(params string[] arguments)
     {
         var startInfo = new ProcessStartInfo
@@ -84,5 +90,5 @@ internal sealed class TempRepository : IDisposable
         return standardOutput.Result;
     }
 
-    public void Dispose() => directory.Dispose();
+    public void Dispose() => _directory.Dispose();
 }

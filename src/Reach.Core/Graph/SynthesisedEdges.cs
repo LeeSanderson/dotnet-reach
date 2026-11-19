@@ -4,9 +4,14 @@ using System.Reflection.Metadata.Ecma335;
 namespace Reach.Graph;
 
 /// <summary>
-/// The two places where control flow is certain but no instruction expresses it.
+/// The two places inside compiled code where control flow is certain but no instruction
+/// expresses it.
 /// </summary>
 /// <remarks>
+/// <para>
+/// The third, a test framework running a test class's lifecycle, needs test recognition, so
+/// selection builds it (<c>Reach.Selection.TestLifecycle</c>) and hands it to the builder.
+/// </para>
 /// <para>
 /// <strong>Containment is not optional.</strong> <c>async Task&lt;int&gt; Aw()</c> reaches its
 /// own body only through <c>AsyncTaskMethodBuilder&lt;int&gt;::Start</c> — <c>MoveNext</c> is
@@ -87,12 +92,12 @@ internal static class SynthesisedEdges
 
             // A generated member's kernel lives on the type that declared the closure, which is
             // the display class's own declaring type.
-            foreach (var kernel in MethodsNamed(assembly, DeclaringTypeOf(declaringType), kernelName))
+            var kernels = MethodsNamed(assembly, DeclaringTypeOf(declaringType), kernelName)
+                .Where(kernel => kernel != generated);
+
+            foreach (var kernel in kernels)
             {
-                if (kernel != generated)
-                {
-                    yield return new Edge(kernel, generated, EdgeProvenance.Containment);
-                }
+                yield return new Edge(kernel, generated, EdgeProvenance.Containment);
             }
         }
     }
@@ -118,16 +123,7 @@ internal static class SynthesisedEdges
 
         foreach (var instruction in instructions)
         {
-            var type = instruction.OpCode switch
-            {
-                ILOpCode.Newobj or ILOpCode.Call or ILOpCode.Callvirt or ILOpCode.Ldftn =>
-                    DeclaringTypeOfMember(assembly, instruction.Token),
-
-                ILOpCode.Ldsfld or ILOpCode.Ldsflda or ILOpCode.Stsfld =>
-                    DeclaringTypeOfField(assembly, instruction.Token),
-
-                _ => null,
-            };
+            var type = TriggeredType(assembly, instruction);
 
             if (type is null || !triggered.Add(type))
             {
@@ -141,7 +137,24 @@ internal static class SynthesisedEdges
         }
     }
 
-    /// <summary>The generated types an attribute on <paramref name="method"/> names.</summary>
+    /// <summary>
+    /// The type whose initialization <paramref name="instruction"/> triggers, if it triggers one.
+    /// </summary>
+    private static string? TriggeredType(GraphAssembly assembly, TokenInstruction instruction) =>
+        instruction.OpCode switch
+        {
+            ILOpCode.Newobj or ILOpCode.Call or ILOpCode.Callvirt or ILOpCode.Ldftn =>
+                DeclaringTypeOfMember(assembly, instruction.Token),
+
+            ILOpCode.Ldsfld or ILOpCode.Ldsflda or ILOpCode.Stsfld =>
+                DeclaringTypeOfField(assembly, instruction.Token),
+
+            _ => null,
+        };
+
+    /// <summary>
+    /// The generated types an attribute on <paramref name="method"/> names.
+    /// </summary>
     private static IEnumerable<string> StateMachinesOf(MetadataReader reader, MethodDefinition method)
     {
         foreach (var handle in method.GetCustomAttributes())
@@ -327,13 +340,16 @@ internal static class SynthesisedEdges
         }
     }
 
-    private static string? TypeNameOf(MetadataReader reader, EntityHandle handle) => handle.IsNil ? null : handle.Kind switch
-    {
-        HandleKind.TypeDefinition => MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)handle),
-        HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)handle),
-        HandleKind.TypeSpecification => MetadataNames.WithoutInstantiation(
-            reader.GetTypeSpecification((TypeSpecificationHandle)handle)
-                .DecodeSignature(new SignatureNames(), genericContext: null)),
-        _ => null,
-    };
+    private static string? TypeNameOf(MetadataReader reader, EntityHandle handle) =>
+        handle.IsNil
+            ? null
+            : handle.Kind switch
+            {
+                HandleKind.TypeDefinition => MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)handle),
+                HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)handle),
+                HandleKind.TypeSpecification => MetadataNames.WithoutInstantiation(
+                    reader.GetTypeSpecification((TypeSpecificationHandle)handle)
+                        .DecodeSignature(new SignatureNames(), genericContext: null)),
+                _ => null,
+            };
 }

@@ -17,13 +17,19 @@ namespace Reach.Tests.Fixtures;
 /// </remarks>
 internal sealed class Graphs : IDisposable
 {
-    private readonly List<PEReader> readers = [];
+    private readonly List<PEReader> _readers = [];
 
-    internal CallGraphResult Result { get; private set; } = null!;
+    internal CallGraphResult Result
+    {
+        get => field ?? throw new InvalidOperationException("Set by Of before the fixture is returned.");
+        private set;
+    }
 
     internal CallGraph Graph => Result.Graph;
 
-    /// <summary>Compiles each named source into its own assembly instance and builds the graph.</summary>
+    /// <summary>
+    /// Compiles each named source into its own assembly instance and builds the graph.
+    /// </summary>
     internal static Graphs Of(params (string Name, string Source)[] assemblies)
     {
         var graphs = new Graphs();
@@ -36,7 +42,7 @@ internal sealed class Graphs : IDisposable
             compiled.Add(assembly);
 
             var reader = new PEReader(ImmutableArray.Create(assembly.Image));
-            graphs.readers.Add(reader);
+            graphs._readers.Add(reader);
 
             built.Add(new GraphAssembly(
                 built.Count,
@@ -71,7 +77,7 @@ internal sealed class Graphs : IDisposable
         foreach (var (name, assembly) in new[] { ("Core", onDisk), ("App", app) })
         {
             var reader = new PEReader(ImmutableArray.Create(assembly.Image));
-            graphs.readers.Add(reader);
+            graphs._readers.Add(reader);
 
             built.Add(new GraphAssembly(
                 built.Count,
@@ -89,7 +95,9 @@ internal sealed class Graphs : IDisposable
 
     internal IReadOnlyList<GraphAssembly> Assemblies { get; private set; } = [];
 
-    /// <summary>The node for one method, found by its declaring type and name.</summary>
+    /// <summary>
+    /// The node for one method, found by its declaring type and name.
+    /// </summary>
     internal MethodId Method(string declaringType, string name, int assemblyIndex = 0)
     {
         var found = Methods(declaringType, name, assemblyIndex);
@@ -121,7 +129,9 @@ internal sealed class Graphs : IDisposable
         return found;
     }
 
-    /// <summary>Every method name declared by one type, so a test can say what the graph contains.</summary>
+    /// <summary>
+    /// Every method name declared by one type, so a test can say what the graph contains.
+    /// </summary>
     internal IReadOnlyList<string> MethodNamesOf(string declaringType, int assemblyIndex = 0)
     {
         var reader = Assemblies[assemblyIndex].Reader;
@@ -136,7 +146,9 @@ internal sealed class Graphs : IDisposable
         ];
     }
 
-    /// <summary>The provenances of every edge from <paramref name="from"/> to <paramref name="to"/>.</summary>
+    /// <summary>
+    /// The provenances of every edge from <paramref name="from"/> to <paramref name="to"/>.
+    /// </summary>
     internal IReadOnlyList<EdgeProvenance> EdgesBetween(MethodId from, MethodId to)
     {
         var incoming = Graph.CallersOf(to);
@@ -156,7 +168,9 @@ internal sealed class Graphs : IDisposable
     internal bool HasEdge(MethodId from, MethodId to, EdgeProvenance provenance) =>
         EdgesBetween(from, to).Contains(provenance);
 
-    /// <summary>Every external anchor the pass interned, by its readable name.</summary>
+    /// <summary>
+    /// Every external anchor the pass interned, by its readable name.
+    /// </summary>
     internal IReadOnlyList<string> ExternalAnchorNames() =>
     [
         .. Graph.Nodes
@@ -168,7 +182,7 @@ internal sealed class Graphs : IDisposable
 
     public void Dispose()
     {
-        foreach (var reader in readers)
+        foreach (var reader in _readers)
         {
             reader.Dispose();
         }
