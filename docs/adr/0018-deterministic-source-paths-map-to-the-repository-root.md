@@ -43,8 +43,23 @@ A global packages folder configured another way (`globalPackagesFolder` in `nuge
 raise the notice. The notice is accurate but costs a warning on every run of such a build.
 
 The convention can be wrong in one configuration: a build with source-control queries turned
-off (`EnableSourceControlManagerQueries=false`) and a hand-written `SourceRoot` that is not the
-repository root. `/_/` then stood for a different directory. Where the mapped paths name
-existing files with other content, ADR-0003's checksums fail the run. Where they name no file,
-the documents read as generated, nothing is verified, and joins miss. That case is registered
-in the limitations register rather than detected.
+off (`EnableSourceControlManagerQueries=false`) and a hand-written `SourceRoot` (or `PathMap`)
+that is not the repository root. `/_/` then stood for a different directory, and Reach detects
+it rather than trusting the convention:
+
+- Where the mapped paths name existing files with other content, ADR-0003's checksums fail the
+  run, as for any stale build.
+- Where an assembly's `/_/` documents name no file at all, correspondence fails the run (exit 5).
+  The message names the assembly, the likely cause and `-p:DeterministicSourcePaths=false`.
+  Without this check every document would read as a source generator's output, nothing would be
+  verified, and joins would miss silently.
+
+The check is "none of the assembly's `/_/` documents exists", not "most". A correct mapping
+always finds the hand-written files the build just compiled, so one existing file proves the
+root. Only generated documents are legitimately missing, and an assembly is never all generated.
+A threshold would be a guess about how much generated code a project has. It runs in
+correspondence because that is where every document's existence is already checked, so it
+costs no extra disk access. It runs per assembly, because `SourceRoot` is per project.
+
+What remains undetected is a wrong root whose mapped paths happen to name, for some documents,
+files with identical content. Then those documents verify, and the others read as generated.
