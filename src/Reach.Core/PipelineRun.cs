@@ -13,8 +13,7 @@ internal sealed class PipelineRun(
     SelectRequest request,
     EnvironmentLookup environment,
     PhaseTimings timings,
-    DiscoveredTarget target,
-    AnalysisScopeResult scope,
+    UsableTarget usable,
     GitAdapter git,
     CancellationToken cancellationToken)
 {
@@ -24,9 +23,9 @@ internal sealed class PipelineRun(
 
     internal PhaseTimings Timings { get; } = timings;
 
-    internal DiscoveredTarget Target { get; } = target;
+    internal DiscoveredTarget Target { get; } = usable.Target;
 
-    internal AnalysisScope Scope { get; } = scope.Scope!;
+    internal AnalysisScope Scope { get; } = usable.Scope;
 
     internal GitAdapter Git { get; } = git;
 
@@ -35,5 +34,28 @@ internal sealed class PipelineRun(
     /// <summary>
     /// Every notice so far, starting with scope resolution's. Each phase adds its own.
     /// </summary>
-    internal List<Notice> Notices { get; } = [.. scope.Notices];
+    internal List<Notice> Notices { get; } = [.. usable.ScopeNotices];
+}
+
+/// <summary>
+/// A target that passed the usage checks, with the analysis scope it resolved to.
+/// </summary>
+/// <param name="Target">The solution or project the run is against.</param>
+/// <param name="Scope">The projects in scope.</param>
+/// <param name="ScopeNotices">What resolving the scope disclosed.</param>
+internal sealed record UsableTarget(
+    DiscoveredTarget Target,
+    AnalysisScope Scope,
+    IReadOnlyList<Notice> ScopeNotices);
+
+/// <summary>
+/// The usage checks' answer: a target the run can go on with, or why it cannot.
+/// </summary>
+/// <param name="Usable">The target and its scope. Null when the run is refused.</param>
+/// <param name="Refusal">Why the run is refused. Empty when it is not.</param>
+internal sealed record UsageCheck(UsableTarget? Usable, string Refusal)
+{
+    internal static UsageCheck Passed(UsableTarget usable) => new(usable, string.Empty);
+
+    internal static UsageCheck Refused(string refusal) => new(null, refusal);
 }

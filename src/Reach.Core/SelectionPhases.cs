@@ -1,5 +1,4 @@
 using Reach.Assemblies;
-using Reach.Changes;
 using Reach.Graph;
 using Reach.Join;
 using Reach.Output;
@@ -81,7 +80,7 @@ internal static class SelectionPhases
                 partial.Changes!,
                 roots,
                 run.Request.Paths,
-                new TierLadder(run.Scope, repositoryRoot)));
+                repositoryRoot));
 
         notices.AddRange(selection.Notices);
 

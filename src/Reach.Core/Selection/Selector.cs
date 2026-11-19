@@ -20,9 +20,10 @@ internal static class Selector
         ChangedSet changed,
         IReadOnlyList<JoinResult> joined,
         bool includePaths,
-        TierLadder ladder)
+        string repositoryRoot)
     {
         var notices = new List<Notice>();
+        var ladder = new TierLadder(scope, repositoryRoot);
         var roots = new RootSets(graph.Assemblies);
         var changes = roots.ChangesFrom(changed, joined, scope, ladder);
 
