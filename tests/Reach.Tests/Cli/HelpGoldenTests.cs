@@ -1,6 +1,6 @@
 using System.CommandLine;
-using System.Runtime.CompilerServices;
 using Reach.Cli;
+using Reach.Tests.Fixtures;
 
 namespace Reach.Tests.Cli;
 
@@ -42,9 +42,9 @@ public class HelpGoldenTests
             .TrimEnd();
     }
 
-    private static void AssertGolden(string name, string actual, [CallerFilePath] string testFile = "")
+    private static void AssertGolden(string name, string actual)
     {
-        var path = Path.Combine(Path.GetDirectoryName(testFile)!, "Golden", name);
+        var path = RepositoryRoot.Combine("tests", "Reach.Tests", "Cli", "Golden", name);
 
         if (Environment.GetEnvironmentVariable("REACH_UPDATE_GOLDEN") is { Length: > 0 })
         {

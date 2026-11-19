@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using Reach.Assemblies;
+using Reach.Tests.Fixtures;
 
 namespace Reach.Tests.Assemblies;
 
@@ -75,14 +76,14 @@ public class PortablePdbChecksumTests
         var subject = Subject();
 
         var onDisk = subject.Documents
-            .Where(document => File.Exists(document.Path))
+            .Where(document => File.Exists(OnDisk(document.Path)))
             .ToArray();
 
         Assert.NotEmpty(onDisk);
 
         foreach (var document in onDisk)
         {
-            var bytes = File.ReadAllBytes(document.Path);
+            var bytes = File.ReadAllBytes(OnDisk(document.Path));
 
             var computed = document.HashAlgorithm == Sha1
                 ? SHA1.HashData(bytes)
@@ -100,12 +101,31 @@ public class PortablePdbChecksumTests
     {
         var subject = Subject();
 
-        var document = subject.Documents.First(candidate => File.Exists(candidate.Path));
-        var edited = File.ReadAllBytes(document.Path).Concat("\n// edited\n"u8.ToArray()).ToArray();
+        var document = subject.Documents.First(candidate => File.Exists(OnDisk(candidate.Path)));
+        var edited = File.ReadAllBytes(OnDisk(document.Path)).Concat("\n// edited\n"u8.ToArray()).ToArray();
 
         // Which is what makes the mismatch detectable at all, and why the mode that trusts the
         // caller more is the mode that detects more.
         Assert.False(SHA256.HashData(edited).AsSpan().SequenceEqual(document.Hash));
+    }
+
+    /// <summary>
+    /// Where the file a recorded document names sits in this checkout.
+    /// </summary>
+    /// <remarks>
+    /// A local build records the path it compiled. A CI build does not: the coding-standards
+    /// package sets <c>ContinuousIntegrationBuild</c> when it sees <c>GITHUB_ACTIONS</c>, and the
+    /// SDK then records the repository root as <c>/_/</c>. The checksums are unaffected, which is
+    /// the claim here, so the prefix is mapped back. Reach itself does not map it back, so a
+    /// CI-built assembly reads as not first-party; that is a product question, not this test's.
+    /// </remarks>
+    private static string OnDisk(string recorded)
+    {
+        var deterministicRoot = Paths.Normalise("/_/") + Path.DirectorySeparatorChar;
+
+        return recorded.StartsWith(deterministicRoot, Paths.Comparison)
+            ? Path.Combine(RepositoryRoot.Of(), recorded[deterministicRoot.Length..])
+            : recorded;
     }
 
     [Fact]
