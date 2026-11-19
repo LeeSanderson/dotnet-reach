@@ -416,6 +416,78 @@ public class CorrespondenceTests
     }
 
     [Fact]
+    public void A_deterministic_root_that_was_not_the_repository_fails_naming_the_cause()
+    {
+        using var directory = TempDirectory.Create("reach-deterministic");
+
+        var widget = directory.Combine("src", "Core", "Widget.cs");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(widget)!);
+        File.WriteAllText(widget, Source);
+
+        // A hand-written SourceRoot of src/ with source-control queries off: the build gave /_/
+        // to src/, so /_/Core/Widget.cs read as the repository root names no file.
+        var compiled = Compiled.Assembly(
+            "Core",
+            [(Source, widget)],
+            pathMap: [(directory.Combine("src") + Path.DirectorySeparatorChar, "/_/")]);
+
+        Assert.Contains("/_/Core/Widget.cs", RecordedDocuments(compiled));
+
+        var scanned = AssemblyScanner.Read(
+            compiled.WriteTo(directory.Combine("bin")),
+            new SourceRoots(directory.Path, Packages: null));
+
+        Assert.NotNull(scanned);
+
+        var project = ProjectFileReader.Read(WriteProject(directory));
+        var result = Correspondence.Verify(
+            [new AssemblyInstance(new ExpectedAssemblyInstance(project, "net10.0"), scanned)],
+            SourceVisibility.Unknown);
+
+        // Not "nothing to check": every source file the assembly names is missing, which a
+        // correct mapping cannot produce, so the run stops and says why.
+        Assert.Equal(CorrespondenceVerdict.Failed, result.Verdict);
+        Assert.Equal(ExitCode.CorrespondenceFailed, result.ExitCode);
+        Assert.Contains("Core", result.Message);
+        Assert.Contains("/_/", result.Message);
+        Assert.Contains("SourceRoot", result.Message);
+        Assert.Contains("-p:DeterministicSourcePaths=false", result.Message);
+    }
+
+    [Fact]
+    public void A_deterministic_build_with_generated_documents_missing_still_verifies()
+    {
+        using var directory = TempDirectory.Create("reach-deterministic");
+
+        var widget = directory.Combine("src", "Widget.cs");
+        const string generatedSource = "namespace N; internal static class Generated { public static int One() => 1; }";
+
+        Directory.CreateDirectory(Path.GetDirectoryName(widget)!);
+        File.WriteAllText(widget, Source);
+
+        // A source generator's output: recorded under /_/ like everything else, never on disk.
+        var compiled = Compiled.Assembly(
+            "Core",
+            [(Source, widget), (generatedSource, directory.Combine("obj", "Gen", "Generated.g.cs"))],
+            pathMap: [(directory.Path + Path.DirectorySeparatorChar, "/_/")]);
+
+        var scanned = AssemblyScanner.Read(
+            compiled.WriteTo(directory.Combine("bin")),
+            new SourceRoots(directory.Path, Packages: null));
+
+        Assert.NotNull(scanned);
+
+        var project = ProjectFileReader.Read(WriteProject(directory));
+        var result = Correspondence.Verify(
+            [new AssemblyInstance(new ExpectedAssemblyInstance(project, "net10.0"), scanned)],
+            SourceVisibility.Unknown);
+
+        Assert.Equal(CorrespondenceVerdict.Verified, result.Verdict);
+        Assert.Contains(result.Documents, verdict => verdict.Class == DocumentClass.Generated);
+    }
+
+    [Fact]
     public void Package_content_under_a_further_root_is_found_in_the_packages_folder()
     {
         using var directory = TempDirectory.Create("reach-deterministic");

@@ -56,20 +56,67 @@ internal static class Correspondence
 
         var mismatched = verdicts.Where(verdict => verdict.Class == DocumentClass.Mismatched).ToArray();
         var verified = verdicts.Count(verdict => verdict.Class == DocumentClass.Verified);
+        var misrooted = Misrooted(instances, verdicts);
 
-        var outcome = (mismatched.Length, verified) switch
+        var outcome = (mismatched.Length + misrooted.Count, verified) switch
         {
             ( > 0, _) => CorrespondenceVerdict.Failed,
             (_, > 0) => CorrespondenceVerdict.Verified,
             _ => CorrespondenceVerdict.Skipped,
         };
 
+        var messages = new[]
+        {
+            misrooted.Count > 0 ? MisrootedMessage(misrooted) : string.Empty,
+            mismatched.Length > 0 ? Message(mismatched) : string.Empty,
+        };
+
         return new CorrespondenceResult(
             outcome,
-            mismatched.Length > 0 ? Message(mismatched) : string.Empty,
+            string.Join("\n\n", messages.Where(message => message.Length > 0)),
             Notices(verdicts),
             verdicts);
     }
+
+    /// <summary>
+    /// Assemblies whose <c>/_/</c> was read as the repository root, and not one of whose
+    /// documents is there. A correct mapping cannot produce that: the build compiled those files
+    /// from the working tree, and only a source generator's output has no file. So the build gave
+    /// <c>/_/</c> to another directory — a hand-written <c>SourceRoot</c> with source-control
+    /// queries off — and reading every document as generated would hide it.
+    /// </summary>
+    /// <remarks>
+    /// Per assembly, because the <c>SourceRoot</c> is per project. A wrong root whose mapped paths
+    /// happen to name files fails as a checksum mismatch instead, which needs no rule here.
+    /// </remarks>
+    private static IReadOnlyList<AssemblyInstance> Misrooted(
+        IReadOnlyList<AssemblyInstance> instances,
+        IReadOnlyList<DocumentVerdict> verdicts)
+    {
+        var classes = verdicts.ToDictionary(verdict => verdict.Document.Path, verdict => verdict.Class, Paths.Comparer);
+
+        return
+        [
+            .. instances.Where(instance =>
+            {
+                var mapped = instance.Assembly.Documents.Where(document => document.ReadAsRepositoryRoot).ToArray();
+
+                return mapped.Length > 0
+                    && Array.TrueForAll(mapped, document => classes[document.Path] == DocumentClass.Generated);
+            })
+        ];
+    }
+
+    private static string MisrootedMessage(IReadOnlyList<AssemblyInstance> misrooted) =>
+        "These assemblies were built with deterministic source paths, and none of the source files "
+        + "their symbols record under /_/ is in the repository:\n"
+        + string.Join(
+            "\n",
+            misrooted.Select(instance => $"  {instance.Expected} ({instance.Assembly.Path})").Order(StringComparer.Ordinal))
+        + "\n\nReach reads /_/ as the repository root, which is what the SDK gives it when it can query "
+        + "git. These builds gave it to another directory: a hand-written SourceRoot, or a PathMap, "
+        + "with source-control queries off. Build with -p:DeterministicSourcePaths=false to record "
+        + "real paths, or make the repository root the SourceRoot.";
 
     private static DocumentClass Classify(SourceDocument document, SourceVisibility visibility)
     {
