@@ -371,6 +371,26 @@ public class SpanJoinTests
         Assert.Equal(["Subject::M"], result.Methods.Select(subject.NameOf));
     }
 
+    [Fact]
+    public void A_declaration_joins_when_a_ci_build_recorded_the_repository_root_as_a_deterministic_prefix()
+    {
+        const string source = "namespace N; public class Subject { public int M() => 1; }";
+
+        // A real directory, because the compiler only maps paths it can resolve; nothing is
+        // written to it.
+        var repository = Path.Combine(Path.GetTempPath(), "reach-deterministic-join");
+
+        // What ContinuousIntegrationBuild does: the SDK maps the git top-level to /_/.
+        using var subject = Subject.Compile(
+            source,
+            documentPath: Path.Combine(repository, "src", "Subject.cs"),
+            pathMap: [(repository + Path.DirectorySeparatorChar, "/_/")]);
+
+        var result = new SpanJoin(subject.Assemblies, repository).Resolve(Declaration(source, "N.Subject", "M"));
+
+        Assert.Equal(["Subject::M"], result.Methods.Select(subject.NameOf));
+    }
+
     // ---- Multi-targeting ------------------------------------------------------------------------
 
     [Fact]
@@ -399,14 +419,18 @@ public class SpanJoinTests
 
         internal IReadOnlyList<GraphAssembly> Assemblies { get; private set; }
 
-        internal static Subject Compile(string source, int instances = 1, string documentPath = DocumentPath)
+        internal static Subject Compile(
+            string source,
+            int instances = 1,
+            string documentPath = DocumentPath,
+            IEnumerable<(string Prefix, string Replacement)>? pathMap = null)
         {
             var subject = new Subject([]);
             var assemblies = new List<GraphAssembly>();
 
             for (var index = 0; index < instances; index++)
             {
-                var compiled = Compiled.Assembly("Subject", source, documentPath);
+                var compiled = Compiled.Assembly("Subject", [(source, documentPath)], pathMap: pathMap);
 
                 var reader = new PEReader(ImmutableArray.Create(compiled.Image));
                 var symbols = MetadataReaderProvider.FromPortablePdbImage(ImmutableArray.Create(compiled.Symbols));

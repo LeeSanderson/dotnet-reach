@@ -45,6 +45,13 @@ internal static class NoticeCodes
     internal const string IgnoredUntrackedAssembly = "ignored-untracked-assembly";
 
     /// <summary>
+    /// An assembly's debug symbols record source under a deterministic root other than
+    /// <c>/_/</c> (<c>/_1/</c>, ...), which nothing Reach reads maps back to a directory. Those
+    /// files are neither verified nor joined. A blind spot, with an entry in the register.
+    /// </summary>
+    internal const string UnmappedDeterministicSourceRoot = "unmapped-deterministic-source-root";
+
+    /// <summary>
     /// A call site names a member of a first-party assembly that is not in it. A build
     /// problem rather than an analysis one, and the run continues.
     /// </summary>

@@ -155,6 +155,28 @@ The gaps that can cost you a regression. Listed worst first.
 - **Detectable**: **yes** — `ignored-untracked-assembly`. Reach can see the file; it cannot see
   its history, so it cannot decide whether it changed.
 
+### Deterministic source roots other than the repository root
+- **Shape**: a CI build (`ContinuousIntegrationBuild=true`, which turns on
+  `DeterministicSourcePaths`) records source paths with a prefix instead of the real directory.
+  Reach maps `/_/` back to the git top-level, which is what the SDK assigns it, and git
+  submodules nest under it. Further roots (`/_1/`, `/_2/`, ...) are NuGet package folders and
+  any `SourceRoot` a build adds itself. Reach maps a file under one only when it exists at the
+  same relative path in the NuGet global packages folder (`NUGET_PACKAGES`, else
+  `~/.nuget/packages`). Nothing in the debug symbols says which directory the others stood
+  for, so Reach does not guess. Their files are not checked against the working tree, and a
+  change to one cannot join to a method. See
+  [ADR-0018](adr/0018-deterministic-source-paths-map-to-the-repository-root.md).
+- **Direction**: under-selection. An assembly recorded *only* under such a root is not
+  first-party, and discovery fails and names the cause.
+- **Detectable**: **yes** — `unmapped-deterministic-source-root`. It also fires, with no
+  under-selection, for package content restored to a packages folder configured some other way
+  (`globalPackagesFolder`, `RestorePackagesPath`, fallback folders). Workaround: build with
+  `-p:DeterministicSourcePaths=false`, which records real paths.
+- **Not detected**: `/_/` read as the wrong directory. This needs a build with source-control
+  queries off (`EnableSourceControlManagerQueries=false`) and a hand-written `SourceRoot` that
+  is not the repository root. If the mapped paths name no file, nothing is verified and joins
+  miss.
+
 ### Stale output under `--no-build`
 - **Shape**: an assembly whose own sources are unchanged — so
   [ADR-0003](adr/0003-verify-source-binary-correspondence-via-pdb-checksums.md)'s checksums pass —

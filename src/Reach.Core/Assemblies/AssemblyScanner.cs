@@ -43,6 +43,7 @@ internal static class AssemblyScanner
         string sourceRoot)
     {
         var scanned = new List<ScannedAssembly>();
+        var roots = SourceRoots.Of(sourceRoot);
 
         foreach (var file in Candidates(root))
         {
@@ -51,7 +52,7 @@ internal static class AssemblyScanner
                 continue;
             }
 
-            var assembly = Read(file, sourceRoot);
+            var assembly = Read(file, roots);
 
             if (assembly is not null)
             {
@@ -62,7 +63,17 @@ internal static class AssemblyScanner
         return scanned;
     }
 
-    internal static ScannedAssembly? Read(string file, string sourceRoot)
+    /// <param name="file">The candidate file.</param>
+    /// <param name="sourceRoot">The working tree. What "first-party" is measured against.</param>
+    internal static ScannedAssembly? Read(string file, string sourceRoot) =>
+        Read(file, SourceRoots.Of(sourceRoot));
+
+    /// <param name="file">The candidate file.</param>
+    /// <param name="roots">
+    /// The working tree, which "first-party" is measured against, and where a deterministic
+    /// build's other prefixes can point.
+    /// </param>
+    internal static ScannedAssembly? Read(string file, SourceRoots roots)
     {
         try
         {
@@ -81,7 +92,7 @@ internal static class AssemblyScanner
                 return null;
             }
 
-            var documents = DocumentsOf(peReader, file);
+            var documents = DocumentsOf(peReader, file, roots);
 
             return new ScannedAssembly(
                 Paths.Normalise(file),
@@ -90,7 +101,7 @@ internal static class AssemblyScanner
                 TargetFrameworkMoniker.FromAttributes(
                     AssemblyFacts.TargetFramework(reader),
                     AssemblyFacts.TargetPlatform(reader)),
-                documents.Any(document => Paths.IsUnder(document.Path, sourceRoot)),
+                documents.Any(document => Paths.IsUnder(document.Path, roots.Repository)),
                 documents);
         }
         catch (BadImageFormatException)
@@ -111,7 +122,7 @@ internal static class AssemblyScanner
     /// <summary>
     /// Handles both a separate <c>.pdb</c> and an embedded one.
     /// </summary>
-    private static IReadOnlyList<SourceDocument> DocumentsOf(PEReader peReader, string file)
+    private static IReadOnlyList<SourceDocument> DocumentsOf(PEReader peReader, string file, SourceRoots roots)
     {
         try
         {
@@ -127,7 +138,7 @@ internal static class AssemblyScanner
 
             using (provider)
             {
-                return PdbDocuments.Of(provider.GetMetadataReader());
+                return PdbDocuments.Of(provider.GetMetadataReader(), roots);
             }
         }
         catch (BadImageFormatException)

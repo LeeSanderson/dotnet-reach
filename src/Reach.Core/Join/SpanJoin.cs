@@ -38,7 +38,7 @@ internal sealed class SpanJoin
     internal SpanJoin(IEnumerable<GraphAssembly> assemblies, string repositoryRoot)
     {
         _repositoryRoot = Paths.Normalise(repositoryRoot);
-        _byDocument = Index(assemblies);
+        _byDocument = Index(assemblies, SourceRoots.Of(_repositoryRoot));
     }
 
     /// <summary>
@@ -79,7 +79,9 @@ internal sealed class SpanJoin
     /// no sequence points at all — abstract, <c>extern</c>, a <c>partial</c> declaration with
     /// no implementation — appears nowhere, which is how it falls through to widening.
     /// </summary>
-    private static Dictionary<string, List<MethodExtent>> Index(IEnumerable<GraphAssembly> assemblies)
+    private static Dictionary<string, List<MethodExtent>> Index(
+        IEnumerable<GraphAssembly> assemblies,
+        SourceRoots roots)
     {
         var index = new Dictionary<string, List<MethodExtent>>(Paths.Comparer);
 
@@ -90,6 +92,21 @@ internal sealed class SpanJoin
             if (symbols is null)
             {
                 continue;
+            }
+
+            // Once per document rather than once per sequence point: mapping a deterministic
+            // path can look for a file on disk.
+            var paths = new Dictionary<DocumentHandle, string>();
+
+            string PathOf(DocumentHandle document)
+            {
+                if (!paths.TryGetValue(document, out var path))
+                {
+                    path = PdbDocuments.PathOf(symbols, document, roots).Path;
+                    paths[document] = path;
+                }
+
+                return path;
             }
 
             foreach (var handle in symbols.MethodDebugInformation)
@@ -105,7 +122,7 @@ internal sealed class SpanJoin
                     assembly.Ordinal,
                     MetadataTokens.GetToken(handle.ToDefinitionHandle()));
 
-                foreach (var (document, extent) in ExtentsOf(symbols, information, method))
+                foreach (var (document, extent) in ExtentsOf(information, method, PathOf))
                 {
                     if (!index.TryGetValue(document, out var methods))
                     {
@@ -125,9 +142,9 @@ internal sealed class SpanJoin
     /// partial method's body and its declaration sit in different files.
     /// </summary>
     private static IEnumerable<(string Document, MethodExtent Extent)> ExtentsOf(
-        MetadataReader symbols,
         MethodDebugInformation information,
-        MethodId method)
+        MethodId method,
+        Func<DocumentHandle, string> pathOf)
     {
         var extents = new Dictionary<string, MethodExtent>(Paths.Comparer);
 
@@ -139,7 +156,7 @@ internal sealed class SpanJoin
                 continue;
             }
 
-            var document = PdbDocuments.PathOf(symbols, point.Document);
+            var document = pathOf(point.Document);
 
             extents[document] = extents.TryGetValue(document, out var existing)
                 ? existing.Extend(point)

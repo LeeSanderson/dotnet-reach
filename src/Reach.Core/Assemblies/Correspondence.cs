@@ -135,7 +135,44 @@ internal static class Correspondence
         + string.Join("\n", mismatched.Select(verdict => "  " + verdict.Document.Path).Order(StringComparer.Ordinal))
         + "\n\nBuild, or drop --no-build.";
 
-    private static IReadOnlyList<Notice> Notices(IReadOnlyList<DocumentVerdict> verdicts)
+    private static IReadOnlyList<Notice> Notices(IReadOnlyList<DocumentVerdict> verdicts) =>
+        [.. new[] { InvisibleNotice(verdicts), UnmappedRootNotice(verdicts) }.OfType<Notice>()];
+
+    /// <summary>
+    /// Documents recorded under a deterministic root Reach could not map. Never guessed: the
+    /// symbols do not say which directory <c>/_1/</c> was, and a guess would turn a disclosed
+    /// gap into a silent one.
+    /// </summary>
+    private static Notice? UnmappedRootNotice(IReadOnlyList<DocumentVerdict> verdicts)
+    {
+        var unmapped = verdicts
+            .Where(verdict => verdict.Document.UnmappedRoot is not null)
+            .ToArray();
+
+        if (unmapped.Length == 0)
+        {
+            return null;
+        }
+
+        var roots = unmapped
+            .Select(verdict => verdict.Document.UnmappedRoot!)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        return new Notice(
+            NoticeCodes.UnmappedDeterministicSourceRoot,
+            // A blind spot: a change to one of these files can be neither verified nor joined.
+            NoticeKind.BlindSpot,
+            $"{unmapped.Length} compiled source file(s) were recorded under a deterministic source root "
+            + $"({string.Join(", ", roots)}) that Reach cannot map to a directory, so they were not "
+            + "checked against the working tree and a change to one cannot select a test. /_/ is read "
+            + "as the repository root, and other roots only where the file is in the NuGet global "
+            + "packages folder. Build with -p:DeterministicSourcePaths=false to record real paths.",
+            new Dictionary<string, object?>(StringComparer.Ordinal) { ["roots"] = roots });
+    }
+
+    private static Notice? InvisibleNotice(IReadOnlyList<DocumentVerdict> verdicts)
     {
         var invisible = verdicts
             .Where(verdict => verdict.Class == DocumentClass.Invisible)
@@ -145,21 +182,18 @@ internal static class Correspondence
 
         if (invisible.Length == 0)
         {
-            return [];
+            return null;
         }
 
-        return
-        [
-            new Notice(
-                NoticeCodes.IgnoredUntrackedAssembly,
-                // A blind spot rather than a widening: Reach can see the file, but it cannot
-                // see changes to it, because git will never report one.
-                NoticeKind.BlindSpot,
-                $"{invisible.Length} compiled source file(s) are untracked and git-ignored, so "
-                + "a change to one is invisible to Reach and cannot select a test: "
-                + string.Join(", ", invisible),
-                new Dictionary<string, object?>(StringComparer.Ordinal) { ["paths"] = invisible }),
-        ];
+        return new Notice(
+            NoticeCodes.IgnoredUntrackedAssembly,
+            // A blind spot rather than a widening: Reach can see the file, but it cannot
+            // see changes to it, because git will never report one.
+            NoticeKind.BlindSpot,
+            $"{invisible.Length} compiled source file(s) are untracked and git-ignored, so "
+            + "a change to one is invisible to Reach and cannot select a test: "
+            + string.Join(", ", invisible),
+            new Dictionary<string, object?>(StringComparer.Ordinal) { ["paths"] = invisible });
     }
 }
 

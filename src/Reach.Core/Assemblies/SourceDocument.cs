@@ -15,6 +15,13 @@ namespace Reach.Assemblies;
 /// <param name="Hash">The recorded digest; empty when the symbols carry none.</param>
 public sealed record SourceDocument(string Path, Guid HashAlgorithm, byte[] Hash)
 {
+    /// <summary>
+    /// The deterministic source root (<c>/_1/</c>, <c>/_2/</c>, ...) the document was recorded
+    /// under when Reach could not map it to a directory; null for every other document. Its
+    /// <see cref="Path"/> then names no file in the working tree.
+    /// </summary>
+    public string? UnmappedRoot { get; init; }
+
     internal bool HasChecksum => Hash.Length > 0;
 }
 
@@ -23,7 +30,9 @@ public sealed record SourceDocument(string Path, Guid HashAlgorithm, byte[] Hash
 /// </summary>
 internal static class PdbDocuments
 {
-    internal static IReadOnlyList<SourceDocument> Of(MetadataReader pdbReader)
+    /// <param name="pdbReader">The opened symbols.</param>
+    /// <param name="roots">Where a deterministic build's prefixes can point on this machine.</param>
+    internal static IReadOnlyList<SourceDocument> Of(MetadataReader pdbReader, SourceRoots roots)
     {
         var documents = new List<SourceDocument>(pdbReader.Documents.Count);
 
@@ -36,10 +45,15 @@ internal static class PdbDocuments
                 continue;
             }
 
+            var path = PathOf(pdbReader, handle, roots);
+
             documents.Add(new SourceDocument(
-                PathOf(pdbReader, handle),
+                path.Path,
                 document.HashAlgorithm.IsNil ? Guid.Empty : pdbReader.GetGuid(document.HashAlgorithm),
-                document.Hash.IsNil ? [] : pdbReader.GetBlobBytes(document.Hash)));
+                document.Hash.IsNil ? [] : pdbReader.GetBlobBytes(document.Hash))
+            {
+                UnmappedRoot = path.UnmappedRoot,
+            });
         }
 
         return documents;
@@ -47,8 +61,16 @@ internal static class PdbDocuments
 
     /// <summary>
     /// The one place a raw PDB document name becomes a path, so no consumer sees the build
-    /// machine's separators: a Windows build read on Linux records <c>src\deep/Widget.cs</c>.
+    /// machine's spelling of it. Two things differ from the file on this machine:
+    /// <list type="bullet">
+    /// <item>Separators. A Windows build read on Linux records <c>src\deep/Widget.cs</c>.</item>
+    /// <item>
+    /// Deterministic source paths. A build with <c>ContinuousIntegrationBuild</c> records
+    /// <c>/_/</c> for the git top-level and <c>/_1/</c>, ... for further roots, such as the
+    /// NuGet package folders. See <see cref="DeterministicSourcePaths"/> and ADR-0018.
+    /// </item>
+    /// </list>
     /// </summary>
-    internal static string PathOf(MetadataReader pdbReader, DocumentHandle handle) =>
-        Paths.Normalise(pdbReader.GetString(pdbReader.GetDocument(handle).Name));
+    internal static DocumentPath PathOf(MetadataReader pdbReader, DocumentHandle handle, SourceRoots roots) =>
+        DeterministicSourcePaths.Map(pdbReader.GetString(pdbReader.GetDocument(handle).Name), roots);
 }
