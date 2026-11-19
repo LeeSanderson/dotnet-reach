@@ -6,7 +6,7 @@ namespace Reach.Assemblies;
 /// One source file an assembly's debug symbols point at, with the checksum the compiler
 /// recorded for it.
 /// </summary>
-/// <param name="Path">As the symbols spell it: absolute, in the build machine's separators.</param>
+/// <param name="Path">Absolute and normalised to this machine's separators.</param>
 /// <param name="HashAlgorithm">
 /// The algorithm GUID — SHA-256 for every modern build, SHA-1 for older ones. Carried rather
 /// than assumed, because comparing a file against the wrong algorithm's digest fails in the
@@ -37,11 +37,18 @@ internal static class PdbDocuments
             }
 
             documents.Add(new SourceDocument(
-                pdbReader.GetString(document.Name),
+                PathOf(pdbReader, handle),
                 document.HashAlgorithm.IsNil ? Guid.Empty : pdbReader.GetGuid(document.HashAlgorithm),
                 document.Hash.IsNil ? [] : pdbReader.GetBlobBytes(document.Hash)));
         }
 
         return documents;
     }
+
+    /// <summary>
+    /// The one place a raw PDB document name becomes a path, so no consumer sees the build
+    /// machine's separators: a Windows build read on Linux records <c>src\deep/Widget.cs</c>.
+    /// </summary>
+    internal static string PathOf(MetadataReader pdbReader, DocumentHandle handle) =>
+        Paths.Normalise(pdbReader.GetString(pdbReader.GetDocument(handle).Name));
 }

@@ -11,8 +11,23 @@
 
 **Status:** ready-for-agent
 
-- [ ] The correspondence test for "a document recorded with mixed separators still finds its file" passes on Linux, unchanged
-- [ ] A new span-join test over a PDB whose document is recorded with mixed separators passes on both OSes. Build it with the in-memory compilation helper, as the correspondence tests do; if the helper can't produce that shape, record why under `## Comments` and skip this criterion
-- [ ] Exactly one place converts a raw PDB document name to a path
-- [ ] All existing correspondence, tier-ladder and span-join tests pass on both OSes
-- [ ] Build and format gates remain clean
+- [x] The correspondence test for "a document recorded with mixed separators still finds its file" passes on Linux, unchanged
+- [x] A new span-join test over a PDB whose document is recorded with mixed separators passes on both OSes. Build it with the in-memory compilation helper, as the correspondence tests do; if the helper can't produce that shape, record why under `## Comments` and skip this criterion
+- [x] Exactly one place converts a raw PDB document name to a path
+- [x] All existing correspondence, tier-ladder and span-join tests pass on both OSes
+- [x] Build and format gates remain clean
+
+## Comments
+
+- The helper is `PdbDocuments.PathOf(MetadataReader, DocumentHandle)` in
+  `src/Reach.Core/Assemblies/SourceDocument.cs`; it is now the only reader of a PDB document's
+  `Name`.
+- New test: `SpanJoinTests.A_declaration_joins_when_the_symbols_record_its_file_with_mixed_separators`.
+  Confirmed red with the span join's normalisation removed, green with the helper.
+- One test outside the named suites changed: `AssemblyFactsTests.The_symbols_record_the_document_the_source_came_from`
+  asserted the raw `/repo/src/Widget.cs`, which on Windows now reads back normalised
+  (`C:\repo\src\Widget.cs`). It now compiles against a temp-directory path spelled natively and
+  expects that path back. On Linux the assertion was unaffected.
+- Linux (`mcr.microsoft.com/dotnet/sdk:10.0`, fresh clone of the branch): `-warnaserror` build
+  clean; 519/525 pass. The 6 failures are the culture-invariance (measurement, human summary) and
+  command-line-ceiling (chunker, three invocation) tests owned by other tickets. Windows: 525/525.

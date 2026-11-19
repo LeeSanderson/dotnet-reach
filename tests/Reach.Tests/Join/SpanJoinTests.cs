@@ -356,6 +356,21 @@ public class SpanJoinTests
         Assert.False(new SpanJoin(subject.Assemblies, "/repo").Resolve(declaration).Joined);
     }
 
+    [Fact]
+    public void A_declaration_joins_when_the_symbols_record_its_file_with_mixed_separators()
+    {
+        const string source = "namespace N; public class Subject { public int M() => 1; }";
+
+        // As a solution built on Windows and read on Linux would carry it.
+        using var subject = Subject.Compile(source, documentPath: "/repo/src\\deep/Subject.cs");
+
+        var declaration = Declaration(source, "N.Subject", "M") with { Path = "src/deep/Subject.cs" };
+        var result = new SpanJoin(subject.Assemblies, "/repo").Resolve(declaration);
+
+        // Missing the join is silent under-selection, not a crash.
+        Assert.Equal(["Subject::M"], result.Methods.Select(subject.NameOf));
+    }
+
     // ---- Multi-targeting ------------------------------------------------------------------------
 
     [Fact]
@@ -384,14 +399,14 @@ public class SpanJoinTests
 
         internal IReadOnlyList<GraphAssembly> Assemblies { get; private set; }
 
-        internal static Subject Compile(string source, int instances = 1)
+        internal static Subject Compile(string source, int instances = 1, string documentPath = DocumentPath)
         {
             var subject = new Subject([]);
             var assemblies = new List<GraphAssembly>();
 
             for (var index = 0; index < instances; index++)
             {
-                var compiled = Compiled.Assembly("Subject", source, DocumentPath);
+                var compiled = Compiled.Assembly("Subject", source, documentPath);
 
                 var reader = new PEReader(ImmutableArray.Create(compiled.Image));
                 var symbols = MetadataReaderProvider.FromPortablePdbImage(ImmutableArray.Create(compiled.Symbols));
