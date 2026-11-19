@@ -4,9 +4,14 @@ using System.Reflection.Metadata.Ecma335;
 namespace Reach.Graph;
 
 /// <summary>
-/// The two places where control flow is certain but no instruction expresses it.
+/// The two places inside compiled code where control flow is certain but no instruction
+/// expresses it.
 /// </summary>
 /// <remarks>
+/// <para>
+/// The third, a test framework running a test class's lifecycle, needs test recognition, so
+/// selection builds it (<c>Reach.Selection.TestLifecycle</c>) and hands it to the builder.
+/// </para>
 /// <para>
 /// <strong>Containment is not optional.</strong> <c>async Task&lt;int&gt; Aw()</c> reaches its
 /// own body only through <c>AsyncTaskMethodBuilder&lt;int&gt;::Start</c> — <c>MoveNext</c> is

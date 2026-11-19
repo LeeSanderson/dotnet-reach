@@ -64,7 +64,9 @@ internal static class SelectionPhases
 
         using var open = OpenAssemblies.Open(instances);
 
-        var graph = timings.Measure("graph", () => CallGraphBuilder.Build(open.Assemblies));
+        var graph = timings.Measure(
+            "graph",
+            () => CallGraphBuilder.Build(open.Assemblies, TestLifecycle.EdgesIn(open.Assemblies)));
         notices.AddRange(graph.Notices);
 
         var roots = timings.Measure(

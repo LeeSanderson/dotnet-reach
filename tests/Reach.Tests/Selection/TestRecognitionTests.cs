@@ -145,7 +145,8 @@ public class TestRecognitionTests
                 new Version(1, 0),
                 new Version(99, 0),
                 ["Xunit.FactAttribute"],
-                "xunit-v3-4"));
+                "xunit-v3-4",
+                new TestLifecycleHooks([], [], [], [], [], [], [])));
 
         Assert.Equal(["N.Tests.Derived", "N.Tests.Plain"], tests.Select(test => test.FullyQualifiedName));
     }

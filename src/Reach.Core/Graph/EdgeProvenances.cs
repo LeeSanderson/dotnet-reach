@@ -13,7 +13,9 @@ internal static class EdgeProvenances
     /// Invented by Reach where the control flow is certain but no instruction expresses it.
     /// </summary>
     internal static bool IsSynthesised(this EdgeProvenance provenance) =>
-        provenance is EdgeProvenance.Containment or EdgeProvenance.TypeInitialization;
+        provenance is EdgeProvenance.Containment
+            or EdgeProvenance.TypeInitialization
+            or EdgeProvenance.TestLifecycle;
 
     /// <summary>
     /// The implementation that runs is not knowable, so every candidate gets an edge.

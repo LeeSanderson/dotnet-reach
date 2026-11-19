@@ -70,12 +70,17 @@ internal sealed class Selections : IDisposable
     /// </param>
     /// <param name="added">Declarations to mark as added rather than modified.</param>
     /// <param name="includePaths">Record hop-by-hop paths, as <c>--paths</c> does.</param>
+    /// <param name="testFramework">
+    /// A stand-in test framework assembly the test assembly also references, for a framework
+    /// the suite itself does not run on. Never opened: like a real one, it is not first-party.
+    /// </param>
     internal static Selections Of(
         string coreSource,
         string testsSource,
         IEnumerable<string>? changed = null,
         IEnumerable<string>? added = null,
-        bool includePaths = false)
+        bool includePaths = false,
+        CompiledAssembly? testFramework = null)
     {
         var selections = new Selections();
 
@@ -85,7 +90,11 @@ internal sealed class Selections : IDisposable
         // fixture that writes no Xunit type gets no reference, and falls back to whole-project
         // selection for the same reason a real project would.
         var core = Compiled.Assembly("Core", coreSource, CorePath);
-        var tests = Compiled.Assembly("Tests", testsSource, TestsPath, references: [core]);
+        var tests = Compiled.Assembly(
+            "Tests",
+            testsSource,
+            TestsPath,
+            references: testFramework is null ? [core] : [core, testFramework]);
 
         var coreProject = Project("/repo/src/Core/Core.csproj", "Core");
         var testsProject = Project("/repo/tests/Tests/Tests.csproj", "Tests");
@@ -108,7 +117,7 @@ internal sealed class Selections : IDisposable
         };
 
         var graphAssemblies = new[] { coreAssembly, testsAssembly };
-        var graph = CallGraphBuilder.Build(graphAssemblies);
+        var graph = CallGraphBuilder.Build(graphAssemblies, TestLifecycle.EdgesIn(graphAssemblies));
 
         var members = Members(coreSource, "src/Core/Widget.cs", changed, added)
             .Concat(Members(testsSource, "tests/Tests/WidgetTests.cs", changed, added))
