@@ -17,8 +17,10 @@ internal static class SelectionPhases
     /// <summary>
     /// Completes a run the change phases left successful.
     /// </summary>
-    internal static async Task<SelectRun> RunAsync(PipelineRun run, SelectRun partial, string repositoryRoot)
+    internal static async Task<SelectRun> RunAsync(PipelineRun run, SelectRun partial)
     {
+        var repositoryRoot = ChangePhases.WorkingRoot(partial.RepositoryRoot);
+
         var assemblies = run.Timings.Measure(
             "discovery",
             () => AssemblyDiscovery.Discover(

@@ -12,10 +12,10 @@ namespace Reach;
 internal static class ChangePhases
 {
     /// <summary>
-    /// The run so far, and the working tree's root as git reported it. A run whose exit code is
-    /// not success stops here.
+    /// The run so far, carrying the working tree's root as git reported it. A run whose exit
+    /// code is not success stops here.
     /// </summary>
-    internal static async Task<(SelectRun Run, string RepositoryRoot)> RunAsync(
+    internal static async Task<SelectRun> RunAsync(
         PipelineRun run,
         IProcessRunner processRunner)
     {
@@ -31,16 +31,20 @@ internal static class ChangePhases
 
         if (!baseline.Resolved)
         {
-            return (new SelectRun(ExitCode.BaselineUnresolvable, baseline.Message, run.Notices), string.Empty);
+            return new SelectRun(ExitCode.BaselineUnresolvable, baseline.Message, run.Notices);
         }
 
         var root = await git.RepositoryRootAsync(cancellationToken).ConfigureAwait(false);
         var head = await git.RevParseAsync("HEAD", cancellationToken).ConfigureAwait(false);
 
+        // Never checked, and deliberately unchanged from the original pipeline: a root git could
+        // not report is carried as null in the report and reads as empty everywhere else.
+        var repositoryRoot = root.Succeeded ? root.Value : null;
+
         var changes = await timings
             .MeasureAsync(
                 "changes",
-                () => new ChangedSetBuilder(git, root.Value, run.Scope)
+                () => new ChangedSetBuilder(git, WorkingRoot(repositoryRoot), run.Scope)
                     .BuildAsync(baseline.Baseline!.Sha, cancellationToken))
             .ConfigureAwait(false);
 
@@ -60,7 +64,7 @@ internal static class ChangePhases
             baseline.Baseline,
             head.Succeeded ? head.Value : null,
             changes,
-            RepositoryRoot: root.Succeeded ? root.Value : null);
+            RepositoryRoot: repositoryRoot);
 
         if (!build.Succeeded)
         {
@@ -73,6 +77,12 @@ internal static class ChangePhases
             };
         }
 
-        return (partial, root.Value);
+        return partial;
     }
+
+    /// <summary>
+    /// The root the phases resolve repository-relative paths against: the one git reported, or
+    /// empty when it reported none, so those paths resolve against the current directory.
+    /// </summary>
+    internal static string WorkingRoot(string? repositoryRoot) => repositoryRoot ?? string.Empty;
 }

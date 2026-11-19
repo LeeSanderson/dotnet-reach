@@ -46,14 +46,14 @@ public sealed class ReachPipeline(IProcessRunner processRunner)
             new GitAdapter(processRunner, target!.Directory),
             cancellationToken);
 
-        var (partial, repositoryRoot) = await ChangePhases.RunAsync(run, processRunner).ConfigureAwait(false);
+        var partial = await ChangePhases.RunAsync(run, processRunner).ConfigureAwait(false);
 
         if (partial.ExitCode != ExitCode.Success)
         {
             return partial;
         }
 
-        return await SelectionPhases.RunAsync(run, partial, repositoryRoot).ConfigureAwait(false);
+        return await SelectionPhases.RunAsync(run, partial).ConfigureAwait(false);
     }
 
     /// <summary>
