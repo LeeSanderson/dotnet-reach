@@ -4,7 +4,6 @@ using Reach.Graph;
 using Reach.Join;
 using Reach.Projects;
 using Reach.Reporting;
-using static Reach.Buckets;
 
 namespace Reach.Selection;
 
@@ -15,8 +14,7 @@ namespace Reach.Selection;
 internal static class Selector
 {
     internal static SelectionResult Select(
-        CallGraph graph,
-        IReadOnlyList<GraphAssembly> assemblies,
+        CallGraphResult graph,
         IReadOnlyList<AssemblyInstance> instances,
         AnalysisScope scope,
         ChangedSet changed,
@@ -25,7 +23,7 @@ internal static class Selector
         TierLadder ladder)
     {
         var notices = new List<Notice>();
-        var roots = new RootSets(assemblies);
+        var roots = new RootSets(graph.Assemblies);
         var changes = roots.ChangesFrom(changed, joined, scope, ladder);
 
         if (TierLadder.UnattributedNotice(ladder.RouteAll(changed.UnmappablePaths)) is { } unattributed)
@@ -33,51 +31,17 @@ internal static class Selector
             notices.Add(unattributed);
         }
 
-        // Every test in every in-scope test project, not only the selected ones: the totals,
-        // the rendered-match computation and the over-selection measurement all read the list.
-        var projects = Enumerate(assemblies, instances, scope, notices);
+        var projects = TestEnumeration.Enumerate(graph.Assemblies, instances, scope, notices);
 
         var allTests = projects
             .SelectMany(project => project.Tests)
             .ToDictionary(test => test.Id);
 
-        var reachedBy = new ChangesByTest();
-        var classOf = new Dictionary<MethodId, PathClass>();
-        var pathsOf = includePaths ? new PathsByTest() : null;
+        var reached = new ReachedTests(graph.Graph, allTests, includePaths);
 
         foreach (var change in changes)
         {
-            if (change.Roots.Count == 0)
-            {
-                continue;
-            }
-
-            // A test that is itself a root is excluded only at the member tier, where the roots
-            // *are* the changed declaration and own-source-changed picks the test up instead —
-            // two attributions for one fact read badly. A widening's roots are an expansion, so
-            // nothing else would select the tests among them and excluding them under-selects.
-            var ownRoots = change.Entry.Tier == ChangeTier.Member ? change.Roots.ToHashSet() : [];
-            var reached = ReverseWalk.From(graph, change.Roots);
-
-            foreach (var (method, pathClass) in reached)
-            {
-                if (!allTests.ContainsKey(method) || ownRoots.Contains(method))
-                {
-                    continue;
-                }
-
-                Bucket(reachedBy, method).Add(change.Entry.Index);
-                change.Entry.TestsReached++;
-
-                classOf[method] = classOf.TryGetValue(method, out var existing)
-                    ? Closer(existing, pathClass)
-                    : pathClass;
-            }
-
-            if (pathsOf is not null)
-            {
-                RecordPaths(graph, change, allTests, reached, ownRoots, pathsOf);
-            }
+            reached.Record(change);
         }
 
         var ownChanged = OwnDeclarationChanged(joined, MemberChange.Modified, MemberChange.Added);
@@ -85,24 +49,17 @@ internal static class Selector
 
         return new SelectionResult(
             [
-                .. projects.Select(project => Decide(project, reachedBy, classOf, ownChanged, added, pathsOf))
+                .. projects.Select(project => Decide(project, reached, ownChanged, added))
             ],
             [.. changes.Select(change => change.Entry)],
             notices);
     }
 
-    /// <summary>
-    /// The stronger of two path classes: a compiled path beats a widened one.
-    /// </summary>
-    private static PathClass Closer(PathClass first, PathClass second) => first < second ? first : second;
-
     private static ProjectSelection Decide(
         EnumeratedProject project,
-        ChangesByTest reachedBy,
-        Dictionary<MethodId, PathClass> classOf,
+        ReachedTests reached,
         HashSet<MethodId> ownChanged,
-        HashSet<MethodId> added,
-        PathsByTest? pathsOf)
+        HashSet<MethodId> added)
     {
         if (project.Framework is null)
         {
@@ -122,7 +79,7 @@ internal static class Selector
 
         foreach (var test in project.Tests)
         {
-            var changes = reachedBy.GetValueOrDefault(test.Id) ?? [];
+            var changes = reached.ChangesReaching(test.Id);
             var rules = RulesFor(test.Id, changes, ownChanged, added);
 
             if (rules.Count == 0)
@@ -134,8 +91,8 @@ internal static class Selector
                 test,
                 rules,
                 [.. changes.Distinct().Order()],
-                changes.Count > 0 ? classOf.GetValueOrDefault(test.Id) : null,
-                pathsOf?.GetValueOrDefault(test.Id)));
+                changes.Count > 0 ? reached.PathClassOf(test.Id) : null,
+                reached.PathsTo(test.Id)));
         }
 
         return new ProjectSelection(
@@ -178,64 +135,6 @@ internal static class Selector
         return rules;
     }
 
-    private static IReadOnlyList<EnumeratedProject> Enumerate(
-        IReadOnlyList<GraphAssembly> assemblies,
-        IReadOnlyList<AssemblyInstance> instances,
-        AnalysisScope scope,
-        List<Notice> notices)
-    {
-        var projects = new List<EnumeratedProject>();
-        var unrecognised = new List<string>();
-
-        foreach (var instance in instances)
-        {
-            if (!scope.TestProjects.Contains(instance.Expected.Project))
-            {
-                continue;
-            }
-
-            var assembly = assemblies.FirstOrDefault(candidate =>
-                candidate.Name == instance.Assembly.SimpleName
-                && candidate.Framework is not null
-                && instance.Assembly.Framework is not null
-                && candidate.Framework.Matches(instance.Assembly.Framework));
-
-            if (assembly is null)
-            {
-                continue;
-            }
-
-            var framework = TestFrameworks.DetectedIn(assembly.Reader);
-
-            if (framework is null)
-            {
-                unrecognised.Add(instance.Expected.Project.Name);
-            }
-
-            projects.Add(new EnumeratedProject(
-                instance.Expected.Project,
-                instance.Expected.TargetFramework,
-                framework,
-                framework is null ? [] : TestMethods.In(assembly, framework)));
-        }
-
-        if (unrecognised.Count > 0)
-        {
-            notices.Add(new Notice(
-                NoticeCodes.WholeProjectFallback,
-                NoticeKind.Widening,
-                $"{unrecognised.Count} test project(s) use a test framework Reach does not "
-                + "recognise, so every test in them runs and their totals are unknown: "
-                + string.Join(", ", unrecognised.Order(StringComparer.Ordinal)),
-                new Dictionary<string, object?>(StringComparer.Ordinal)
-                {
-                    ["projects"] = unrecognised.Order(StringComparer.Ordinal).ToArray(),
-                }));
-        }
-
-        return projects;
-    }
-
     /// <summary>
     /// Which tests' own declarations are in the changed set. Derived from the changed set, not
     /// by comparing two test lists: Reach reads only the current compiled output and cannot
@@ -249,53 +148,4 @@ internal static class Selector
             .Where(result => kinds.Contains(result.Member.Change))
             .SelectMany(result => result.Methods)
     ];
-
-    /// <summary>
-    /// Records, for every test one change reached, the hop-by-hop path from the test to the change.
-    /// </summary>
-    /// <param name="graph">The call graph the walk ran over.</param>
-    /// <param name="change">The change whose roots the paths lead back to.</param>
-    /// <param name="tests">Every test method, by identity.</param>
-    /// <param name="reached">Every method the change reached.</param>
-    /// <param name="ownRoots">
-    /// The same exclusion the counting loop applies, and for the same reason: a test excluded
-    /// there carries no change index, so recording a path for it here would put a path in the
-    /// report next to an empty <c>changes</c> — a hop-by-hop answer to a question the report
-    /// says was never asked.
-    /// </param>
-    /// <param name="into">Where the paths go, keyed by test.</param>
-    private static void RecordPaths(
-        CallGraph graph,
-        Change change,
-        IReadOnlyDictionary<MethodId, TestMethod> tests,
-        IReadOnlyDictionary<MethodId, PathClass> reached,
-        IReadOnlySet<MethodId> ownRoots,
-        PathsByTest into)
-    {
-        var predecessors = ReverseWalk.Predecessors(graph, change.Roots);
-
-        var reachedTests = reached.Keys
-            .Where(method => tests.ContainsKey(method) && !ownRoots.Contains(method));
-
-        foreach (var method in reachedTests)
-        {
-            Bucket(into, method).Add(ReverseWalk.PathFrom(predecessors, method));
-        }
-    }
-
-    /// <summary>
-    /// Per test, the index of every change that reached it.
-    /// </summary>
-    private sealed class ChangesByTest : Dictionary<MethodId, List<int>>;
-
-    /// <summary>
-    /// Per test, the hop-by-hop path from every change that reached it.
-    /// </summary>
-    private sealed class PathsByTest : Dictionary<MethodId, List<IReadOnlyList<MethodId>>>;
-
-    private sealed record EnumeratedProject(
-        ProjectFile Project,
-        string TargetFramework,
-        TestFramework? Framework,
-        IReadOnlyList<TestMethod> Tests);
 }

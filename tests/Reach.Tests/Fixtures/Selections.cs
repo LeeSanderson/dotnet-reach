@@ -130,8 +130,7 @@ internal sealed class Selections : IDisposable
         selections.Changed = changedSet;
 
         selections.Result = Selector.Select(
-            graph.Graph,
-            graphAssemblies,
+            graph,
             instances,
             scope,
             changedSet,

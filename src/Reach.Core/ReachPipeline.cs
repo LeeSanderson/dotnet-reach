@@ -1,6 +1,5 @@
 using Reach.Assemblies;
 using Reach.Baselines;
-using Reach.Build;
 using Reach.Changes;
 using Reach.Git;
 using Reach.Graph;
@@ -27,18 +26,55 @@ public sealed class ReachPipeline(IProcessRunner processRunner)
         PhaseTimings timings,
         CancellationToken cancellationToken)
     {
-        var refusal = ForwardedBuildArguments.Refuse(request.ForwardedBuildArguments);
+        var (refusal, target, scope) = await CheckUsageAsync(request, timings, cancellationToken).ConfigureAwait(false);
 
         if (refusal is not null)
         {
             return Usage(refusal);
         }
 
+        // Past here the invocation is a usable one, so the directory Reach owns comes into
+        // existence and every later outcome carries a report.
+        ReachDirectory.For(request.WorkingDirectory, request.ReportDirectory).EnsureCreated();
+
+        var run = new PipelineRun(
+            request,
+            environment,
+            timings,
+            target!,
+            scope!,
+            new GitAdapter(processRunner, target!.Directory),
+            cancellationToken);
+
+        var (partial, repositoryRoot) = await ChangePhases.RunAsync(run, processRunner).ConfigureAwait(false);
+
+        if (partial.ExitCode != ExitCode.Success)
+        {
+            return partial;
+        }
+
+        return await SelectionPhases.RunAsync(run, partial, repositoryRoot).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The checks that can still end the run as a usage error: the forwarded build arguments,
+    /// the target, and its analysis scope. The refusal is null when all three pass.
+    /// </summary>
+    private static async Task<(string? Refusal, DiscoveredTarget? Target, AnalysisScopeResult? Scope)> CheckUsageAsync(
+        SelectRequest request,
+        PhaseTimings timings,
+        CancellationToken cancellationToken)
+    {
+        if (ForwardedBuildArguments.Refuse(request.ForwardedBuildArguments) is { } refusal)
+        {
+            return (refusal, null, null);
+        }
+
         var discovery = TargetDiscovery.Discover(request.Target ?? request.WorkingDirectory);
 
         if (!discovery.Discovered)
         {
-            return Usage(discovery.Message);
+            return (discovery.Message, null, null);
         }
 
         var target = discovery.Target!;
@@ -47,151 +83,7 @@ public sealed class ReachPipeline(IProcessRunner processRunner)
             .MeasureAsync("scope", () => AnalysisScopeResolver.ResolveAsync(target, cancellationToken))
             .ConfigureAwait(false);
 
-        if (!scope.Resolved)
-        {
-            return Usage(scope.Message);
-        }
-
-        // Past here the invocation is a usable one, so the directory Reach owns comes into
-        // existence and every later outcome carries a report.
-        ReachDirectory.For(request.WorkingDirectory, request.ReportDirectory).EnsureCreated();
-
-        var notices = new List<Notice>(scope.Notices);
-        var git = new GitAdapter(processRunner, target.Directory);
-
-        var baseline = await timings
-            .MeasureAsync(
-                "baseline",
-                () => new BaselineResolver(git).ResolveAsync(request.Base, environment, cancellationToken))
-            .ConfigureAwait(false);
-
-        notices.AddRange(baseline.Notices);
-
-        if (!baseline.Resolved)
-        {
-            return new SelectRun(ExitCode.BaselineUnresolvable, baseline.Message, notices);
-        }
-
-        var root = await git.RepositoryRootAsync(cancellationToken).ConfigureAwait(false);
-        var head = await git.RevParseAsync("HEAD", cancellationToken).ConfigureAwait(false);
-
-        var changes = await timings
-            .MeasureAsync(
-                "changes",
-                () => new ChangedSetBuilder(git, root.Value, scope.Scope!)
-                    .BuildAsync(baseline.Baseline!.Sha, cancellationToken))
-            .ConfigureAwait(false);
-
-        notices.AddRange(changes.Notices);
-
-        var build = await timings
-            .MeasureAsync(
-                "build",
-                () => new BuildAdapter(processRunner).BuildAsync(target, request, cancellationToken))
-            .ConfigureAwait(false);
-
-        var partial = new SelectRun(
-            ExitCode.Success,
-            string.Empty,
-            notices,
-            scope.Scope,
-            baseline.Baseline,
-            head.Succeeded ? head.Value : null,
-            changes,
-            RepositoryRoot: root.Succeeded ? root.Value : null);
-
-        if (!build.Succeeded)
-        {
-            // No degraded mode: a failed build already fails the pipeline, so a clever
-            // selection over a broken tree has no consumer.
-            return partial with
-            {
-                ExitCode = ExitCode.BuildFailed,
-                Message = "The build failed, so Reach selected nothing:\n\n" + build.Output,
-            };
-        }
-
-        var assemblies = timings.Measure(
-            "discovery",
-            () => AssemblyDiscovery.Discover(scope.Scope!, target.Directory, root.Value, LayoutHints.From(request)));
-
-        if (!assemblies.Succeeded)
-        {
-            return partial with { ExitCode = assemblies.ExitCode, Message = assemblies.Message };
-        }
-
-        // In both modes, and the mode that trusts the caller more is the mode that detects
-        // more: default mode has just recompiled the changed file, so its checksums agree.
-        var visibility = await SourceVisibility
-            .ReadAsync(git, root.Value, cancellationToken)
-            .ConfigureAwait(false);
-
-        var correspondence = timings.Measure(
-            "correspondence",
-            () => Correspondence.Verify(assemblies.Instances, visibility));
-
-        notices.AddRange(correspondence.Notices);
-        partial = partial with { Assemblies = assemblies.Instances, Correspondence = correspondence };
-
-        if (correspondence.Verdict == CorrespondenceVerdict.Failed)
-        {
-            return partial with { ExitCode = correspondence.ExitCode, Message = correspondence.Message };
-        }
-
-        using var open = OpenAssemblies.Open(assemblies.Instances);
-
-        var graph = timings.Measure("graph", () => CallGraphBuilder.Build(open.Assemblies));
-        notices.AddRange(graph.Notices);
-
-        var roots = timings.Measure(
-            "join",
-            () => new SpanJoin(open.Assemblies, root.Value).ResolveAll(changes.Members));
-
-        var selection = timings.Measure(
-            "selection",
-            () => Selector.Select(
-                graph.Graph,
-                open.Assemblies,
-                assemblies.Instances,
-                scope.Scope!,
-                changes,
-                roots,
-                request.Paths,
-                new TierLadder(scope.Scope!, root.Value)));
-
-        notices.AddRange(selection.Notices);
-
-        var rendered = timings.Measure(
-            "rendering",
-            () => new Renderer(
-                    assemblies.Instances,
-                    request,
-                    ReachDirectory.For(request.WorkingDirectory, request.ReportDirectory))
-                .Render(selection));
-
-        notices.AddRange(rendered.Notices);
-
-        if (TestRunnerConfiguration.Check(
-                rendered.Entries
-                    .Where(entry => TestRunnerConfiguration.Needs(entry.Selection.Dialect))
-                    .Select(entry => entry.Selection.Project.Name),
-                root.Value)
-            is { } misconfigured)
-        {
-            // The rendering is correct; the repository is misconfigured. Reach says so and
-            // does not stop.
-            notices.Add(misconfigured);
-        }
-
-        // An empty selection exits 0. Non-zero means "do not trust my answer", which is what
-        // makes the pipeline rule one line of guidance rather than a paragraph.
-        return partial with
-        {
-            Graph = graph,
-            Roots = roots,
-            Selection = selection,
-            Rendered = rendered,
-        };
+        return scope.Resolved ? (null, target, scope) : (scope.Message, null, null);
     }
 
     private static SelectRun Usage(string message) =>

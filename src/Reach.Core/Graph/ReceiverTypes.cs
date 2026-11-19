@@ -1,5 +1,3 @@
-using System.Reflection;
-using System.Reflection.Emit;
 using System.Reflection.Metadata;
 
 namespace Reach.Graph;
@@ -31,49 +29,84 @@ namespace Reach.Graph;
 /// types keeps full fan-out at that one site. Errs over.
 /// </para>
 /// </remarks>
-internal static class ReceiverTypes
+internal sealed class ReceiverTypes
 {
-    private const byte TwoBytePrefix = 0xFE;
+    /// <summary>
+    /// <c>ldarg</c> and <c>ldloc</c> each have short forms for the first four slots.
+    /// </summary>
+    private const int ShortFormSlots = 4;
 
     /// <summary>
-    /// The per-opcode tables hold the one-byte opcodes, then the two-byte ones by second byte.
+    /// The instructions the interpretation knows more about than their stack behaviour, by the
+    /// family each one belongs to. Everything else only pops and pushes unknowns.
     /// </summary>
-    private const int OneByteOpCodes = byte.MaxValue + 1;
-
-    private static readonly int[] Pops = new int[512];
-    private static readonly int[] Pushes = new int[512];
-
-    private static readonly HashSet<StackBehaviour> SlotlessBehaviours =
-        [StackBehaviour.Pop0, StackBehaviour.Push0, StackBehaviour.Varpop, StackBehaviour.Varpush];
-
-    /// <summary>
-    /// Every instruction whose operand is a branch target: the conditional and unconditional
-    /// branches and <c>leave</c>, long and short. Read from <see cref="OpCodes"/>, like the
-    /// other tables here, rather than typed out.
-    /// </summary>
-    private static readonly HashSet<ILOpCode> Branches =
-    [
-        .. typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static)
-            .Select(field => field.GetValue(null))
-            .OfType<OpCode>()
-            .Where(opCode => opCode.OperandType is OperandType.InlineBrTarget or OperandType.ShortInlineBrTarget)
-            .Select(opCode => OpCodeValues.ToOpCode(OpCodeValues.ValueOf(opCode))),
-    ];
-
-    static ReceiverTypes()
+    private static readonly Dictionary<ILOpCode, Family> Families = new()
     {
-        foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
-        {
-            if (field.GetValue(null) is not OpCode opCode)
-            {
-                continue;
-            }
+        [ILOpCode.Newobj] = Family.Construction,
 
-            var index = Index(OpCodeValues.ValueOf(opCode));
+        [ILOpCode.Castclass] = Family.Conversion,
+        [ILOpCode.Isinst] = Family.Conversion,
+        [ILOpCode.Unbox_any] = Family.Conversion,
+        [ILOpCode.Box] = Family.Conversion,
 
-            Pops[index] = Count(opCode.StackBehaviourPop);
-            Pushes[index] = Count(opCode.StackBehaviourPush);
-        }
+        [ILOpCode.Ldarg_0] = Family.ArgumentLoad,
+        [ILOpCode.Ldarg_1] = Family.ArgumentLoad,
+        [ILOpCode.Ldarg_2] = Family.ArgumentLoad,
+        [ILOpCode.Ldarg_3] = Family.ArgumentLoad,
+        [ILOpCode.Ldarg] = Family.ArgumentLoad,
+        [ILOpCode.Ldarg_s] = Family.ArgumentLoad,
+
+        [ILOpCode.Ldloc_0] = Family.LocalLoad,
+        [ILOpCode.Ldloc_1] = Family.LocalLoad,
+        [ILOpCode.Ldloc_2] = Family.LocalLoad,
+        [ILOpCode.Ldloc_3] = Family.LocalLoad,
+        [ILOpCode.Ldloc] = Family.LocalLoad,
+        [ILOpCode.Ldloc_s] = Family.LocalLoad,
+
+        [ILOpCode.Ldsfld] = Family.FieldLoad,
+        [ILOpCode.Ldfld] = Family.FieldLoad,
+
+        [ILOpCode.Dup] = Family.Duplication,
+
+        [ILOpCode.Call] = Family.Call,
+        [ILOpCode.Callvirt] = Family.Call,
+
+        [ILOpCode.Ldftn] = Family.FunctionLoad,
+        [ILOpCode.Ldvirtftn] = Family.FunctionLoad,
+    };
+
+    private readonly OperandTypes _types;
+    private readonly IReadOnlyList<string?> _arguments;
+    private readonly IReadOnlyList<string?> _locals;
+    private readonly List<string?> _stack = [];
+    private readonly Dictionary<int, string> _inferred = [];
+
+    private ReceiverTypes(MetadataReader reader, MethodDefinition method, MethodBodyBlock body)
+    {
+        _types = new OperandTypes(reader);
+        _arguments = _types.ArgumentsOf(method);
+        _locals = _types.LocalsOf(body);
+    }
+
+    private enum Family
+    {
+        /// <summary>
+        /// Anything that only pops and pushes unknowns.
+        /// </summary>
+        Other,
+
+        // Rung 1: an exact type.
+        Construction,
+        Conversion,
+
+        // Rung 2: a signature type.
+        ArgumentLoad,
+        LocalLoad,
+        FieldLoad,
+
+        Duplication,
+        Call,
+        FunctionLoad,
     }
 
     /// <summary>
@@ -86,15 +119,8 @@ internal static class ReceiverTypes
         MethodBodyBlock body,
         ReadOnlySpan<byte> il)
     {
-        var reader = assembly.Reader;
-        var names = new SignatureNames();
-
-        var arguments = ArgumentTypes(reader, method, names);
-        var locals = LocalTypes(reader, body, names);
-        var boundaries = Boundaries(il, body);
-
-        var inferred = new Dictionary<int, string>();
-        var stack = new List<string?>();
+        var interpretation = new ReceiverTypes(assembly.Reader, method, body);
+        var boundaries = ILDecoder.Boundaries(il, body);
         var offset = 0;
 
         // An instruction Read cannot decode is a nop with a negative next offset: the walk ends.
@@ -104,504 +130,153 @@ internal static class ReceiverTypes
             {
                 // Everything before a branch target reached it from somewhere this pass did not
                 // follow, so nothing on the stack can be trusted across it.
-                stack.Clear();
+                interpretation._stack.Clear();
             }
 
-            var (opCode, operand, next) = Read(il, offset);
+            var (opCode, operand, next) = ILDecoder.Read(il, offset);
 
-            Apply(reader, names, arguments, locals, stack, inferred, offset, opCode, operand);
+            interpretation.Apply(offset, opCode, operand);
 
             offset = next;
         }
 
-        return inferred;
+        return interpretation._inferred;
     }
 
-    private static void Apply(
-        MetadataReader reader,
-        SignatureNames names,
-        IReadOnlyList<string?> arguments,
-        IReadOnlyList<string?> locals,
-        List<string?> stack,
-        Dictionary<int, string> inferred,
-        int offset,
-        ILOpCode opCode,
-        int operand)
+    private void Apply(int offset, ILOpCode opCode, int operand)
     {
-        switch (opCode)
+        switch (Families.GetValueOrDefault(opCode))
         {
-            // Rung 1: an exact type.
-            case ILOpCode.Newobj:
-                Pop(stack, ArgumentCount(reader, operand, names));
-                stack.Add(DeclaringTypeOf(reader, operand, names));
-                return;
+            case Family.Construction:
+                Pop(_types.CallShape(operand).Parameters);
+                _stack.Add(_types.DeclaringTypeOf(operand));
+                break;
 
-            case ILOpCode.Castclass:
-            case ILOpCode.Isinst:
-            case ILOpCode.Unbox_any:
-            case ILOpCode.Box:
-                Pop(stack, 1);
-                stack.Add(TypeNameOf(reader, operand, names));
-                return;
+            case Family.Conversion:
+                Pop(1);
+                _stack.Add(_types.TypeNamed(operand));
+                break;
 
-            // Rung 2: a signature type.
-            // The short forms are numbered consecutively, so the slot is the distance from _0.
-            case ILOpCode.Ldarg_0:
-            case ILOpCode.Ldarg_1:
-            case ILOpCode.Ldarg_2:
-            case ILOpCode.Ldarg_3:
-                stack.Add(At(arguments, opCode - ILOpCode.Ldarg_0));
-                return;
-            case ILOpCode.Ldarg:
-            case ILOpCode.Ldarg_s:
-                stack.Add(At(arguments, operand));
-                return;
+            case Family.ArgumentLoad:
+                _stack.Add(At(_arguments, Slot(opCode, ILOpCode.Ldarg_0, operand)));
+                break;
 
-            case ILOpCode.Ldloc_0:
-            case ILOpCode.Ldloc_1:
-            case ILOpCode.Ldloc_2:
-            case ILOpCode.Ldloc_3:
-                stack.Add(At(locals, opCode - ILOpCode.Ldloc_0));
-                return;
-            case ILOpCode.Ldloc:
-            case ILOpCode.Ldloc_s:
-                stack.Add(At(locals, operand));
-                return;
+            case Family.LocalLoad:
+                _stack.Add(At(_locals, Slot(opCode, ILOpCode.Ldloc_0, operand)));
+                break;
 
-            case ILOpCode.Ldsfld:
-                stack.Add(FieldTypeOf(reader, operand, names));
-                return;
+            case Family.FieldLoad:
+                LoadField(opCode, operand);
+                break;
 
-            case ILOpCode.Ldfld:
-                Pop(stack, 1);
-                stack.Add(FieldTypeOf(reader, operand, names));
-                return;
+            case Family.Duplication:
+                _stack.Add(Peek(0));
+                break;
 
-            case ILOpCode.Dup:
-                stack.Add(stack.Count > 0 ? stack[^1] : null);
-                return;
+            case Family.Call:
+                Call(offset, operand);
+                break;
 
-            case ILOpCode.Call:
-            case ILOpCode.Callvirt:
-            {
-                var (parameters, isInstance, returns) = CallShape(reader, operand, names);
-                var receiver = Peek(stack, parameters);
-
-                if (isInstance && receiver is not null)
-                {
-                    inferred[offset] = receiver;
-                }
-
-                Pop(stack, parameters + (isInstance ? 1 : 0));
-
-                if (returns is not null)
-                {
-                    stack.Add(returns);
-                }
-
-                return;
-            }
-
-            case ILOpCode.Ldftn:
-            case ILOpCode.Ldvirtftn:
-            {
-                // ldvirtftn consumes its receiver; ldftn does not.
-                if (opCode == ILOpCode.Ldvirtftn)
-                {
-                    if (Peek(stack, 0) is { } receiver)
-                    {
-                        inferred[offset] = receiver;
-                    }
-
-                    Pop(stack, 1);
-                }
-
-                stack.Add(null);
-                return;
-            }
+            case Family.FunctionLoad:
+                LoadFunction(offset, opCode);
+                break;
 
             default:
-            {
-                var index = Index(OpCodeValues.ValueOf(opCode));
-
-                Pop(stack, index < Pops.Length ? Pops[index] : 0);
-
-                for (var push = 0; push < (index < Pushes.Length ? Pushes[index] : 0); push++)
-                {
-                    stack.Add(null);
-                }
-
-                return;
-            }
+                ApplyStackEffect(opCode);
+                break;
         }
     }
 
     /// <summary>
-    /// Offsets a branch or a handler can arrive at, where the stack stops being knowable.
+    /// <c>ldsfld</c> pushes the field's type; <c>ldfld</c> first pops the object it reads from.
     /// </summary>
-    private static HashSet<int> Boundaries(ReadOnlySpan<byte> il, MethodBodyBlock body)
+    private void LoadField(ILOpCode opCode, int operand)
     {
-        var boundaries = new HashSet<int>();
-        var offset = 0;
-
-        // An instruction Read cannot decode is a nop with a negative next offset: the walk ends.
-        while (offset >= 0 && offset < il.Length)
+        if (opCode == ILOpCode.Ldfld)
         {
-            var (opCode, operand, next) = Read(il, offset);
-
-            if (IsBranch(opCode))
-            {
-                boundaries.Add(next + operand);
-            }
-            else if (opCode == ILOpCode.Switch)
-            {
-                // One opcode byte, a four-byte count, then that many four-byte targets.
-                var targets = offset + 1 + sizeof(int);
-                var count = BitConverter.ToInt32(il[(offset + 1)..targets]);
-
-                for (var index = 0; index < count; index++)
-                {
-                    var target = targets + (index * sizeof(int));
-                    boundaries.Add(next + BitConverter.ToInt32(il[target..(target + sizeof(int))]));
-                }
-            }
-            else
-            {
-                // Anything else falls through to the next instruction, which is no boundary.
-            }
-
-            offset = next;
+            Pop(1);
         }
 
-        foreach (var region in body.ExceptionRegions)
-        {
-            boundaries.Add(region.TryOffset);
-            boundaries.Add(region.HandlerOffset);
-
-            if (region.FilterOffset >= 0)
-            {
-                boundaries.Add(region.FilterOffset);
-            }
-        }
-
-        return boundaries;
-    }
-
-    private static bool IsBranch(ILOpCode opCode) => Branches.Contains(opCode);
-
-    /// <summary>
-    /// Decodes one instruction: its opcode, its operand as an integer, and where the next one starts.
-    /// One it cannot decode reads as a <c>nop</c> with a negative next offset.
-    /// </summary>
-    private static (ILOpCode OpCode, int Operand, int Next) Read(ReadOnlySpan<byte> il, int offset)
-    {
-        var first = il[offset++];
-        ILOpCode opCode;
-
-        if (first == TwoBytePrefix)
-        {
-            if (offset >= il.Length)
-            {
-                return (ILOpCode.Nop, 0, -1);
-            }
-
-            opCode = OpCodeValues.ToTwoByteOpCode(il[offset++]);
-        }
-        else
-        {
-            opCode = OpCodeValues.ToOpCode(first);
-        }
-
-        var size = OperandSize(opCode, il, offset);
-
-        if (size < 0 || offset + size > il.Length)
-        {
-            return (ILOpCode.Nop, 0, -1);
-        }
-
-        var operand = size switch
-        {
-            1 => ShortOperand(opCode, il[offset]),
-            2 => BitConverter.ToInt16(il[offset..(offset + 2)]),
-            4 => BitConverter.ToInt32(il[offset..(offset + 4)]),
-            _ => 0,
-        };
-
-        return (opCode, operand, offset + size);
+        _stack.Add(_types.FieldTypeOf(operand));
     }
 
     /// <summary>
-    /// A short branch offset is signed; a short variable index is not.
+    /// The receiver sits below the arguments, so it is read before they are popped.
     /// </summary>
-    private static int ShortOperand(ILOpCode opCode, byte value) =>
-        IsBranch(opCode) ? sbyte.CreateTruncating(value) : value;
-
-    private static int OperandSize(ILOpCode opCode, ReadOnlySpan<byte> il, int offset)
+    private void Call(int offset, int operand)
     {
-        if (opCode == ILOpCode.Switch)
+        var (parameters, isInstance, returns) = _types.CallShape(operand);
+        var receiver = Peek(parameters);
+
+        if (isInstance && receiver is not null)
         {
-            if (offset + sizeof(int) > il.Length)
-            {
-                return -1;
-            }
-
-            var count = BitConverter.ToUInt32(il[offset..(offset + sizeof(int))]);
-
-            return count > int.MaxValue / sizeof(int) ? -1 : sizeof(int) + (int.CreateTruncating(count) * sizeof(int));
+            _inferred[offset] = receiver;
         }
 
-        return Sizes.TryGetValue(OpCodeValues.ValueOf(opCode), out var size) ? size : -1;
-    }
+        Pop(parameters + (isInstance ? 1 : 0));
 
-    private static readonly Dictionary<ushort, int> Sizes = BuildSizes();
-
-    private static Dictionary<ushort, int> BuildSizes()
-    {
-        var sizes = new Dictionary<ushort, int>();
-
-        foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
+        if (returns is not null)
         {
-            if (field.GetValue(null) is not OpCode opCode)
-            {
-                continue;
-            }
-
-            sizes[OpCodeValues.ValueOf(opCode)] = SizeOf(opCode.OperandType);
+            _stack.Add(returns);
         }
-
-        return sizes;
     }
 
     /// <summary>
-    /// The operand's width in bytes. A switch's is variable and worked out where it is read.
+    /// <c>ldvirtftn</c> consumes its receiver; <c>ldftn</c> does not.
     /// </summary>
-    private static int SizeOf(OperandType operandType) => operandType switch
+    private void LoadFunction(int offset, ILOpCode opCode)
     {
-        OperandType.InlineNone or OperandType.InlineSwitch => 0,
-        OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => sizeof(byte),
-        OperandType.InlineVar => sizeof(short),
-        OperandType.InlineI8 or OperandType.InlineR => sizeof(long),
-        _ => sizeof(int),
-    };
-
-    private static int Index(ushort value) =>
-        value > byte.MaxValue ? OneByteOpCodes + (value & byte.MaxValue) : value;
-
-    /// <summary>
-    /// How many slots a behaviour pops or pushes: one per underscore-separated part of its name,
-    /// so <c>Popref_popi_pop1</c> pops three. The variable behaviours count as none; the call
-    /// cases work theirs out from the signature.
-    /// </summary>
-    private static int Count(StackBehaviour behaviour) =>
-        SlotlessBehaviours.Contains(behaviour) ? 0 : behaviour.ToString().Split('_').Length;
-
-    private static void Pop(List<string?> stack, int count)
-    {
-        for (var index = 0; index < count && stack.Count > 0; index++)
+        if (opCode == ILOpCode.Ldvirtftn)
         {
-            stack.RemoveAt(stack.Count - 1);
+            if (Peek(0) is { } receiver)
+            {
+                _inferred[offset] = receiver;
+            }
+
+            Pop(1);
+        }
+
+        _stack.Add(null);
+    }
+
+    private void ApplyStackEffect(ILOpCode opCode)
+    {
+        var (pops, pushes) = ILDecoder.StackEffectOf(opCode);
+
+        Pop(pops);
+
+        for (var push = 0; push < pushes; push++)
+        {
+            _stack.Add(null);
+        }
+    }
+
+    private void Pop(int count)
+    {
+        for (var index = 0; index < count && _stack.Count > 0; index++)
+        {
+            _stack.RemoveAt(_stack.Count - 1);
         }
     }
 
     /// <summary>
     /// The slot <paramref name="below"/> places from the top, or null when the stack is short.
     /// </summary>
-    private static string? Peek(List<string?> stack, int below) =>
-        stack.Count > below ? stack[^(below + 1)] : null;
+    private string? Peek(int below) =>
+        _stack.Count > below ? _stack[^(below + 1)] : null;
+
+    /// <summary>
+    /// The variable an argument or local load names. The short forms are numbered
+    /// consecutively, so their slot is the distance from the <c>_0</c> form; the others carry it
+    /// as their operand.
+    /// </summary>
+    private static int Slot(ILOpCode opCode, ILOpCode shortForm0, int operand)
+    {
+        var distance = opCode - shortForm0;
+
+        return distance is >= 0 and < ShortFormSlots ? distance : operand;
+    }
 
     private static string? At(IReadOnlyList<string?> values, int index) =>
         index >= 0 && index < values.Count ? values[index] : null;
-
-    private static IReadOnlyList<string?> ArgumentTypes(
-        MetadataReader reader,
-        MethodDefinition method,
-        SignatureNames names)
-    {
-        var types = new List<string?>();
-
-        if (!method.Attributes.HasFlag(MethodAttributes.Static))
-        {
-            types.Add(MetadataNames.FullNameOf(reader, method.GetDeclaringType()));
-        }
-
-        try
-        {
-            types.AddRange(method.DecodeSignature(names, genericContext: null).ParameterTypes.Select(Clean));
-        }
-        catch (BadImageFormatException)
-        {
-            // Nothing to add; every argument then reads as unknown, which falls to the token.
-        }
-
-        return types;
-    }
-
-    private static IReadOnlyList<string?> LocalTypes(
-        MetadataReader reader,
-        MethodBodyBlock body,
-        SignatureNames names)
-    {
-        if (body.LocalSignature.IsNil)
-        {
-            return [];
-        }
-
-        try
-        {
-            return
-            [
-                .. reader.GetStandaloneSignature(body.LocalSignature)
-                    .DecodeLocalSignature(names, genericContext: null)
-                    .Select(Clean)
-            ];
-        }
-        catch (BadImageFormatException)
-        {
-            return [];
-        }
-    }
-
-    /// <summary>
-    /// Drops the by-ref marker and any instantiation, leaving the name the hierarchy is keyed on.
-    /// </summary>
-    private static string? Clean(string type)
-    {
-        var name = MetadataNames.WithoutInstantiation(type.TrimEnd('&'));
-
-        return name.Length == 0 || name.StartsWith('!') ? null : name;
-    }
-
-    private static string? TypeNameOf(MetadataReader reader, int token, SignatureNames names)
-    {
-        try
-        {
-            var handle = System.Reflection.Metadata.Ecma335.MetadataTokens.EntityHandle(token);
-
-            return handle.Kind switch
-            {
-                HandleKind.TypeDefinition => MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)handle),
-                HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)handle),
-                HandleKind.TypeSpecification => Clean(
-                    reader.GetTypeSpecification((TypeSpecificationHandle)handle)
-                        .DecodeSignature(names, genericContext: null)),
-                _ => null,
-            };
-        }
-        catch (BadImageFormatException)
-        {
-            return null;
-        }
-    }
-
-    private static string? DeclaringTypeOf(MetadataReader reader, int token, SignatureNames names)
-    {
-        try
-        {
-            var handle = System.Reflection.Metadata.Ecma335.MetadataTokens.EntityHandle(token);
-
-            return handle.Kind switch
-            {
-                HandleKind.MethodDefinition => MetadataNames.FullNameOf(
-                    reader,
-                    reader.GetMethodDefinition((MethodDefinitionHandle)handle).GetDeclaringType()),
-                HandleKind.MemberReference => ParentTypeOf(
-                    reader,
-                    reader.GetMemberReference((MemberReferenceHandle)handle).Parent,
-                    names),
-                _ => null,
-            };
-        }
-        catch (BadImageFormatException)
-        {
-            return null;
-        }
-    }
-
-    private static string? ParentTypeOf(MetadataReader reader, EntityHandle parent, SignatureNames names) =>
-        parent.Kind switch
-        {
-            HandleKind.TypeDefinition => MetadataNames.FullNameOf(reader, (TypeDefinitionHandle)parent),
-            HandleKind.TypeReference => MetadataNames.FullNameOf(reader, (TypeReferenceHandle)parent),
-            HandleKind.TypeSpecification => Clean(
-                reader.GetTypeSpecification((TypeSpecificationHandle)parent)
-                    .DecodeSignature(names, genericContext: null)),
-            _ => null,
-        };
-
-    private static string? FieldTypeOf(MetadataReader reader, int token, SignatureNames names)
-    {
-        try
-        {
-            var handle = System.Reflection.Metadata.Ecma335.MetadataTokens.EntityHandle(token);
-
-            return handle.Kind switch
-            {
-                HandleKind.FieldDefinition => Clean(
-                    reader.GetFieldDefinition((FieldDefinitionHandle)handle).DecodeSignature(names, null)),
-                HandleKind.MemberReference => Clean(
-                    reader.GetMemberReference((MemberReferenceHandle)handle).DecodeFieldSignature(names, null)),
-                _ => null,
-            };
-        }
-        catch (BadImageFormatException)
-        {
-            return null;
-        }
-    }
-
-    private static int ArgumentCount(MetadataReader reader, int token, SignatureNames names) =>
-        CallShape(reader, token, names).Parameters;
-
-    private static (int Parameters, bool IsInstance, string? Returns) CallShape(
-        MetadataReader reader,
-        int token,
-        SignatureNames names)
-    {
-        try
-        {
-            var handle = System.Reflection.Metadata.Ecma335.MetadataTokens.EntityHandle(token);
-
-            switch (handle.Kind)
-            {
-                case HandleKind.MethodDefinition:
-                {
-                    var method = reader.GetMethodDefinition((MethodDefinitionHandle)handle);
-                    var signature = method.DecodeSignature(names, genericContext: null);
-
-                    return (
-                        signature.ParameterTypes.Length,
-                        !method.Attributes.HasFlag(MethodAttributes.Static),
-                        Returns(signature));
-                }
-
-                case HandleKind.MemberReference:
-                {
-                    var reference = reader.GetMemberReference((MemberReferenceHandle)handle);
-                    var signature = reference.DecodeMethodSignature(names, genericContext: null);
-
-                    return (
-                        signature.ParameterTypes.Length,
-                        signature.Header.IsInstance,
-                        Returns(signature));
-                }
-
-                case HandleKind.MethodSpecification:
-                    return CallShape(
-                        reader,
-                        System.Reflection.Metadata.Ecma335.MetadataTokens.GetToken(
-                            reader.GetMethodSpecification((MethodSpecificationHandle)handle).Method),
-                        names);
-
-                default:
-                    return (0, false, null);
-            }
-        }
-        catch (BadImageFormatException)
-        {
-            return (0, false, null);
-        }
-    }
-
-    private static string? Returns(MethodSignature<string> signature) =>
-        signature.ReturnType == "System.Void" ? null : Clean(signature.ReturnType) ?? "?";
 }
