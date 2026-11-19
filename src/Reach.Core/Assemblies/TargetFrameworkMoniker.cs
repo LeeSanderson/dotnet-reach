@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 namespace Reach.Assemblies;
 
 /// <summary>
@@ -7,7 +9,7 @@ namespace Reach.Assemblies;
 /// </summary>
 /// <param name="Identifier">The framework family as assemblies spell it: <c>.NETCoreApp</c>, <c>.NETFramework</c> or <c>.NETStandard</c>.</param>
 /// <param name="Version">The framework version: <c>10.0</c> for <c>net10.0</c>, <c>4.7.2</c> for <c>net472</c>.</param>
-/// <param name="Platform">Lower-cased and with its version stripped: <c>windows</c>, not <c>Windows7.0</c>.</param>
+/// <param name="Platform">With its version stripped and, for a platform the SDK knows, spelled as the SDK spells it: <c>windows</c>, not <c>Windows7.0</c>.</param>
 public sealed record TargetFrameworkMoniker(string Identifier, Version Version, string? Platform)
 {
     private const string NetCoreApp = ".NETCoreApp";
@@ -20,6 +22,17 @@ public sealed record TargetFrameworkMoniker(string Identifier, Version Version, 
     private const int StampedVersionFields = 2;
 
     /// <summary>
+    /// The platforms the SDK names, in its own lower-case spelling. A platform is looked up here
+    /// rather than lower-cased, so <c>Windows7.0</c> reads as <c>windows</c>; one not listed keeps
+    /// its spelling, which is harmless because every comparison ignores case.
+    /// </summary>
+    private static readonly FrozenSet<string> KnownPlatforms = new[]
+    {
+        "android", "browser", "freebsd", "illumos", "ios", "linux", "maccatalyst", "macos", "solaris",
+        "tizen", "tvos", "wasi", "windows",
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Parses a declared moniker — <c>net10.0</c>, <c>net10.0-windows</c>, <c>netstandard2.0</c>, <c>net472</c>.
     /// </summary>
     internal static TargetFrameworkMoniker? Parse(string declared)
@@ -29,7 +42,7 @@ public sealed record TargetFrameworkMoniker(string Identifier, Version Version, 
             return null;
         }
 
-        var moniker = declared.Trim().ToLowerInvariant();
+        var moniker = declared.Trim();
         var dash = moniker.IndexOf('-');
         var platform = dash < 0 ? null : StripVersion(moniker[(dash + 1)..]);
 
@@ -38,17 +51,17 @@ public sealed record TargetFrameworkMoniker(string Identifier, Version Version, 
             moniker = moniker[..dash];
         }
 
-        if (moniker.StartsWith("netstandard", StringComparison.Ordinal))
+        if (moniker.StartsWith("netstandard", StringComparison.OrdinalIgnoreCase))
         {
             return Build(NetStandard, moniker["netstandard".Length..], platform);
         }
 
-        if (moniker.StartsWith("netcoreapp", StringComparison.Ordinal))
+        if (moniker.StartsWith("netcoreapp", StringComparison.OrdinalIgnoreCase))
         {
             return Build(NetCoreApp, moniker["netcoreapp".Length..], platform);
         }
 
-        if (!moniker.StartsWith("net", StringComparison.Ordinal))
+        if (!moniker.StartsWith("net", StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
@@ -85,7 +98,7 @@ public sealed record TargetFrameworkMoniker(string Identifier, Version Version, 
         return Build(
             parts[0].Trim(),
             version["Version=".Length..].TrimStart('v', 'V'),
-            targetPlatform is null ? null : StripVersion(targetPlatform.ToLowerInvariant()));
+            targetPlatform is null ? null : StripVersion(targetPlatform));
     }
 
     /// <summary>
@@ -104,7 +117,7 @@ public sealed record TargetFrameworkMoniker(string Identifier, Version Version, 
 
     private static TargetFrameworkMoniker? Build(string identifier, string version, string? platform)
     {
-        var namedPlatform = string.IsNullOrEmpty(platform) ? null : platform;
+        var namedPlatform = string.IsNullOrEmpty(platform) ? null : Canonical(platform);
 
         return Normalise(version) is { } parsed
             ? new TargetFrameworkMoniker(identifier, parsed, namedPlatform)
@@ -123,6 +136,12 @@ public sealed record TargetFrameworkMoniker(string Identifier, Version Version, 
             ? new Version(parsed.Major, parsed.Minor, Math.Max(parsed.Build, 0), Math.Max(parsed.Revision, 0))
             : null;
     }
+
+    /// <summary>
+    /// The SDK's spelling of a platform it knows; any other platform as given.
+    /// </summary>
+    private static string Canonical(string platform) =>
+        KnownPlatforms.TryGetValue(platform, out var known) ? known : platform;
 
     /// <summary>
     /// <c>windows7.0</c> and <c>windows</c> are the same platform.
