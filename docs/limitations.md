@@ -147,14 +147,18 @@ The gaps that can cost you a regression. Listed worst first.
 - **Shape**: a CI build (`ContinuousIntegrationBuild=true`, which turns on
   `DeterministicSourcePaths`) records source paths with a prefix instead of the real directory.
   Reach maps `/_/` back to the git top-level, which is what the SDK assigns it, and git
-  submodules nest under it. Further roots (`/_1/`, `/_2/`, ...) come only from `SourceRoot`
-  items a build adds itself. Nothing in the debug symbols says which directory they stood for,
-  so Reach does not guess. Their files are not checked against the working tree, and a change
-  to one cannot join to a method. See
+  submodules nest under it. Further roots (`/_1/`, `/_2/`, ...) are NuGet package folders and
+  any `SourceRoot` a build adds itself. Reach maps a file under one only when it exists at the
+  same relative path in the NuGet global packages folder (`NUGET_PACKAGES`, else
+  `~/.nuget/packages`). Nothing in the debug symbols says which directory the others stood
+  for, so Reach does not guess. Their files are not checked against the working tree, and a
+  change to one cannot join to a method. See
   [ADR-0018](adr/0018-deterministic-source-paths-map-to-the-repository-root.md).
 - **Direction**: under-selection. An assembly recorded *only* under such a root is not
   first-party, and discovery fails and names the cause.
-- **Detectable**: **yes** — `unmapped-deterministic-source-root`. Workaround: build with
+- **Detectable**: **yes** — `unmapped-deterministic-source-root`. It also fires, with no
+  under-selection, for package content restored to a packages folder configured some other way
+  (`globalPackagesFolder`, `RestorePackagesPath`, fallback folders). Workaround: build with
   `-p:DeterministicSourcePaths=false`, which records real paths.
 - **Not detected**: `/_/` read as the wrong directory. This needs a build with source-control
   queries off (`EnableSourceControlManagerQueries=false`) and a hand-written `SourceRoot` that

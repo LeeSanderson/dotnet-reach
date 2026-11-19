@@ -246,7 +246,7 @@ not holes are documented in full here.
 | Code | |
 |---|---|
 | `ignored-untracked-assembly` | compiled source that is untracked **and** git-ignored. [Register](limitations.md#ignored-and-untracked-compiled-files) |
-| `unmapped-deterministic-source-root` | compiled source recorded under a deterministic root other than `/_/`, which Reach does not guess at. `data.roots`. [Register](limitations.md#deterministic-source-roots-other-than-the-repository-root) |
+| `unmapped-deterministic-source-root` | compiled source recorded under a deterministic root other than `/_/` and not found in the NuGet global packages folder. Reach does not guess at it. `data.roots`. [Register](limitations.md#deterministic-source-roots-other-than-the-repository-root) |
 | `unmapped-file-no-project` | a changed file matched no rule and sits inside no project. [Register](limitations.md#a-changed-file-matching-no-rule-and-no-project) |
 | `parse-failed` | a changed file did not parse cleanly, so its project widened. [Register](limitations.md#c-newer-than-reachs-parser-misparsed-silently) |
 | `calli-unresolved` | a function pointer invoked with no visible `ldftn`. [Register](limitations.md#function-pointers-obtained-outside-analysed-il) |
