@@ -68,7 +68,10 @@ on your first run**, and it is one line.
 
 **This block is not an illustration — it is the workflow this repository runs on its own pull
 requests**, `.github/workflows/dogfood.yml`, and a test in Reach's suite fails the build if the
-two differ by one character. Copy it as `.github/workflows/tests.yml`.
+two differ by one character. Copy it as `.github/workflows/tests.yml`, and replace
+`tests/Reach.Tests/Reach.Tests.csproj` in the two steps that name it with your own solution or
+test project. Or drop it (with `--project` before it), and both steps use the solution in the
+working directory.
 
 <!-- reach:dogfood-workflow -->
 ```yaml
@@ -90,8 +93,11 @@ jobs:
       - name: Build
         run: dotnet build -c Release
 
+      # Reach's own solution also holds the fixture projects its tests build, so this names its
+      # one test project. Put your solution or test project in its place, here and in the whole
+      # suite below. Without one, both find the solution in the working directory.
       - name: Select the tests this change could affect
-        run: dnx dotnet-reach@0.1.0-alpha.1 select -c Release --no-build
+        run: dnx dotnet-reach@0.1.0-alpha.1 select tests/Reach.Tests/Reach.Tests.csproj -c Release --no-build
 
       # An empty selection emits no command, so the loop runs nothing. Two things the obvious
       # one-liner gets wrong: `eval` inside a loop does not propagate failure, so a failing
@@ -111,7 +117,7 @@ jobs:
       # the one run where the two disagree is the one that never compares them.
       - name: Run the whole suite
         if: ${{ !cancelled() }}
-        run: dotnet test -c Release --no-build
+        run: dotnet test --project tests/Reach.Tests/Reach.Tests.csproj -c Release --no-build
 
       # The gap between what Reach selected and what the whole suite ran is the number worth
       # looking at, so keep the report whatever happened above.
