@@ -126,11 +126,19 @@ From tickets:
   notice codes are never emitted (`calli-unresolved`, `recompilation-widening`,
   `langversion-above-ceiling`), and README's `--filter "$(…)"` has no command behind it. The
   rest are untested behaviour, prose that drifts, and claims about other tools.
+- [Test it or cut it](issues/12-test-it-or-cut-it.md): the outcome for each of the 28 claims.
+  - Emit `recompilation-widening` and `langversion-above-ceiling`. Cut `calli-unresolved` and
+    `packageVersion`. The README quick start shows the real recipe.
+  - The expected result gains `reasons`, and `Expect` asserts the exit code for every outcome.
+  - New parity tests cover the notice index, the example report and the `--help` options. The
+    claims about other tools stay as cited facts.
+  - `limitations.md` is in the gate only for its notice-code "Detectable" claims.
+  - All of this work becomes tickets cut by the spec ticket.
 
 ## Not yet specified
 
-Nothing. The way to the destination is two tickets: [Test it or cut it](issues/12-test-it-or-cut-it.md),
-then [Write the spec and cut the implementation tickets](issues/13-write-the-spec-and-cut-the-tickets.md).
+Nothing. The way to the destination is one ticket:
+[Write the spec and cut the implementation tickets](issues/13-write-the-spec-and-cut-the-tickets.md).
 
 ## Out of scope
 
@@ -139,5 +147,7 @@ then [Write the spec and cut the implementation tickets](issues/13-write-the-spe
 - **Moving the in-memory selection tests into sample solutions** — ruled out while charting;
   they stay fast and isolated. A sample solution may *repeat* their cases for the showcase.
 - **Changing Reach's output for the acceptance layer's benefit.**
+- **Detecting `calli-unresolved`** — ruled out in [Test it or cut it](issues/12-test-it-or-cut-it.md):
+  new IL dataflow work, a follow-up after the alpha; the notice is cut from the docs meanwhile.
 - **Publishing `0.1.0-alpha.1`** — ticket 21 of `m1-implementation`, on hold until this map
   is done.
