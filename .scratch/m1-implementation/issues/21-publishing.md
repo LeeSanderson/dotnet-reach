@@ -1,9 +1,11 @@
 # Publishing
 
 Status: ready-for-human
-On hold: since 2026-11-14, by the owner's decision — no tag is pushed until the acceptance test
-layer (`.scratch/acceptance-layer/`) has been planned.
-Depends on: 19, 20
+Depends on: 19, 20, and [the gate audit](../../acceptance-implementation/issues/16-the-gate-audit.md)
+(acceptance-implementation ticket 16). The planning hold of 2026-11-14 was lifted on 2026-11-22,
+when the acceptance-layer map reached its destination. The release now waits for the gate itself:
+every claim in the docs proven by a passing test
+([acceptance-layer spec §9](../../acceptance-layer/spec.md#9-the-release-gate)).
 Spec: [§16.4](../../walking-skeleton/spec.md#164-documentation-ci-and-publishing)
 
 ## Goal

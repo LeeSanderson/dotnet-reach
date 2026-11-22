@@ -17,8 +17,9 @@ to start building, that is the edge of the map: hand off instead.
   came from [The fixture solution and the acceptance assertions](../m1-implementation/issues/19-fixture-solution-and-acceptance.md).
 - Default skills for a ticket: `grilling` and `domain-modeling`, unless its `Type:` says
   otherwise.
-- **The release is on hold for this map.** [Publishing](../m1-implementation/issues/21-publishing.md)
-  carries an `On hold:` line; no `v*` tag is pushed until this map's destination is reached.
+- **The release was on hold for this map**, and the hold is lifted now that the destination is reached.
+  [Publishing](../m1-implementation/issues/21-publishing.md) now depends on the
+  [gate audit](../acceptance-implementation/issues/16-the-gate-audit.md) instead.
 - **Vocabulary for this effort.** Test-infrastructure terms, so they live here and in the spec,
   not in `CONTEXT.md` (which is Reach's product glossary):
   - **Sample solution**: a buildable .NET solution that Reach is pointed at. Not "sample
@@ -134,11 +135,23 @@ From tickets:
     claims about other tools stay as cited facts.
   - `limitations.md` is in the gate only for its notice-code "Detectable" claims.
   - All of this work becomes tickets cut by the spec ticket.
+- [Write the spec and cut the implementation tickets](issues/13-write-the-spec-and-cut-the-tickets.md):
+  **the destination.** [spec.md](spec.md) exists, and sixteen `ready-for-agent` tickets are in
+  [acceptance-implementation/](../acceptance-implementation/README.md), in four stages: harness,
+  Reach and doc changes, samples, then the rest of the gate and an audit. Writing the spec also
+  settled several things no ticket had:
+  - `--list-unselected` is removed (parsed, never read).
+  - Rows 28 (failed build, exit 2) and 29 (`all-changes-outside-analysis-scope`) are added.
+  - If the harness's build fails, Reach runs in default build mode.
+  - `Expected` gains `ExitCode`.
+  - Publishing now waits on the gate audit, not the planning hold.
 
 ## Not yet specified
 
-Nothing. The way to the destination is one ticket:
-[Write the spec and cut the implementation tickets](issues/13-write-the-spec-and-cut-the-tickets.md).
+Nothing. The destination is reached: [spec.md](spec.md) exists, and the implementation tickets are
+written and triaged. **This map is complete.** Work continues in
+[.scratch/acceptance-implementation/](../acceptance-implementation/README.md), which is a build, not
+a map.
 
 ## Out of scope
 
@@ -149,5 +162,7 @@ Nothing. The way to the destination is one ticket:
 - **Changing Reach's output for the acceptance layer's benefit.**
 - **Detecting `calli-unresolved`** — ruled out in [Test it or cut it](issues/12-test-it-or-cut-it.md):
   new IL dataflow work, a follow-up after the alpha; the notice is cut from the docs meanwhile.
-- **Publishing `0.1.0-alpha.1`** — ticket 21 of `m1-implementation`, on hold until this map
-  is done.
+- **Publishing `0.1.0-alpha.1`**: ticket 21 of `m1-implementation`. It now depends on the gate
+  audit.
+- **Enumerating unselected tests** (`--list-unselected`): removed while writing the spec, because
+  nothing read it. It can come back after the alpha as a schema addition.
