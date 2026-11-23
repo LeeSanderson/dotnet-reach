@@ -97,6 +97,14 @@ internal sealed class RootSets
                 continue;
             }
 
+            // A removed member no longer exists, so it can never join. Its declaring type's
+            // whole-type widening, added below, is the deliberate response to a deletion, and
+            // recompilation widening still covers the assemblies that reference this one.
+            if (WidenedForDeletion(changed, result.Member))
+            {
+                continue;
+            }
+
             // A declaration that fails to join falls through to whole-assembly widening for its
             // project. Over-selection, and it is what makes a phantom member from a misparse
             // survivable rather than a silent hole.
@@ -153,6 +161,16 @@ internal sealed class RootSets
 
         return changes;
     }
+
+    /// <summary>
+    /// Whether <paramref name="member"/> is a removal its declaring type's deletion widening
+    /// already covers. Anything else that fails to join keeps whole-assembly widening.
+    /// </summary>
+    private static bool WidenedForDeletion(ChangedSet changed, ChangedMember member) =>
+        member.Change == MemberChange.Removed
+        && changed.TypeWidenings.Any(widening =>
+            widening.Reason == WideningReason.DeletedMember
+            && string.Equals(widening.DeclaringType, member.DeclaringType, StringComparison.Ordinal));
 
     private static ChangeEntry Entry(int index, string display, ChangeTier tier, string reason) =>
         new(index, display, tier, reason);

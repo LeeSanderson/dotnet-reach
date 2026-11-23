@@ -116,23 +116,23 @@ public sealed class BasicsTests() : SampleTests("Basics")
         });
 
     [Fact]
-    public async Task A_deleted_method_widens_at_least_its_declaring_type() =>
+    public async Task A_deleted_method_widens_its_declaring_type() =>
         await Apply("method-deleted.patch").ExpectAsync(new()
         {
-            // Pinned, not intended: the deleted member cannot be matched to compiled code, so it
-            // also falls through to whole-assembly widening of Basics.Tests. Without that, only
-            // the two tests that read Readings.Freezing would be selected. See ticket 06.
-            Because = "Deleting Readings.BodyHeat widens the whole of Readings, and the deleted "
-                + "member, which matches no compiled code, widens all of Basics.Tests, so every "
-                + "Basics test is selected.",
+            Because = "Deleting Readings.BodyHeat widens the whole of Readings, whose one remaining "
+                + "member, Freezing, is read by two thermometer tests; the third thermometer test "
+                + "passes its own value, and nothing references Basics.Tests, so nothing else widens.",
             Outcome = Outcome.Selected,
-            Selected = new() { ["Basics.Tests"] = EveryBasicsTest },
-            RunInFull = [],
-            Tiers = new()
+            Selected = new()
             {
-                ["Basics.Tests.Readings"] = Tier.WholeType,
-                ["Basics.Tests.Readings.BodyHeat()"] = Tier.WholeAssembly,
+                ["Basics.Tests"] =
+                [
+                    "Basics.Tests.ThermometerTests.Freezing_is_273_kelvin",
+                    "Basics.Tests.ThermometerTests.Freezing_is_thirty_two_fahrenheit",
+                ],
             },
+            RunInFull = [],
+            Tiers = new() { ["Basics.Tests.Readings"] = Tier.WholeType },
         });
 
     [Fact]
