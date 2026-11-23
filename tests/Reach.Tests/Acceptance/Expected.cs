@@ -68,12 +68,35 @@ internal sealed record Expected
     /// <summary>
     /// Changed member display to the number of tests it reached.
     /// </summary>
-    public Dictionary<string, int>? Changes { get; init; }
+    public Dictionary<string, Entries<int>>? Changes { get; init; }
 
     /// <summary>
     /// Changed member display to the tier it was routed at.
     /// </summary>
-    public Dictionary<string, Tier>? Tiers { get; init; }
+    public Dictionary<string, Entries<Tier>>? Tiers { get; init; }
+}
+
+/// <summary>
+/// The values of every change entry carrying one display, in report order. Almost always one,
+/// written as the bare value; <see cref="Entries.Of"/> gives several, for a member that is its
+/// own entry twice (a changed <c>const</c> both fails to join and widens its consumers).
+/// </summary>
+internal readonly record struct Entries<T>(IReadOnlyList<T> Values)
+{
+    public static implicit operator Entries<T>(T value) => new([value]);
+
+    /// <summary>
+    /// The values as the report spells them, joined in order.
+    /// </summary>
+    internal string Spell(Func<T, string> spellOne) => string.Join(", ", Values.Select(spellOne));
+}
+
+/// <summary>
+/// Builds an <see cref="Entries{T}"/> of several values.
+/// </summary>
+internal static class Entries
+{
+    internal static Entries<T> Of<T>(params T[] values) => new(values);
 }
 
 /// <summary>

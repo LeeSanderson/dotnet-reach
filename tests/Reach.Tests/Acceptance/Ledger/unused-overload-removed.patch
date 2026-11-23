@@ -1,0 +1,14 @@
+--- a/src/Collections/Ledger.Dunning/ReminderSchedule.cs
++++ b/src/Collections/Ledger.Dunning/ReminderSchedule.cs
+@@ -7,11 +7,6 @@ public static class ReminderSchedule
+ {
+     private const int DaysPerWeek = 7;
+ 
+-    /// <summary>
+-    /// Unused on purpose: row 19 removes it, and a removed member widens every consumer.
+-    /// </summary>
+-    public static DateOnly Next(DateOnly lastSent) => Next(lastSent, remindersSent: 0);
+-
+     public static DateOnly Next(DateOnly lastSent, int remindersSent) =>
+         lastSent.AddDays(DaysPerWeek * (remindersSent + 1));
+ }

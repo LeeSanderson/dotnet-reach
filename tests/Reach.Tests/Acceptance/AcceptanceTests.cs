@@ -159,18 +159,6 @@ public sealed class AcceptanceTests : IDisposable
     }
 
     [Fact]
-    public async Task A_changed_const_consumed_across_an_assembly_boundary_selects_the_consumers_tests()
-    {
-        Touch("src/Contoso.Core/Invoice.cs", "StandardRate = 20;", "StandardRate = 25;");
-
-        var report = await _fixture.SelectAsync(_baseline, Token);
-
-        // After inlining the consumer's source is byte-identical and its IL is different, so
-        // nothing on the declaring side reaches this.
-        Assert.NotEmpty(EntryFor(report, "Contoso.Tests.Xunit").Tests);
-    }
-
-    [Fact]
     public async Task A_change_reaching_no_test_appears_with_a_count_of_zero()
     {
         // Untouched() is called by exactly one xUnit test and nothing else, so changing the

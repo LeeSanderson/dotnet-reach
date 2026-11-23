@@ -59,6 +59,9 @@ Known-gap tests depend on these. Gate patches never touch them.
 | `IReminderChannel` (Domain), `EmailChannel` (Dunning), `WebhookChannel` (Api), called through the interface by Dunning's `ReminderSender` | 26: interface fan-out |
 | `Money.DefaultCurrency` (Domain), a `const` | 27: a core `const`'s blast radius |
 
+Row 26's shape reaches into row 18: once Api is widened whole, Dunning's `ReminderSenderTests`
+reaches Api's `WebhookChannel.Send` through the interface call, so row 18 selects it.
+
 The two `const`s are `internal`, not `public`: a public constant trips Sonar S2339, and Reach
 widens on a changed compile-time constant whatever its visibility.
 
