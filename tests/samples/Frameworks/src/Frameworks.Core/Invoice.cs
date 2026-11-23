@@ -1,11 +1,11 @@
-namespace Contoso;
+namespace Frameworks.Core;
 
+/// <summary>
+/// The production code every test project calls, whatever its framework.
+/// </summary>
 public static class Invoice
 {
-    /// <summary>
-    /// The rate every consumer inlines, which is what makes it a recompilation trigger.
-    /// </summary>
-    internal const int StandardRate = 20;
+    private const int StandardRate = 20;
 
     private const int Percent = 100;
 

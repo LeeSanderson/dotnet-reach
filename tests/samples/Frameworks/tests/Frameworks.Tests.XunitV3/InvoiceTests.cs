@@ -1,6 +1,7 @@
+using Frameworks.Core;
 using Xunit;
 
-namespace Contoso.Tests;
+namespace Frameworks.Tests.XunitV3;
 
 public class InvoiceTests
 {

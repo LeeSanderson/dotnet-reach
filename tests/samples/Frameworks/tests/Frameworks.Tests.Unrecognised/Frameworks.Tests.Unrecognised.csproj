@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/Contoso.Core/Contoso.Core.csproj" />
+    <ProjectReference Include="../../src/Frameworks.Core/Frameworks.Core.csproj" />
   </ItemGroup>
 
 </Project>
