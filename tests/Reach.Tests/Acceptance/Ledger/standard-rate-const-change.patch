@@ -1,0 +1,11 @@
+--- a/src/Ledger.Billing/TaxRules.cs
++++ b/src/Ledger.Billing/TaxRules.cs
+@@ -11,7 +11,7 @@ public static class TaxRules
+     /// Row 18 changes it: a <c>const</c> can be inlined into consumers, so every project that
+     /// references Billing widens. Internal for the same reason as <c>Money.DefaultCurrency</c>.
+     /// </summary>
+-    internal const int StandardRatePercent = 20;
++    internal const int StandardRatePercent = 25;
+ 
+     private const int WholePercent = 100;
+ 

@@ -1,0 +1,11 @@
+--- a/README.md
++++ b/README.md
+@@ -32,6 +32,8 @@ Known-gap tests depend on the members listed here, and gate patches never touch
+ 
+ ## Building it
+ 
++Nothing here is built by hand.
++
+ The projects are in `Reach.slnx` under `/samples/`, so the main build holds them to the coding
+ standard. Their tests are never run by `dotnet test`; they run only through Reach, inside an
+ acceptance test, over a copy of the files git tracks here.

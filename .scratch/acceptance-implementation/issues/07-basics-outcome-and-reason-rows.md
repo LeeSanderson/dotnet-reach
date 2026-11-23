@@ -1,6 +1,6 @@
 # Basics: outcome and reason rows
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 03
 Spec: [§2.3](../../acceptance-layer/spec.md#23-basics), [§5.2](../../acceptance-layer/spec.md#52-which-build-mode-reach-runs-in), [§7.1](../../acceptance-layer/spec.md#71-release-gate-small-samples) rows 12–16, [§7.4](../../acceptance-layer/spec.md#74-rows-added-by-this-spec) rows 28–29, [§8.1](../../acceptance-layer/spec.md#81-where-each-test-goes)
 
@@ -62,3 +62,42 @@ invariant), `The_generator_project_is_in_scope_and_not_expected_on_disk` (row 12
 
 Rows 9–11 (ticket 08). The CLI-level exit-2 test (row 28 is the end-to-end proof; ticket 13 covers
 the report-on-exit-2 claim).
+
+## Comments
+
+- **Done.** Basics gains `src/Basics.Generator` (a stand-in like Contoso's, `netstandard2.0`,
+  consumed by `Basics.Core` with `ReferenceOutputAssembly="false" OutputItemType="Analyzer"`),
+  `src/Basics.Tools` (`Housekeeping`, referenced by no test project) and `Basics.Core.Receipt` (no
+  test reaches it; rows 13, 15 and 28 patch it). All three are in `Basics.slnx` and in `Reach.slnx`
+  under `/samples/`. Neither project added a notice to any existing Basics test. Seven rows in
+  `Acceptance/Basics/BasicsTests.cs`, patches saved with `tests/tools/patch.cs`:
+  `generator-project-change`, `receipt-formatting-only`, `readme-only`, `receipt-header-change`,
+  `voucher-new-file`, `receipt-breaks-the-build`, `tools-only-change`. The three old Contoso tests
+  are deleted. The harness's §5.2 build-mode rule was already right: row 28 passes with `Failed`
+  and exit 2 reported by Reach. Release `-warnaserror` build and `dotnet format --verify-no-changes`
+  are clean.
+- **Finding (spec, rows 13 and 14): the two outcomes are the other way round.** A formatting-only
+  `.cs` edit leaves the changed set empty (no member, no widening, no unmappable path), so
+  `ReportBuilder.OutcomeOf` says `no-changes`, with no reason. A README at the repository root is
+  an unmappable path routed to no project, so it is `nothing-selected`, with
+  `unmapped-file-no-project` and the reason `changes-were-formatting-only` (that reason fires on
+  "no member changed, some path did", not on formatting). Pinned as Reach does it; the tests are
+  named for what they prove (`A_formatting_only_change_is_no_changes`,
+  `A_docs_only_change_selects_nothing_and_says_no_member_changed`).
+- **Finding (spec and Reach, row 29): `all-changes-outside-analysis-scope` cannot fire end to end.**
+  `ReportBuilder.Reasons` gives it when the selection's change list is empty, but `RootSets` makes
+  an entry for every member, widening and unmappable path, so an empty list means an empty changed
+  set, which is `no-changes`. The `Basics.Tools` change is listed (`DaysToKeep(int)`, count 0) and
+  the reason is `no-changed-member-reached-a-test`. Pinned as Reach does it. So only two of the
+  three reason codes are asserted end to end; the acceptance criterion cannot be met without a
+  change to Reach or to the spec.
+- **Finding (Reach, row 12): a change to a generator's `.cs` file selects nothing.** Rule 4 of the
+  tier ladder fires only on the generator's project file. A `Marker.cs` edit is listed as a changed
+  member of the generator (`Basics.Generation.Marker.Name`), whose assembly is not in the graph, so
+  it roots nothing and the report is `nothing-selected`. With a real generator that is an under-selection, and it
+  contradicts CONTEXT.md's "unmappable change". Row 12 therefore patches
+  `Basics.Generator.csproj` (a harmless `<NoWarn>`), which widens `Basics.Core`.
+- **Note for merges (row 12):** widening `Basics.Core` selects every Basics test that reaches it,
+  so its `Selected` lists all six tests today. Ticket 06's new tests that reach `Basics.Core` must
+  be added to it when the branches merge. This is the one row where §2.2's "unrelated code appears
+  in no other test's expected result" cannot hold.

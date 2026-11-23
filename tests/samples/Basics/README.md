@@ -11,6 +11,8 @@ patches they apply.
 | Project | What it is here for |
 |---|---|
 | `src/Basics.Core` | the production code, single `net10.0` |
+| `src/Basics.Generator` | a stand-in source generator, consumed by `Basics.Core` as an analyser (row 12) |
+| `src/Basics.Tools` | production code no test project references, so outside the analysis scope (row 29) |
 | `tests/Basics.Tests` | `xunit.v3` 4.0.0, the tests Reach selects from |
 | `global.json` | the testing-platform runner setting, and nothing else that changes the build |
 
@@ -28,6 +30,11 @@ row:
 | `Greeting` | 9: a multi-targeted test project gives one entry per framework |
 | `Mileage` | 10: a platform-suffixed framework makes its project run in full |
 | `Vowels` | 11: `xunit.v3` 4.0.0 without the runner setting gets its notice |
+| `Basics.Generation.Marker`, and the generator's project file | 12: a generator change widens its consumers |
+| `Receipt` (no test reaches it) | 13: formatting only; 15: a change reaching no test; 28: a change that breaks the build |
+| `Voucher` (added by row 16's patch, so not in the sample) | 16: a new file git does not track |
+| `Basics.Tools.Housekeeping` | 29: a change outside the analysis scope |
+| this README | 14: a docs-only change |
 
 Rows 9 to 11 need a starting state that differs from the one here (two frameworks, a platform
 suffix, no `global.json`). That state is a baseline patch beside the row's change patch, so no

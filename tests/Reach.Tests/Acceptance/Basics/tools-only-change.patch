@@ -1,0 +1,9 @@
+--- a/src/Basics.Tools/Housekeeping.cs
++++ b/src/Basics.Tools/Housekeeping.cs
+@@ -6,5 +6,5 @@ namespace Basics.Tools;
+ /// </summary>
+ public static class Housekeeping
+ {
+-    public static int DaysToKeep(int days) => Math.Max(days, 1);
++    public static int DaysToKeep(int days) => Math.Max(days, 7);
+ }

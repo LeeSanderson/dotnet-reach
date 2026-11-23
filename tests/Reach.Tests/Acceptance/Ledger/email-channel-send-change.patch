@@ -1,0 +1,9 @@
+--- a/src/Collections/Ledger.Dunning/EmailChannel.cs
++++ b/src/Collections/Ledger.Dunning/EmailChannel.cs
+@@ -7,5 +7,5 @@ namespace Ledger.Dunning;
+ /// </summary>
+ public sealed class EmailChannel : IReminderChannel
+ {
+-    public string Send(string customer, string message) => $"email to {customer}: {message}";
++    public string Send(string customer, string message) => $"email to {customer} - {message}";
+ }

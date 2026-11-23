@@ -198,6 +198,41 @@ public sealed class ExpectationTests
         Assert.DoesNotContain("Basics.Core.Basket:", message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void A_display_carried_by_two_entries_is_given_both_values_in_report_order()
+    {
+        var report = SelectedReport() with
+        {
+            Changes =
+            [
+                new ReportChange(0, "Basics.Core.Rates.Standard", "whole-assembly", "unjoined", 2),
+                new ReportChange(1, "Basics.Core.Rates.Standard", "whole-assembly", "constant", 3),
+            ],
+        };
+
+        Assert.Null(Failures(
+            Matching with
+            {
+                Changes = new() { ["Basics.Core.Rates.Standard"] = Entries.Of(2, 3) },
+                Tiers = new() { ["Basics.Core.Rates.Standard"] = Entries.Of(Tier.WholeAssembly, Tier.WholeAssembly) },
+            },
+            report));
+
+        var message = Failures(
+            Matching with
+            {
+                Changes = new() { ["Basics.Core.Rates.Standard"] = 3 },
+                Tiers = new() { ["Basics.Core.Rates.Standard"] = Tier.WholeAssembly },
+            },
+            report);
+
+        Assert.Contains("Basics.Core.Rates.Standard: expected 3, was 2, 3", message, StringComparison.Ordinal);
+        Assert.Contains(
+            "Basics.Core.Rates.Standard: expected whole-assembly, was whole-assembly, whole-assembly",
+            message,
+            StringComparison.Ordinal);
+    }
+
     // ---- Keys --------------------------------------------------------------------------------
 
     [Fact]

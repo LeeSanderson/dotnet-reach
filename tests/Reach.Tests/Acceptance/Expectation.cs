@@ -36,8 +36,12 @@ internal static class Expectation
             ("WillRun", expected.WillRun is { } willRun ? WillRunDifferences(willRun, keys) : []),
             ("Notices", expected.Notices is { } notices ? SetDifferences(notices, report.Notices.Select(notice => notice.Code)) : []),
             ("Reasons", expected.Reasons is { } reasons ? SetDifferences(reasons, report.Reasons ?? []) : []),
-            ("Changes", expected.Changes is { } changes ? ChangeDifferences(changes, report, change => Number(change.TestsReached), Number) : []),
-            ("Tiers", expected.Tiers is { } tiers ? ChangeDifferences(tiers, report, change => change.Tier, Wire.Of) : []),
+            ("Changes", expected.Changes is { } changes
+                ? ChangeDifferences(changes.ToDictionary(pair => pair.Key, pair => pair.Value.Spell(Number), StringComparer.Ordinal), report, change => Number(change.TestsReached))
+                : []),
+            ("Tiers", expected.Tiers is { } tiers
+                ? ChangeDifferences(tiers.ToDictionary(pair => pair.Key, pair => pair.Value.Spell(Wire.Of), StringComparer.Ordinal), report, change => change.Tier)
+                : []),
             ("Invariant, determinism", Determinism(observed)),
             ("Invariant, exit code matches outcome", ExitCodeMatchesOutcome(expected, observed)),
             ("Invariant, skip means nothing runs", SkipMeansNothingRuns(keys)),
@@ -183,13 +187,13 @@ internal static class Expectation
 
     /// <summary>
     /// Compares one value per changed member display, for the <c>Changes</c> and <c>Tiers</c>
-    /// sections alike.
+    /// sections alike, both sides already spelled. A display carried by several entries is
+    /// spelled as all their values, in report order.
     /// </summary>
-    private static List<string> ChangeDifferences<T>(
-        Dictionary<string, T> expected,
+    private static List<string> ChangeDifferences(
+        Dictionary<string, string> expected,
         Report report,
-        Func<ReportChange, string> valueOf,
-        Func<T, string> spell)
+        Func<ReportChange, string> valueOf)
     {
         var actual = report.Changes
             .GroupBy(change => change.Display, StringComparer.Ordinal)
@@ -197,9 +201,8 @@ internal static class Expectation
 
         var differences = new List<string>();
 
-        foreach (var (display, value) in expected.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        foreach (var (display, wanted) in expected.OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {
-            var wanted = spell(value);
             var got = actual.GetValueOrDefault(display);
 
             if (got != wanted)
