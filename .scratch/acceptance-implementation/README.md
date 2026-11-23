@@ -63,6 +63,7 @@ to fix Reach rather than pin what it did. Ticket 16 depends on them.
 | 17 | [A deleted member widens only its declaring type](issues/17-a-deleted-member-widens-only-its-type.md) | 06 |
 | 18 | [A generator source change widens its consumers](issues/18-a-generator-source-change-widens-its-consumers.md) | 07, 17 |
 | 19 | [Changes outside the analysis scope](issues/19-changes-outside-the-analysis-scope.md) | 07 |
+| 20 | [Project containment is relative to the repository](issues/20-project-containment-is-repository-relative.md) | 17, 18, 19 |
 
 ## One hard ordering constraint
 
