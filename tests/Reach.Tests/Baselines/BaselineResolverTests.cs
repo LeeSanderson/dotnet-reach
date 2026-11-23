@@ -117,6 +117,27 @@ public class BaselineResolverTests
         Assert.Equal(ExitCode.BaselineUnresolvable, resolution.ExitCode);
     }
 
+    [Fact]
+    public async Task TeamCity_is_not_detected()
+    {
+        // TeamCity is deliberately off the ladder: its pull-request target is a configuration
+        // parameter, and only env.-prefixed parameters reach the build process. These are the
+        // variables a TeamCity agent does set, plus the target branch exported by hand.
+        _environment["TEAMCITY_VERSION"] = "2025.07";
+        _environment["TEAMCITY_PROJECT_NAME"] = "Reach";
+        _environment["teamcity.pullRequest.target.branch"] = "the-teamcity-target";
+        _environment["TEAMCITY_PULLREQUEST_TARGET_BRANCH"] = "the-teamcity-target";
+        _runner.Fails(128, "fatal: unknown revision\n", "rev-parse", "origin/main");
+        _runner.Fails(128, "fatal: unknown revision\n", "rev-parse", "origin/master");
+
+        var resolution = await ResolveAsync();
+
+        AssertUnresolvable(resolution);
+        Assert.DoesNotContain(
+            _runner.Requests,
+            request => request.Arguments.Contains("the-teamcity-target"));
+    }
+
     // ---- The spelling a provider hands out is not the one git can name ------------------
 
     [Fact]
