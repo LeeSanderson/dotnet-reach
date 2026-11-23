@@ -1,6 +1,7 @@
 using System.Globalization;
 using Reach.Cli;
 using Reach.Output;
+using Reach.Processes;
 using Reach.Tests.Fixtures;
 
 namespace Reach.Tests.Cli;
@@ -19,7 +20,7 @@ public sealed class CommandLineTests : IDisposable
     private readonly StringWriter _standardError = new();
 
     private Task<int> RunAsync(string workingDirectory, params string[] arguments) =>
-        ReachCli.RunAsync(
+        new ReachCli(new ProcessRunner()).RunAsync(
             arguments,
             workingDirectory,
             _standardOutput,
@@ -436,7 +437,7 @@ public sealed class CommandLineTests : IDisposable
     /// <summary>
     /// The fixture solution inside a real repository, committed as the baseline.
     /// </summary>
-    private static TempRepository SolutionRepository()
+    internal static TempRepository SolutionRepository()
     {
         var repository = TempRepository.Create();
 
@@ -456,7 +457,7 @@ public sealed class CommandLineTests : IDisposable
         return repository;
     }
 
-    private static ProjectTree SolutionWithTests()
+    internal static ProjectTree SolutionWithTests()
     {
         var tree = ProjectTree.Create();
 
