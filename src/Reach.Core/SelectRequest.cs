@@ -44,8 +44,6 @@ public sealed record SelectRequest
 
     public bool Paths { get; init; }
 
-    public bool ListUnselected { get; init; }
-
     /// <summary>
     /// Documented by its effect — "merge Reach's filter into this runsettings file and write
     /// the result" — because the name is a foot-gun: someone will pass it expecting Reach to

@@ -146,12 +146,6 @@ internal static class NoticeCodes
     internal const string NUnitFilterOvermatch = "nunit-filter-overmatch";
 
     /// <summary>
-    /// A function pointer was invoked through <c>calli</c>. Where the pointer came from is not
-    /// in the analysed instructions, so no edge could be made.
-    /// </summary>
-    internal const string CalliUnresolved = "calli-unresolved";
-
-    /// <summary>
     /// An <c>xunit.v3</c> 4.0.0 project in a repository with no <c>global.json</c> runner
     /// setting, where <c>dotnet test</c> is a hard build error — so every invocation Reach
     /// emits is unrunnable and the error names nothing Reach-shaped.

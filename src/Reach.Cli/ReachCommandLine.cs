@@ -70,12 +70,7 @@ internal sealed class ReachCommandLine
 
     private readonly Option<bool> _paths = new("--paths")
     {
-        Description = "Include the source path of every changed member in the report.",
-    };
-
-    private readonly Option<bool> _listUnselected = new("--list-unselected")
-    {
-        Description = "Include the tests that were not selected in the report.",
+        Description = "Add hop-by-hop paths to each selected test in the report, from the test back to the change. Every hop is a method.",
     };
 
     private readonly Option<string?> _runSettings = new("--runsettings")
@@ -116,7 +111,6 @@ internal sealed class ReachCommandLine
             _report,
             _reportDirectory,
             _paths,
-            _listUnselected,
             _runSettings,
             _verbosity,
             _noColor,
@@ -150,7 +144,6 @@ internal sealed class ReachCommandLine
         Report = parseResult.GetValue(_report),
         ReportDirectory = parseResult.GetValue(_reportDirectory),
         Paths = parseResult.GetValue(_paths),
-        ListUnselected = parseResult.GetValue(_listUnselected),
         RunSettings = parseResult.GetValue(_runSettings),
         Verbosity = Verbosities.Parse(parseResult.GetValue(_verbosity)),
         NoColor = parseResult.GetValue(_noColor),

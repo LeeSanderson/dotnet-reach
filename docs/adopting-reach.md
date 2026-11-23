@@ -15,8 +15,11 @@ dnx dotnet-reach@0.1.0-alpha.1 select --help
 ```
 
 **The version pin is a requirement, not a preference.** `dnx` with a bare package id will not
-find a prerelease, and fails with a misleading *"not found in NuGet feeds"*. Pin it until there
-is a stable release.
+find a prerelease: it selects one only under `--prerelease`
+([`dotnet tool exec`](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-tool-exec#options)),
+and otherwise fails with a misleading *"not found in NuGet feeds"*
+([the SDK's message](https://github.com/dotnet/sdk/blob/3572593e44eb27035e2faa9a46a9d6c850de6b69/src/Cli/dotnet/CliStrings.resx#L533-L535)).
+Pin it until there is a stable release.
 
 Do not install with `-g`. A globally installed tool is a version nobody can see in the
 repository, which is the opposite of what a pipeline wants.
@@ -48,20 +51,26 @@ project pins its framework. So with current Microsoft.Testing.Platform hosts, **
 command Reach emitted means the rendering matched nothing while the report claimed tests were
 selected — a Reach bug and nothing else.** Please report it.
 
-**Reach never recommends `--ignore-exit-code 8`,** and nor should you. It does not merely
-suppress the signal: the zero-match module's line changes from *Zero tests ran* to *passed* and
-the annotation disappears from the summary entirely. It also stopped working on the .NET 11 SDK,
-where zero-match handling moved to a run-level verdict — which is why emitting no command at all
-is the only host- and SDK-version-independent answer.
+**Reach never recommends `--ignore-exit-code 8`,** and nor should you. It returns that exit code
+as `0`
+([Microsoft.Testing.Platform](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-troubleshooting#ignore-specific-exit-codes)),
+which hides the one signal that a rendering matched nothing. It is also not how the .NET 11 SDK
+decides: there, `dotnet test` decides the zero-tests verdict once for the whole run, from the
+aggregated results
+([`dotnet test`](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test-mtp#whole-run-and-per-module-minimums),
+[microsoft/testfx#7457](https://github.com/microsoft/testfx/issues/7457)). That is why emitting no
+command at all is the only host- and SDK-version-independent answer.
 
 Two ways to see exit 8 from a correct invocation, both your own choice:
-`--zero-tests-policy strict` when every selected test in a project is skipped, and a rebuild
-between Reach's run and the test step.
+`--zero-tests-policy strict` when every selected test in a project is skipped
+([MTP options](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-cli-options)),
+and a rebuild between Reach's run and the test step.
 
 ## CI
 
 Reach needs the full history: it resolves a baseline with `git merge-base`, and
-`actions/checkout` fetches a single commit by default. **This is the likeliest thing to go wrong
+`actions/checkout` fetches a single commit by default
+([its README](https://github.com/actions/checkout#readme)). **This is the likeliest thing to go wrong
 on your first run**, and it is one line.
 
 ### GitHub Actions — the complete recipe
@@ -136,9 +145,11 @@ is deliberate for now: gating on a selection nobody has measured is the unproven
 tool exists not to do. Running both is a miniature shadow mode, and the gap between them is the
 first real datapoint.
 
-`jq` is preinstalled on GitHub's hosted runners. The `@sh` filter quotes each argv element, which
-is why `eval` is safe here and why Reach emits argv vectors rather than shell strings in the first
-place.
+`jq` is preinstalled on GitHub's hosted Ubuntu runners
+([the `ubuntu-latest` image](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md)).
+The `@sh` filter quotes each argv element for a POSIX shell
+([jq manual](https://jqlang.org/manual/#format-strings-and-escaping)), which is why `eval` is safe
+here and why Reach emits argv vectors rather than shell strings in the first place.
 
 ### Every other provider
 
@@ -147,15 +158,18 @@ row, because it looks authoritative.
 
 | Provider | Fetch the whole history | Reach detects it from |
 |---|---|---|
-| GitHub Actions | `fetch-depth: 0` on `actions/checkout` | `GITHUB_BASE_REF` |
-| Azure DevOps | `fetchDepth: 0` on `checkout: self` | `SYSTEM_PULLREQUEST_TARGETBRANCH` |
-| GitLab CI | `GIT_DEPTH: 0` in `variables` | `CI_MERGE_REQUEST_TARGET_BRANCH_NAME` |
-| Bitbucket Pipelines | `clone: depth: full` | `BITBUCKET_PR_DESTINATION_BRANCH` |
-| Jenkins multibranch | turn off *Shallow clone* in the job's Git behaviours | `CHANGE_TARGET` |
-| TeamCity | (its default checkout is deep) | **nothing — pass `--base` explicitly** |
+| GitHub Actions | `fetch-depth: 0` on `actions/checkout` ([docs](https://github.com/actions/checkout#readme)) | `GITHUB_BASE_REF` |
+| Azure DevOps | `fetchDepth: 0` on `checkout: self` ([docs](https://learn.microsoft.com/en-us/azure/devops/pipelines/yaml-schema/steps-checkout#shallow-fetch)) | `SYSTEM_PULLREQUEST_TARGETBRANCH` |
+| GitLab CI | `GIT_DEPTH: 0` in `variables` ([docs](https://docs.gitlab.com/ci/runners/configure_runners/#shallow-cloning)) | `CI_MERGE_REQUEST_TARGET_BRANCH_NAME` |
+| Bitbucket Pipelines | `clone: depth: full` ([docs](https://support.atlassian.com/bitbucket-cloud/docs/git-clone-behavior/)) | `BITBUCKET_PR_DESTINATION_BRANCH` |
+| Jenkins multibranch | turn off *Shallow clone* in the job's Git behaviours ([docs](https://plugins.jenkins.io/git/#plugin-content-advanced-clone-behaviours)) | `CHANGE_TARGET` |
+| TeamCity | a Git *Checkout policy* other than *Shallow clone*; *Auto* can choose it ([docs](https://www.jetbrains.com/help/teamcity/git.html#git-checkout-policy)) | **nothing — pass `--base` explicitly** |
 
-TeamCity is not detected on purpose: `teamcity.pullRequest.target.branch` is a configuration
-parameter, and TeamCity passes only `env.`-prefixed parameters to the build process.
+TeamCity is not detected on purpose: `teamcity.pullRequest.target.branch` is a build parameter
+([pull requests](https://www.jetbrains.com/help/teamcity/pull-requests.html#Predefined+build+parameters+for+pull+requests)),
+not an environment variable, and TeamCity passes only `env.` parameters to the build process as
+environment variables
+([parameter types](https://www.jetbrains.com/help/teamcity/configuring-build-parameters.html#Parameter+Types)).
 
 **Reach never reads a *source* branch variable** — `GITHUB_HEAD_REF`,
 `System.PullRequest.SourceBranch`, `Build.SourceBranch` and their equivalents. A source branch

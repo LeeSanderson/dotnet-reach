@@ -304,7 +304,6 @@ public sealed class CommandLineTests : IDisposable
             "--report", "r.json",
             "--report-dir", "rdir",
             "--paths",
-            "--list-unselected",
             "--runsettings", "my.runsettings",
             "-v", "diag",
             "--no-color",
@@ -323,7 +322,6 @@ public sealed class CommandLineTests : IDisposable
         Assert.Equal("r.json", request.Report);
         Assert.Equal("rdir", request.ReportDirectory);
         Assert.True(request.Paths);
-        Assert.True(request.ListUnselected);
         Assert.Equal("my.runsettings", request.RunSettings);
         Assert.Equal(Verbosity.Diagnostic, request.Verbosity);
         Assert.True(request.NoColor);
