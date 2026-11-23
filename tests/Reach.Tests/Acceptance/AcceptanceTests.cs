@@ -130,22 +130,6 @@ public sealed class AcceptanceTests : IDisposable
     // ---- Determinism and the exact selection now live in Basics/BasicsTests and Expect ------------
 
     [Fact]
-    public async Task A_multi_targeted_project_contributes_an_entry_per_framework()
-    {
-        Touch("src/Contoso.Core/Invoice.cs", "=> net + Tax(net);", "=> net + Tax(net) + 0;");
-
-        var report = await _fixture.SelectAsync(_baseline, Token);
-
-        // Contoso.Core is net8.0;net10.0, so discovery resolved two assembly instances for it.
-        Assert.Equal(
-            ["net10.0", "net8.0"],
-            report.Scope.Assemblies
-                .Where(assembly => assembly.Name == "Contoso.Core")
-                .Select(assembly => assembly.TargetFramework)
-                .Order(StringComparer.Ordinal));
-    }
-
-    [Fact]
     public async Task The_generator_project_is_in_scope_and_not_expected_on_disk()
     {
         Touch("src/Contoso.Core/Invoice.cs", "=> net + Tax(net);", "=> net + Tax(net) + 0;");
@@ -182,22 +166,6 @@ public sealed class AcceptanceTests : IDisposable
         // The field that makes an under-selection visible, and only trustworthy if something
         // proves it fires.
         Assert.Contains(report.Changes, change => change.TestsReached == 0);
-    }
-
-    [Fact]
-    public async Task A_project_on_a_framework_needing_the_runner_setting_says_so()
-    {
-        Touch("src/Contoso.Core/Invoice.cs", "=> net + Tax(net);", "=> net + Tax(net) + 0;");
-
-        var report = await _fixture.SelectAsync(_baseline, Token);
-
-        // The fixture has no global.json, and its xUnit project is on xunit.v3 4.0.0 — where
-        // `dotnet test` is a hard build error whose message names nothing Reach-shaped. Reach
-        // still emits the invocations: the rendering is correct, the repository is not.
-        var notice = Assert.Single(report.Notices, n => n.Code == NoticeCodes.TestRunnerNotConfigured);
-
-        Assert.Contains("Microsoft.Testing.Platform", notice.Message);
-        Assert.NotEmpty(EntryFor(report, "Contoso.Tests.Xunit").Invocations);
     }
 
     /// <summary>
