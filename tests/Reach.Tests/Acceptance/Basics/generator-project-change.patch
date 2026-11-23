@@ -1,0 +1,10 @@
+--- a/src/Basics.Generator/Basics.Generator.csproj
++++ b/src/Basics.Generator/Basics.Generator.csproj
+@@ -8,6 +8,7 @@
+     <RootNamespace>Basics.Generation</RootNamespace>
+     <IsRoslynComponent>true</IsRoslynComponent>
+     <IncludeBuildOutput>false</IncludeBuildOutput>
++    <NoWarn>$(NoWarn);CS1591</NoWarn>
+   </PropertyGroup>
+ 
+ </Project>
