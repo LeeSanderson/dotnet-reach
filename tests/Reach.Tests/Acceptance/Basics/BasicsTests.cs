@@ -12,8 +12,8 @@ public sealed class BasicsTests() : SampleTests("Basics")
     private static readonly string[] EveryRunNotices = ["baseline-resolved", "baseline-is-head"];
 
     /// <summary>
-    /// Every test in <c>Basics.Tests</c>, for the rows whose patch widens the whole project. A
-    /// new sample test belongs here too.
+    /// Every test in <c>Basics.Tests</c>, each of which reaches <c>Basics.Core</c>: what row 12
+    /// selects when the generator's consumer widens. A new sample test belongs here too.
     /// </summary>
     private static readonly IReadOnlyList<string> EveryBasicsTest =
     [
@@ -116,23 +116,23 @@ public sealed class BasicsTests() : SampleTests("Basics")
         });
 
     [Fact]
-    public async Task A_deleted_method_widens_at_least_its_declaring_type() =>
+    public async Task A_deleted_method_widens_its_declaring_type() =>
         await Apply("method-deleted.patch").ExpectAsync(new()
         {
-            // Pinned, not intended: the deleted member cannot be matched to compiled code, so it
-            // also falls through to whole-assembly widening of Basics.Tests. Without that, only
-            // the two tests that read Readings.Freezing would be selected. See ticket 06.
-            Because = "Deleting Readings.BodyHeat widens the whole of Readings, and the deleted "
-                + "member, which matches no compiled code, widens all of Basics.Tests, so every "
-                + "Basics test is selected.",
+            Because = "Deleting Readings.BodyHeat widens the whole of Readings, whose one remaining "
+                + "member, Freezing, is read by two thermometer tests; the third thermometer test "
+                + "passes its own value, and nothing references Basics.Tests, so nothing else widens.",
             Outcome = Outcome.Selected,
-            Selected = new() { ["Basics.Tests"] = EveryBasicsTest },
-            RunInFull = [],
-            Tiers = new()
+            Selected = new()
             {
-                ["Basics.Tests.Readings"] = Tier.WholeType,
-                ["Basics.Tests.Readings.BodyHeat()"] = Tier.WholeAssembly,
+                ["Basics.Tests"] =
+                [
+                    "Basics.Tests.ThermometerTests.Freezing_is_273_kelvin",
+                    "Basics.Tests.ThermometerTests.Freezing_is_thirty_two_fahrenheit",
+                ],
             },
+            RunInFull = [],
+            Tiers = new() { ["Basics.Tests.Readings"] = Tier.WholeType },
         });
 
     [Fact]
@@ -203,15 +203,16 @@ public sealed class BasicsTests() : SampleTests("Basics")
         });
 
     [Fact]
-    public async Task A_generator_project_is_in_scope_and_a_change_to_it_widens_its_consumers() =>
-        await Apply("generator-project-change.patch").ExpectAsync(new()
+    public async Task A_change_to_a_generators_source_widens_its_consumers() =>
+        await Apply("generator-source-change.patch").ExpectAsync(new()
         {
-            Because = "Only the generator's project file changed, and Basics.Core consumes it as an analyser, so "
-                + "Basics.Core widens and every test reaching it is selected, which is every Basics test; had "
-                + "Reach expected the generator on disk, the run would end failed instead.",
+            Because = "Only Marker.Name in the generator changed, and Basics.Core consumes the generator as an "
+                + "analyser, so Basics.Core widens and every test reaching it is selected, which is every Basics "
+                + "test; had Reach expected the generator on disk, the run would end failed instead.",
             Outcome = Outcome.Selected,
             Selected = new() { ["Basics.Tests"] = EveryBasicsTest },
             RunInFull = [],
+            Tiers = new() { ["Basics.Generation.Marker.Name"] = Tier.WholeAssembly },
         });
 
     [Fact]

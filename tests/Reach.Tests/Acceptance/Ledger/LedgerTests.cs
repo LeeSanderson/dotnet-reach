@@ -118,13 +118,12 @@ public sealed class LedgerTests() : SampleTests("Ledger")
             },
             RunInFull = [],
             Notices = [.. StandingNotices, "recompilation-widening"],
-            // The deletion widens its type; the removed member, which no longer has compiled code to
-            // join, falls back to Dunning's whole assembly and, as a removal, widens Dunning's
-            // referencers.
+            // The deletion widens its type, and the removed member, as a removal, widens Dunning's
+            // referencers. Dunning itself does not widen whole.
             Tiers = new()
             {
                 ["Ledger.Dunning.ReminderSchedule"] = Tier.WholeType,
-                ["Ledger.Dunning.ReminderSchedule.Next(DateOnly)"] = Entries.Of(Tier.WholeAssembly, Tier.WholeAssembly),
+                ["Ledger.Dunning.ReminderSchedule.Next(DateOnly)"] = Tier.WholeAssembly,
             },
         });
 

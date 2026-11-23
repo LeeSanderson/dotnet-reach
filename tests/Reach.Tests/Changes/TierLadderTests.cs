@@ -125,6 +125,20 @@ public class TierLadderTests
         Assert.Equal(["Billing"], Names(Route("src/Generator/Generator.csproj")));
     }
 
+    [Theory]
+    [InlineData("src/Generator/GlobalUsings.cs")]
+    [InlineData("src/Generator/Templates/template.json")]
+    [InlineData("src/Generator/notes.md")]
+    public void Any_file_inside_a_generator_project_selects_its_consumers(string path)
+    {
+        // The generator's directory is no more scanned than its project file is, so a file that
+        // would otherwise widen the generator itself widens what consumes it.
+        var routed = Route(path);
+
+        Assert.Equal(4, routed.Rule.Row);
+        Assert.Equal(["Billing"], Names(routed));
+    }
+
     [Fact]
     public void A_project_nothing_references_as_an_analyser_is_an_ordinary_project() =>
         Assert.Equal(["Shared"], Names(Route("src/Shared/Shared.csproj")));

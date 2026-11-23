@@ -112,26 +112,22 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
             return new RoutedChange(path, DirectoryScoped, AtOrBelow(DirectoryOf(path.Path)));
         }
 
-        var containing = ProjectContaining(path.Path);
-
-        if (containing is null)
-        {
-            // Rows 1–5 enumerate every build-affecting file that lives at a repository root, so
-            // the residue genuinely is documentation-shaped: README.md, .gitignore, CI YAML,
-            // licence files. The alternative — whole-solution selection for any unrecognised
-            // file — means a README change runs the entire suite, which is not conservatism
-            // with a cost but a tool nobody keeps switched on.
-            return new RoutedChange(path, Unattributed, []);
-        }
-
-        return new RoutedChange(
-            path,
-            IsContent(extension) ? Content : NearestProject,
-            [containing]);
+        return RouteToContainingProject(path, extension);
     }
 
     internal IReadOnlyList<RoutedChange> RouteAll(IEnumerable<ChangedPath> paths) =>
         [.. paths.Select(Route)];
+
+    /// <summary>
+    /// Row 4 for a change that <em>did</em> map to a member or a type, when the file it is in
+    /// belongs to a generator project. The generator's assembly is consumed by the compiler, not
+    /// loaded, so it is never in the graph and its own widening would root nothing. Null for a
+    /// file outside every generator.
+    /// </summary>
+    internal RoutedConsumers? ConsumersOfGeneratorContaining(string repositoryRelativePath) =>
+        ProjectContaining(repositoryRelativePath) is { } project && IsGenerator(project)
+            ? new RoutedConsumers(Generator, ConsumersOf(project))
+            : null;
 
     /// <summary>
     /// Tier 2: a changed source file with no changed member, but which some assembly's debug
@@ -191,6 +187,36 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
             Paths.Same(Paths.Normalise(reference.Path), generator.Path)))
     ];
 
+    /// <summary>
+    /// Rows 4 to 6 for a file that is not itself a build file: whatever project contains it.
+    /// </summary>
+    private RoutedChange RouteToContainingProject(ChangedPath path, string extension)
+    {
+        var containing = ProjectContaining(path.Path);
+
+        if (containing is null)
+        {
+            // Rows 1–5 enumerate every build-affecting file that lives at a repository root, so
+            // the residue genuinely is documentation-shaped: README.md, .gitignore, CI YAML,
+            // licence files. The alternative — whole-solution selection for any unrecognised
+            // file — means a README change runs the entire suite, which is not conservatism
+            // with a cost but a tool nobody keeps switched on.
+            return new RoutedChange(path, Unattributed, []);
+        }
+
+        // Anything inside a generator, not only its project file: a source file or a template
+        // reaches the build only through the generator's consumers.
+        if (IsGenerator(containing))
+        {
+            return new RoutedChange(path, Generator, ConsumersOf(containing));
+        }
+
+        return new RoutedChange(
+            path,
+            IsContent(extension) ? Content : NearestProject,
+            [containing]);
+    }
+
     private ProjectFile? ProjectAt(string repositoryRelativePath) =>
         scope.Projects.FirstOrDefault(project => Paths.Same(project.Path, Absolute(repositoryRelativePath)));
 
@@ -231,3 +257,10 @@ internal sealed record RoutedChange(
     ChangedPath Path,
     RoutingRule Rule,
     IReadOnlyList<ProjectFile> Projects);
+
+/// <summary>
+/// A member-level change re-routed to a generator's consumers.
+/// </summary>
+/// <param name="Rule">Row 4, so the report gives the same reason a project-file change does.</param>
+/// <param name="Projects">The in-scope projects that consume the generator.</param>
+internal sealed record RoutedConsumers(RoutingRule Rule, IReadOnlyList<ProjectFile> Projects);

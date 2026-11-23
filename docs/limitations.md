@@ -93,7 +93,9 @@ The gaps that can cost you a regression. Listed worst first.
 - **Shape**: generator detection is conventional, not prescribed — `OutputItemType="Analyzer"`
   on a `ProjectReference`, or a project setting `IsRoslynComponent` or
   `EnforceExtendedAnalyzerRules`. A generator arriving as a `PackageReference` or a bare
-  `<Analyzer>` item is invisible, so a change to it does not widen its consumers.
+  `<Analyzer>` item is invisible, so a change to it does not widen its consumers. A generator
+  Reach does identify widens its consumers whatever changed in it: its project file, a source
+  file, a new or deleted file.
 - **Direction**: under-selection.
 - **Detectable**: no — the failure is not knowing the generator exists.
 - **Why not whole-suite on failure**: it would fire on every solution that has no generator at

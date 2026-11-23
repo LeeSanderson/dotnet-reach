@@ -171,4 +171,76 @@ public class WholeProjectAndWideningTests
         Assert.Equal(ChangeTier.WholeAssembly, change.Entry.Tier);
         Assert.NotEmpty(change.Roots);
     }
+
+    [Fact]
+    public void A_deleted_member_widens_its_declaring_type_and_not_its_assembly()
+    {
+        using var graphs = Graphs.Of(
+            ("Core",
+                """
+                namespace N;
+
+                public class A { public int Kept() => 1; }
+                public class B { public int Other() => 2; }
+                """));
+
+        var project = new ProjectFile(Paths.Normalise("/repo/src/Core/Core.csproj"), "Core", ["net10.0"], [], []);
+        var roots = new RootSets(graphs.Assemblies);
+        var scope = new AnalysisScope([project], [project], []);
+
+        // A removed member no longer exists, so it can never join to compiled code.
+        var removed = new ChangedMember(
+            "N.A",
+            new MemberKey(MemberKind.Method, "Gone", 0, []),
+            MemberChange.Removed,
+            "src/Core/A.cs");
+
+        var changes = roots.ChangesFrom(
+            ChangedSet.Empty with
+            {
+                Members = [removed],
+                TypeWidenings = [new TypeWidening("N.A", WideningReason.DeletedMember, "src/Core/A.cs")],
+            },
+            [new JoinResult(removed, [])],
+            scope,
+            new TierLadder(scope, "/repo"),
+            []);
+
+        // The declaring type's widening is the whole response to a deletion. B is untouched,
+        // so nothing of B is a root.
+        var change = Assert.Single(changes);
+
+        Assert.Equal(ChangeTier.WholeType, change.Entry.Tier);
+        Assert.Equal("N.A", change.Entry.Display);
+        Assert.Equal(roots.InType("N.A"), change.Roots);
+    }
+
+    [Fact]
+    public void A_deleted_member_whose_type_has_not_widened_still_widens_its_assembly()
+    {
+        using var graphs = Graphs.Of(("Core", "namespace N; public class A { public int M() => 1; }"));
+
+        var project = new ProjectFile(Paths.Normalise("/repo/src/Core/Core.csproj"), "Core", ["net10.0"], [], []);
+        var roots = new RootSets(graphs.Assemblies);
+        var scope = new AnalysisScope([project], [project], []);
+
+        var removed = new ChangedMember(
+            "N.A",
+            new MemberKey(MemberKind.Method, "Gone", 0, []),
+            MemberChange.Removed,
+            "src/Core/A.cs");
+
+        var changes = roots.ChangesFrom(
+            ChangedSet.Empty with { Members = [removed] },
+            [new JoinResult(removed, [])],
+            scope,
+            new TierLadder(scope, "/repo"),
+            []);
+
+        // Only the type's widening covers a deletion. Without one, the fallback stands.
+        var change = Assert.Single(changes);
+
+        Assert.Equal(ChangeTier.WholeAssembly, change.Entry.Tier);
+        Assert.Equal(roots.InAssembly("Core"), change.Roots);
+    }
 }

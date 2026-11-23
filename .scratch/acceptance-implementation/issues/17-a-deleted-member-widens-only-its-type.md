@@ -1,6 +1,6 @@
 # A deleted member widens only its declaring type
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 06
 Spec: [§7.1](../../acceptance-layer/spec.md#71-release-gate-small-samples) row 5
 
@@ -38,3 +38,24 @@ method widens its declaring type unconditionally.
 - Row 5 passes with its intended, hand-written selection and `Tiers`.
 - An unjoinable member that is **not** a removal still widens its assembly, and a test proves it.
 - The full suite is green, and the Release `-warnaserror` build and format check are clean.
+
+## Comments
+
+- **Done.** `RootSets.ChangesFrom` skips the whole-assembly fallback for an unjoined member only
+  when it is a removal and its declaring type carries a `DeletedMember` whole-type widening. Any
+  other unjoined member, and a removal with no such widening, keeps the fallback. Recompilation
+  widening (ADR-0014) is untouched: it reads `ChangedSet.RemovedMembers`, not the join.
+- Seam tests in `Selection/WholeProjectAndWideningTests`: a covered deletion gives one
+  `whole-type` entry; an uncovered removal still widens its assembly. The existing
+  `A_declaration_that_fails_to_join_falls_through_to_whole_assembly_widening` (a modified member)
+  still proves the non-removal fallback.
+- Row 5 renamed `A_deleted_method_widens_its_declaring_type`; it selects the two
+  `ThermometerTests` that read `Readings.Freezing`, `Tiers` = `Readings` `whole-type` only.
+  `EveryBasicsTest` stays: row 12 still uses it. `Readings.cs`'s remark updated (same line count,
+  so the patch is unchanged).
+- **Knock-on (Ledger row, ticket 11):** `A_removed_member_widens_only_the_projects_that_reference_its_assembly`
+  lost its duplicate `Next(DateOnly)` `whole-assembly` entry; it now has one (the recompilation
+  widening). The selection is unchanged, because Dunning's referencers, Dunning.Tests included,
+  still widen whole.
+- No doc described the old behaviour: `docs/limitations.md` already said "widens its declaring
+  type".
