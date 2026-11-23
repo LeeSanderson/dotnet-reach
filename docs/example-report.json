@@ -27,53 +27,100 @@
   },
   "scope": {
     "testProjects": [
-      "tests/Contoso.Tests.NUnit/Contoso.Tests.NUnit.csproj",
-      "tests/Contoso.Tests.Unrecognised/Contoso.Tests.Unrecognised.csproj",
-      "tests/Contoso.Tests.Xunit/Contoso.Tests.Xunit.csproj"
+      "tests/Frameworks.Tests.MSTest/Frameworks.Tests.MSTest.csproj",
+      "tests/Frameworks.Tests.NUnit/Frameworks.Tests.NUnit.csproj",
+      "tests/Frameworks.Tests.Unrecognised/Frameworks.Tests.Unrecognised.csproj",
+      "tests/Frameworks.Tests.XunitV2/Frameworks.Tests.XunitV2.csproj",
+      "tests/Frameworks.Tests.XunitV3/Frameworks.Tests.XunitV3.csproj",
+      "tests/Frameworks.Tests.XunitV3_4/Frameworks.Tests.XunitV3_4.csproj"
     ],
     "assemblies": [
       {
-        "name": "Contoso.Core",
+        "name": "Frameworks.Core",
         "targetFramework": "net10.0"
       },
       {
-        "name": "Contoso.Core",
-        "targetFramework": "net8.0"
-      },
-      {
-        "name": "Contoso.Tests.NUnit",
+        "name": "Frameworks.Tests.MSTest",
         "targetFramework": "net10.0"
       },
       {
-        "name": "Contoso.Tests.Unrecognised",
+        "name": "Frameworks.Tests.NUnit",
         "targetFramework": "net10.0"
       },
       {
-        "name": "Contoso.Tests.Xunit",
+        "name": "Frameworks.Tests.Unrecognised",
+        "targetFramework": "net10.0"
+      },
+      {
+        "name": "Frameworks.Tests.XunitV2",
+        "targetFramework": "net10.0"
+      },
+      {
+        "name": "Frameworks.Tests.XunitV3",
+        "targetFramework": "net10.0"
+      },
+      {
+        "name": "Frameworks.Tests.XunitV3_4",
         "targetFramework": "net10.0"
       }
     ]
   },
   "summary": {
-    "selected": 2,
-    "willRun": 3,
-    "total": 5,
+    "selected": 5,
+    "willRun": 6,
+    "total": 11,
     "projectsRunInFull": 1,
     "widenedPairs": 0,
-    "ratio": 0.6
+    "ratio": 0.5455
   },
   "changes": [
     {
       "index": 0,
-      "display": "Contoso.Invoice.Tax(int)",
+      "display": "Frameworks.Core.Invoice.Tax(int)",
       "tier": "member",
       "reason": "the member changed",
-      "testsReached": 2
+      "testsReached": 5
     }
   ],
   "entries": [
     {
-      "project": "tests/Contoso.Tests.NUnit/Contoso.Tests.NUnit.csproj",
+      "project": "tests/Frameworks.Tests.MSTest/Frameworks.Tests.MSTest.csproj",
+      "targetFramework": "net10.0",
+      "framework": "mstest",
+      "runnerHost": "dotnet-test",
+      "dialect": "mstest",
+      "mode": "filtered",
+      "delivery": "inline",
+      "counts": {
+        "selected": 1,
+        "willRun": 1,
+        "total": 2
+      },
+      "tests": [
+        {
+          "display": "Frameworks.Tests.MSTest.InvoiceTests.Totals_include_tax",
+          "id": "1:0x06000003",
+          "rules": [
+            "reverse-reachable"
+          ],
+          "changes": [
+            0
+          ],
+          "pathClass": "compiled"
+        }
+      ],
+      "invocations": [
+        [
+          "dotnet",
+          "test",
+          "/repo/tests/Frameworks.Tests.MSTest/Frameworks.Tests.MSTest.csproj",
+          "--filter",
+          "FullyQualifiedName=Frameworks.Tests.MSTest.InvoiceTests.Totals_include_tax"
+        ]
+      ]
+    },
+    {
+      "project": "tests/Frameworks.Tests.NUnit/Frameworks.Tests.NUnit.csproj",
       "targetFramework": "net10.0",
       "framework": "nunit",
       "runnerHost": "dotnet-test",
@@ -87,7 +134,7 @@
       },
       "tests": [
         {
-          "display": "Contoso.Tests.Nunit.InvoiceTests.MyTest",
+          "display": "Frameworks.Tests.NUnit.InvoiceTests.MyTest",
           "id": "2:0x06000003",
           "rules": [
             "reverse-reachable"
@@ -102,14 +149,14 @@
         [
           "dotnet",
           "test",
-          "/repo/tests/Contoso.Tests.NUnit/Contoso.Tests.NUnit.csproj",
+          "/repo/tests/Frameworks.Tests.NUnit/Frameworks.Tests.NUnit.csproj",
           "--filter",
-          "FullyQualifiedName~Contoso.Tests.Nunit.InvoiceTests.MyTest"
+          "FullyQualifiedName~Frameworks.Tests.NUnit.InvoiceTests.MyTest"
         ]
       ]
     },
     {
-      "project": "tests/Contoso.Tests.Unrecognised/Contoso.Tests.Unrecognised.csproj",
+      "project": "tests/Frameworks.Tests.Unrecognised/Frameworks.Tests.Unrecognised.csproj",
       "targetFramework": "net10.0",
       "runnerHost": "dotnet-test",
       "mode": "run-all",
@@ -124,16 +171,16 @@
         [
           "dotnet",
           "test",
-          "/repo/tests/Contoso.Tests.Unrecognised/Contoso.Tests.Unrecognised.csproj"
+          "/repo/tests/Frameworks.Tests.Unrecognised/Frameworks.Tests.Unrecognised.csproj"
         ]
       ]
     },
     {
-      "project": "tests/Contoso.Tests.Xunit/Contoso.Tests.Xunit.csproj",
+      "project": "tests/Frameworks.Tests.XunitV2/Frameworks.Tests.XunitV2.csproj",
       "targetFramework": "net10.0",
-      "framework": "xunit-v3-4",
+      "framework": "xunit-v2",
       "runnerHost": "dotnet-test",
-      "dialect": "xunit-v3-4",
+      "dialect": "xunit-v2",
       "mode": "filtered",
       "delivery": "inline",
       "counts": {
@@ -143,8 +190,8 @@
       },
       "tests": [
         {
-          "display": "Contoso.Tests.InvoiceTests.Totals_include_tax",
-          "id": "4:0x06000004",
+          "display": "Frameworks.Tests.XunitV2.InvoiceTests.Totals_include_tax",
+          "id": "4:0x06000003",
           "rules": [
             "reverse-reachable"
           ],
@@ -158,9 +205,81 @@
         [
           "dotnet",
           "test",
-          "/repo/tests/Contoso.Tests.Xunit/Contoso.Tests.Xunit.csproj",
+          "/repo/tests/Frameworks.Tests.XunitV2/Frameworks.Tests.XunitV2.csproj",
           "--filter",
-          "FullyQualifiedName=Contoso.Tests.InvoiceTests.Totals_include_tax"
+          "FullyQualifiedName=Frameworks.Tests.XunitV2.InvoiceTests.Totals_include_tax"
+        ]
+      ]
+    },
+    {
+      "project": "tests/Frameworks.Tests.XunitV3/Frameworks.Tests.XunitV3.csproj",
+      "targetFramework": "net10.0",
+      "framework": "xunit-v3",
+      "runnerHost": "dotnet-test",
+      "dialect": "xunit-v3",
+      "mode": "filtered",
+      "delivery": "inline",
+      "counts": {
+        "selected": 1,
+        "willRun": 1,
+        "total": 2
+      },
+      "tests": [
+        {
+          "display": "Frameworks.Tests.XunitV3.InvoiceTests.Totals_include_tax",
+          "id": "5:0x06000001",
+          "rules": [
+            "reverse-reachable"
+          ],
+          "changes": [
+            0
+          ],
+          "pathClass": "compiled"
+        }
+      ],
+      "invocations": [
+        [
+          "dotnet",
+          "test",
+          "/repo/tests/Frameworks.Tests.XunitV3/Frameworks.Tests.XunitV3.csproj",
+          "--filter",
+          "FullyQualifiedName=Frameworks.Tests.XunitV3.InvoiceTests.Totals_include_tax"
+        ]
+      ]
+    },
+    {
+      "project": "tests/Frameworks.Tests.XunitV3_4/Frameworks.Tests.XunitV3_4.csproj",
+      "targetFramework": "net10.0",
+      "framework": "xunit-v3-4",
+      "runnerHost": "dotnet-test",
+      "dialect": "xunit-v3-4",
+      "mode": "filtered",
+      "delivery": "inline",
+      "counts": {
+        "selected": 1,
+        "willRun": 1,
+        "total": 2
+      },
+      "tests": [
+        {
+          "display": "Frameworks.Tests.XunitV3_4.InvoiceTests.Totals_include_tax",
+          "id": "6:0x06000004",
+          "rules": [
+            "reverse-reachable"
+          ],
+          "changes": [
+            0
+          ],
+          "pathClass": "compiled"
+        }
+      ],
+      "invocations": [
+        [
+          "dotnet",
+          "test",
+          "/repo/tests/Frameworks.Tests.XunitV3_4/Frameworks.Tests.XunitV3_4.csproj",
+          "--filter",
+          "FullyQualifiedName=Frameworks.Tests.XunitV3_4.InvoiceTests.Totals_include_tax"
         ]
       ]
     }
@@ -188,35 +307,25 @@
     {
       "code": "dialect-over-selects",
       "kind": "widening",
-      "message": "The rendered filter matches more tests than were selected, because the dialect matches by containment rather than equality: Contoso.Tests.NUnit (net10.0) 1 selected, 2 will run"
+      "message": "The rendered filter matches more tests than were selected, because the dialect matches by containment rather than equality: Frameworks.Tests.NUnit (net10.0) 1 selected, 2 will run"
     },
     {
       "code": "nunit-filter-overmatch",
       "kind": "widening",
-      "message": "NUnit's filter matches by containment rather than equality, because its FullyQualifiedName includes a parameterised test's arguments and equality matching survives only through an adapter re-parse three ordinary configurations disable. Affects: Contoso.Tests.NUnit.",
+      "message": "NUnit's filter matches by containment rather than equality, because its FullyQualifiedName includes a parameterised test's arguments and equality matching survives only through an adapter re-parse three ordinary configurations disable. Affects: Frameworks.Tests.NUnit.",
       "data": {
         "projects": [
-          "Contoso.Tests.NUnit"
-        ]
-      }
-    },
-    {
-      "code": "test-runner-not-configured",
-      "kind": "environment",
-      "message": "Contoso.Tests.Xunit use a test framework that requires the Microsoft.Testing.Platform runner, and this repository's global.json does not set it — so `dotnet test` is a hard build error and every command Reach emitted is unrunnable. Add to global.json:\n\n  \"test\": {\n    \"runner\": \"Microsoft.Testing.Platform\"\n  }",
-      "data": {
-        "projects": [
-          "Contoso.Tests.Xunit"
+          "Frameworks.Tests.NUnit"
         ]
       }
     },
     {
       "code": "whole-project-fallback",
       "kind": "widening",
-      "message": "1 test project(s) use a test framework Reach does not recognise, so every test in them runs and their totals are unknown: Contoso.Tests.Unrecognised",
+      "message": "1 test project(s) use a test framework Reach does not recognise, so every test in them runs and their totals are unknown: Frameworks.Tests.Unrecognised",
       "data": {
         "projects": [
-          "Contoso.Tests.Unrecognised"
+          "Frameworks.Tests.Unrecognised"
         ]
       }
     }

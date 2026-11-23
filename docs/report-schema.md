@@ -5,8 +5,9 @@ this document exists to make a surprising one explicable **without rerunning the
 is also why there is no `explain` verb.
 
 [`example-report.json`](example-report.json) is a real report, and is the byte-for-byte output
-of the test suite's determinism fixture. A test fails the moment the two disagree, so the
-example cannot rot.
+of a run in the test suite: one change to the Frameworks sample, the same change one of
+Reach's acceptance tests makes. A test fails the moment the two disagree, so the example cannot
+rot.
 
 ## The compatibility promise
 
@@ -180,13 +181,14 @@ would have to say for this to have been the wrong thing to build.
 ## Reading a surprising selection
 
 Walk [`example-report.json`](example-report.json). It is one change to
-`Contoso.Invoice.Tax(int)` in a five-project solution.
+`Frameworks.Core.Invoice.Tax(int)` in a seven-project solution: one production project, and one
+test project for each framework Reach recognises plus one it does not.
 
 **1. What did Reach think changed?** `changes` has one entry:
 
 ```json
-{ "index": 0, "display": "Contoso.Invoice.Tax(int)", "tier": "member",
-  "reason": "the member changed", "testsReached": 2 }
+{ "index": 0, "display": "Frameworks.Core.Invoice.Tax(int)", "tier": "member",
+  "reason": "the member changed", "testsReached": 5 }
 ```
 
 `tier: member` means Reach matched the change to a method and walked from it — the precise case.
@@ -202,13 +204,13 @@ it was found. This one reads:
 `detectedFrom: "Option"` means it came from `--base` rather than from a CI variable, and
 **`isHead: true` means only uncommitted work could appear as a change** — a `baseline-is-head`
 notice says the same thing in prose. That is the single most common reason a report looks
-emptier than you expected, and the example carries it on purpose. Here it is correct: the fixture
-edits a file and does not commit it.
+emptier than you expected, and the example carries it on purpose. Here it is correct: the test
+that produced it edits a file and does not commit it.
 
-**3. Why was this test selected?** `entries[2].tests[0]`:
+**3. Why was this test selected?** `entries[5].tests[0]`:
 
 ```json
-{ "display": "Contoso.Tests.InvoiceTests.Totals_include_tax",
+{ "display": "Frameworks.Tests.XunitV3_4.InvoiceTests.Totals_include_tax",
   "rules": ["reverse-reachable"], "changes": [0], "pathClass": "compiled" }
 ```
 
@@ -218,17 +220,19 @@ compiled instructions only. Run it with `--paths` to see every hop.
 
 **4. Why is something running that you did not expect?** Two places to look.
 
-`entries[0]` — the NUnit project — selected one test and will run two:
+`entries[1]` — the NUnit project — selected one test and will run two:
 
 ```json
 "counts": { "selected": 1, "willRun": 2, "total": 3 }
 ```
 
 The `notices` array says why: `nunit-filter-overmatch`, and `dialect-over-selects` names the
-gap. The filter renders as `FullyQualifiedName~…MyTest`, which also matches `MyTest2`.
+gap. The filter renders as `FullyQualifiedName~…MyTest`, which also matches `MyTest2`. Every
+other recognised project renders with `=` and will run exactly what it selected.
 
-`entries[1]` — the unrecognised-framework project — runs in full with `total: "unknown"`, and
-`whole-project-fallback` says so.
+`entries[2]` — the unrecognised-framework project — runs in full with `total: "unknown"`, and
+`whole-project-fallback` says so. It is also the one entry with no `framework` or `dialect`:
+the five recognised entries carry both, each the same string.
 
 **5. What could Reach not see?** Every notice of kind `blind-spot` is a gap that may have cost
 you a test, and every one of them has an entry in the [limitations register](limitations.md) —

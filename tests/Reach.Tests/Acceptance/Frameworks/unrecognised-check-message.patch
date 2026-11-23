@@ -1,0 +1,11 @@
+--- a/tests/Frameworks.Tests.Unrecognised/InvoiceChecks.cs
++++ b/tests/Frameworks.Tests.Unrecognised/InvoiceChecks.cs
+@@ -12,7 +12,7 @@ public class InvoiceChecks
+     {
+         if (Invoice.Total(Net) != TotalWithTax)
+         {
+-            throw new InvalidOperationException();
++            throw new InvalidOperationException("The total left out the tax.");
+         }
+     }
+ 

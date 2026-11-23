@@ -102,7 +102,7 @@ jobs:
       - name: Build
         run: dotnet build -c Release
 
-      # Reach's own solution also holds the fixture projects its tests build, so this names its
+      # Reach's own solution also holds the sample projects its tests build, so this names its
       # one test project. Put your solution or test project in its place, here and in the whole
       # suite below. Without one, both find the solution in the working directory.
       - name: Select the tests this change could affect
