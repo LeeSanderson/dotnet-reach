@@ -115,11 +115,14 @@ internal sealed class RootSets
 
             changes.Add(ThroughGenerator(
                 new Change(
-                    Entry(
-                        changes.Count,
-                        result.Member.ToString(),
-                        ChangeTier.WholeAssembly,
-                        "the declaration could not be matched to compiled code"),
+                    Scoped(
+                        Entry(
+                            changes.Count,
+                            result.Member.ToString(),
+                            ChangeTier.WholeAssembly,
+                            "the declaration could not be matched to compiled code"),
+                        result.Member.Path,
+                        ladder),
                     project is null ? [] : InAssembly(project.AssemblyName)),
                 result.Member.Path,
                 ladder));
@@ -129,7 +132,10 @@ internal sealed class RootSets
         {
             changes.Add(ThroughGenerator(
                 new Change(
-                    Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeType, Describe(widening.Reason)),
+                    Scoped(
+                        Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeType, Describe(widening.Reason)),
+                        widening.Path,
+                        ladder),
                     InType(widening.DeclaringType)),
                 widening.Path,
                 ladder));
@@ -139,7 +145,10 @@ internal sealed class RootSets
         {
             changes.Add(ThroughGenerator(
                 new Change(
-                    Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeAssembly, Describe(widening.Reason)),
+                    Scoped(
+                        Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeAssembly, Describe(widening.Reason)),
+                        widening.Path,
+                        ladder),
                     widening.Project is null ? [] : InAssembly(widening.Project.AssemblyName)),
                 widening.Path,
                 ladder));
@@ -179,6 +188,12 @@ internal sealed class RootSets
     /// whole, as they do when its project file changes. The change's own roots are kept, so a
     /// generator that is also referenced normally loses nothing.
     /// </summary>
+    /// <remarks>
+    /// It never meets an entry <see cref="Scoped"/> marked outside the analysis scope: both ask
+    /// <see cref="AnalysisScope.ProjectContaining"/>, and a generator is recognised only as an
+    /// in-scope project. A generator outside the scope has no in-scope consumer, so nothing it
+    /// does can reach a test, and its change is reported as outside the scope.
+    /// </remarks>
     private Change ThroughGenerator(Change change, string repositoryRelativePath, TierLadder ladder)
     {
         if (ladder.ConsumersOfGeneratorContaining(repositoryRelativePath) is not { } routed)
@@ -207,6 +222,19 @@ internal sealed class RootSets
 
     private static ChangeEntry Entry(int index, string display, ChangeTier tier, string reason) =>
         new(index, display, tier, reason);
+
+    /// <summary>
+    /// A change in a file no in-scope project contains says so, whatever tier routed it. Only the
+    /// report reads this: the change's roots are computed exactly as they were.
+    /// </summary>
+    private static ChangeEntry Scoped(ChangeEntry entry, string path, TierLadder ladder) =>
+        ladder.ProjectContaining(path) is null
+            ? entry with
+            {
+                Reason = "the file is in no project a test project references, so it is outside the analysis scope",
+                OutsideAnalysisScope = true,
+            }
+            : entry;
 
     private static string Describe(WideningReason reason) => reason switch
     {

@@ -1,7 +1,7 @@
 # The gate audit
 
 Status: ready-for-agent
-Depends on: 01–15, 17, 18, 19
+Depends on: 01–15, 17–20
 Spec: [§9](../../acceptance-layer/spec.md#9-the-release-gate)
 
 ## Goal
@@ -73,6 +73,13 @@ anything else to the owner.
   Reword §3.5.
 - Ticket 02: the API is `ExpectAsync`, not `Expect`. Every report carries `baseline-resolved` and
   `baseline-is-head`. Make the spec match.
+- Ticket 18: `docs/limitations.md` says generator detection also reads `IsRoslynComponent` and
+  `EnforceExtendedAnalyzerRules`, but no code reads either. Only the `Analyzer` reference marker is
+  used. Correct the doc. Also, a `Directory.Build.props` inside a generator's directory widens only
+  the generator, so it selects nothing. That's the same under-selection shape as row 12. Bring it
+  to the owner: fix it, or add a limitations entry.
+- Ticket 19: a changed `.csproj` of an out-of-scope project still gets the reason
+  `changes-were-formatting-only`. That's the same misnaming as the rows 13 and 14 finding.
 - Ticket 05: two claims are still uncited: "Git does not preserve timestamps", and MSBuild's
   incremental-build claim.
 - Ticket 09's release-gate filter, for step 4:

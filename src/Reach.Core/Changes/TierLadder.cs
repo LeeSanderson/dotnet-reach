@@ -125,7 +125,7 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
     /// file outside every generator.
     /// </summary>
     internal RoutedConsumers? ConsumersOfGeneratorContaining(string repositoryRelativePath) =>
-        NearestAncestorProject(repositoryRelativePath) is { } project && IsGenerator(project)
+        ProjectContaining(repositoryRelativePath) is { } project && IsGenerator(project)
             ? new RoutedConsumers(Generator, ConsumersOf(project))
             : null;
 
@@ -192,7 +192,7 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
     /// </summary>
     private RoutedChange RouteToContainingProject(ChangedPath path, string extension)
     {
-        var containing = NearestAncestorProject(path.Path);
+        var containing = ProjectContaining(path.Path);
 
         if (containing is null)
         {
@@ -224,18 +224,11 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
         [.. scope.Projects.Where(project => Paths.IsUnder(project.Directory, directory))];
 
     /// <summary>
-    /// The nearest ancestor project directory, which reproduces the SDK's default
-    /// <c>**/*.cs</c> globbing without running MSBuild.
+    /// The nearest ancestor in-scope project of a repository-relative path, or null when the
+    /// path is outside the analysis scope.
     /// </summary>
-    private ProjectFile? NearestAncestorProject(string repositoryRelativePath)
-    {
-        var full = Absolute(repositoryRelativePath);
-
-        return scope.Projects
-            .Where(project => Paths.IsUnder(full, project.Directory))
-            .OrderByDescending(project => project.Directory.Length)
-            .FirstOrDefault();
-    }
+    internal ProjectFile? ProjectContaining(string repositoryRelativePath) =>
+        scope.ProjectContaining(Absolute(repositoryRelativePath));
 
     private static bool IsContent(string extension) => ContentExtensions.Contains(extension, NameComparer);
 

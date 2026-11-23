@@ -68,7 +68,11 @@ public static class ReportBuilder
             reasons.Add(NoticeCodes.ChangesWereFormattingOnly);
         }
 
-        if (run.Selection is { } selection && selection.Changes.Count == 0)
+        // Most specific first: none of these changes could have reached a test, because no test
+        // process can execute the code they are in (ADR-0002). One in-scope change that reached
+        // nothing is the more urgent news, so it takes the reason below instead.
+        if (run.Selection is { Changes: [_, ..] entries }
+            && entries.All(entry => entry.OutsideAnalysisScope))
         {
             reasons.Add(NoticeCodes.AllChangesOutsideAnalysisScope);
         }

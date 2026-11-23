@@ -65,6 +65,13 @@ Ticket 17 changes the same fall-through in `RootSets.ChangesFrom`, so this ticke
 - **Finding (docs vs Reach):** `docs/limitations.md` says detection also reads `IsRoslynComponent`
   and `EnforceExtendedAnalyzerRules`, but nothing in `src/` reads either: only the `Analyzer`
   reference marker is used. Left as is; out of this ticket's scope.
+- **Merged with ticket 19.** Generator retiering wraps ticket 19's out-of-scope marking
+  (`ThroughGenerator(new Change(Scoped(...), roots))`), and both now use
+  `AnalysisScope.ProjectContaining`. They can't both fire. A generator is recognised only as an
+  in-scope project that an in-scope project references as an analyser, so its changes are in scope
+  and go to rule 4. A generator outside the scope has no in-scope consumer, so it can't reach a
+  test. Its change is reported as outside the analysis scope, with the ticket 19 reason and
+  `testsReached: 0`.
 - **Not routed (by design of the ticket's scope):** a `Directory.Build.props` *inside* a generator's
   directory still goes to row 2, which widens the generator itself, so roots nothing. Rare, but
   the same under-selection shape; worth a follow-up if wanted.

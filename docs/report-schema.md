@@ -161,6 +161,11 @@ thousand entries.
 notice — and that is either a genuine coverage gap or an under-selection bug. Today both are
 invisible everywhere else.
 
+A change to C# that no in-scope project contains, such as code in a project no test project
+references, is listed too, with `testsReached: 0` and a `reason` saying it is outside the analysis
+scope. That is a third answer, and the honest one: nothing in this repository can test that code.
+When every change is like that, `reasons` is `all-changes-outside-analysis-scope`.
+
 ## `summary`
 
 | Field | Notes |
@@ -306,8 +311,8 @@ not holes are documented in full here.
 |---|---|---|
 | `project-outside-every-solution` | Reach was pointed at a project no solution above it lists, so there is no expected project list to check the output against | `projects` |
 | `untracked-source-files` | C# files git has never seen entered the changed set: intentional codegen, or a forgotten `git add` | `paths` |
-| `no-changed-member-reached-a-test` | there were changes, they joined, and no test could reach any of them | — |
-| `all-changes-outside-analysis-scope` | every change was outside the union of the test projects' closures | — |
+| `no-changed-member-reached-a-test` | there were changes, not every one of them outside the analysis scope, and no test could reach any of them | — |
+| `all-changes-outside-analysis-scope` | every change was to C# source that no in-scope project contains, such as code in a project no test project references, which no test process can execute. Each is still listed in `changes`, with `testsReached: 0` and a `reason` saying it is outside the analysis scope | — |
 | `changes-were-formatting-only` | paths changed, but nothing inside them did | — |
 
 The last three appear in `reasons` rather than in `notices`.
