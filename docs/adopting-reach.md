@@ -178,6 +178,10 @@ detection bug that under-selects rather than over-selects.
 
 ## The switches whose behaviour surprises
 
+`select --help` describes every switch, and this section covers only the ones that surprise. The
+rest do what they say: `-c|--configuration` and `-v|--verbosity` take the values `dotnet build`'s
+do, and `--no-color` turns colour off in the summary.
+
 ### `--no-build` detects *more*, not less
 
 The mode that trusts you more is the mode that catches more. Reach compares each source file
