@@ -1,0 +1,17 @@
+--- a/src/Ledger.Billing/InvoiceNumbering.cs
++++ b/src/Ledger.Billing/InvoiceNumbering.cs
+@@ -1,6 +1,6 @@
+ using System.Globalization;
+ 
+-namespace Ledger.Billing;
++namespace Ledger.Billing.Numbering;
+ 
+ /// <summary>
+ /// Gives each posted invoice the next number in sequence. Row 22 moves it to another namespace.
+--- a/src/Ledger.Billing/InvoicePoster.cs
++++ b/src/Ledger.Billing/InvoicePoster.cs
+@@ -1,3 +1,4 @@
++using Ledger.Billing.Numbering;
+ using Ledger.Domain;
+ 
+ namespace Ledger.Billing;

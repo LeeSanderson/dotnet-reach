@@ -1,0 +1,9 @@
+--- a/tests/Basics.Tests/Readings.cs
++++ b/tests/Basics.Tests/Readings.cs
+@@ -13,6 +13,4 @@ namespace Basics.Tests;
+ public static class Readings
+ {
+     public static decimal Freezing() => 0m;
+-
+-    public static decimal BodyHeat() => 37m;
+ }

@@ -1,0 +1,9 @@
+--- a/src/Ledger.Domain/Invoice.cs
++++ b/src/Ledger.Domain/Invoice.cs
+@@ -16,5 +16,5 @@ public sealed class Invoice(string customer, DateOnly due)
+     /// <summary>
+     /// Only Dunning calls this, so a change to it leaves Billing's tests out (row 17).
+     /// </summary>
+-    public int DaysOverdue(DateOnly today) => today > due ? today.DayNumber - due.DayNumber : 0;
++    public int DaysOverdue(DateOnly today) => Math.Max(0, today.DayNumber - due.DayNumber);
+ }

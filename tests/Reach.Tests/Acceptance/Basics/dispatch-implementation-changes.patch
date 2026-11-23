@@ -1,0 +1,18 @@
+--- a/src/Basics.Core/BracketLabel.cs
++++ b/src/Basics.Core/BracketLabel.cs
+@@ -5,5 +5,5 @@ namespace Basics.Core;
+ /// </summary>
+ public sealed class BracketLabel : Label
+ {
+-    public override string Render(string text) => $"[{text}]";
++    public override string Render(string text) => $"[{text.Trim()}]";
+ }
+--- a/src/Basics.Core/FlatRate.cs
++++ b/src/Basics.Core/FlatRate.cs
+@@ -7,5 +7,5 @@ public sealed class FlatRate : IShippingRate
+ {
+     private const decimal Fee = 5m;
+ 
+-    public decimal Cost(decimal weightKg) => Fee;
++    public decimal Cost(decimal weightKg) => weightKg >= 0 ? Fee : 0m;
+ }

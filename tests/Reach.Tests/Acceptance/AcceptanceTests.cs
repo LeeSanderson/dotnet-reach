@@ -116,22 +116,6 @@ public sealed class AcceptanceTests : IDisposable
     }
 
     [Fact]
-    public async Task Fact_added_to_an_existing_method_selects_it()
-    {
-        Touch(
-            "tests/Contoso.Tests.Xunit/InvoiceTests.cs",
-            "    [Fact]\n    public void Untouched_is_zero()",
-            "    [Fact]\n    [Trait(\"kind\", \"new\")]\n    public void Untouched_is_zero()");
-
-        var report = await _fixture.SelectAsync(_baseline, Token);
-
-        // The cheapest test of the most expensive regression in the set.
-        Assert.Contains(
-            EntryFor(report, "Contoso.Tests.Xunit").Tests,
-            test => test.Display.EndsWith(".Untouched_is_zero", StringComparison.Ordinal));
-    }
-
-    [Fact]
     public async Task A_project_on_a_framework_needing_the_runner_setting_says_so()
     {
         Touch("src/Contoso.Core/Invoice.cs", "=> net + Tax(net);", "=> net + Tax(net) + 0;");

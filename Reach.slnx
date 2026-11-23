@@ -4,6 +4,14 @@
     <Project Path="tests/samples/Basics/src/Basics.Generator/Basics.Generator.csproj" />
     <Project Path="tests/samples/Basics/src/Basics.Tools/Basics.Tools.csproj" />
     <Project Path="tests/samples/Basics/tests/Basics.Tests/Basics.Tests.csproj" />
+    <Project Path="tests/samples/Ledger/src/Collections/Ledger.Dunning/Ledger.Dunning.csproj" />
+    <Project Path="tests/samples/Ledger/src/Ledger.Api/Ledger.Api.csproj" />
+    <Project Path="tests/samples/Ledger/src/Ledger.Billing/Ledger.Billing.csproj" />
+    <Project Path="tests/samples/Ledger/src/Ledger.Domain/Ledger.Domain.csproj" />
+    <Project Path="tests/samples/Ledger/tests/Ledger.Api.Tests/Ledger.Api.Tests.csproj" />
+    <Project Path="tests/samples/Ledger/tests/Ledger.Billing.Tests/Ledger.Billing.Tests.csproj" />
+    <Project Path="tests/samples/Ledger/tests/Ledger.Domain.Tests/Ledger.Domain.Tests.csproj" />
+    <Project Path="tests/samples/Ledger/tests/Ledger.Dunning.Tests/Ledger.Dunning.Tests.csproj" />
     <Project Path="tests/fixtures/Contoso/src/Contoso.Core/Contoso.Core.csproj" />
     <Project Path="tests/fixtures/Contoso/src/Contoso.Generator/Contoso.Generator.csproj" />
     <Project Path="tests/fixtures/Contoso/tests/Contoso.Tests.NUnit/Contoso.Tests.NUnit.csproj" />
