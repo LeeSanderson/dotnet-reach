@@ -1,6 +1,6 @@
 # Project containment is relative to the repository
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 17, 18, 19
 
 ## Goal
@@ -39,3 +39,19 @@ correctly, and `TierLadder` and `ChangedSetBuilder` already share it.
 - The new seam tests pass, and each was seen to fail first.
 - No acceptance row's expected result changes, or each change is explained in the comments.
 - The full suite is green, and the Release `-warnaserror` build and format check are clean.
+
+## Comments
+
+- **Done.** `RootSets.ProjectFor` and its common-root helpers are deleted. The unjoined-member
+  fallback and recompilation widening's declaring-project lookup now call
+  `TierLadder.ProjectContaining`, which resolves against the repository root and delegates to
+  `AnalysisScope.ProjectContaining`. A search of `src/` found no other place that matched paths
+  against the projects' common root (`ReportBuilder`'s `GetRelativePath` only formats paths for
+  display).
+- Seam tests in `Selection/ProjectContainmentTests` put every in-scope project below `/repo/app/`.
+  An unjoined member widens its own assembly. A changed constant widens Api, its referencer. A
+  single in-scope project no longer claims `tools/Script/Script.cs`: that change has no roots and
+  is marked outside the analysis scope. All three failed first, each on the assertion it targets.
+- The third test is the one narrowing, and it is the one the ticket describes: a file that no
+  in-scope project contains can't be compiled into any test process.
+- No acceptance row's expected result changed.

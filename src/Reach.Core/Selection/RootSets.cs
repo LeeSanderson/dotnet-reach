@@ -111,7 +111,7 @@ internal sealed class RootSets
             // A declaration that fails to join falls through to whole-assembly widening for its
             // project. Over-selection, and it is what makes a phantom member from a misparse
             // survivable rather than a silent hole.
-            var project = ProjectFor(scope, result.Member.Path);
+            var project = ladder.ProjectContaining(result.Member.Path);
 
             changes.Add(ThroughGenerator(
                 new Change(
@@ -159,7 +159,7 @@ internal sealed class RootSets
         foreach (var widened in RecompilationWidening.From(
             changed,
             scope,
-            member => ProjectFor(scope, member.Path)))
+            member => ladder.ProjectContaining(member.Path)))
         {
             changes.Add(new Change(
                 Entry(
@@ -244,55 +244,6 @@ internal sealed class RootSets
         WideningReason.TypeMoved => "the type moved between files",
         _ => "the type has no identity in the current binaries",
     };
-
-    /// <summary>
-    /// The nearest ancestor project directory, which reproduces the SDK's default
-    /// <c>**/*.cs</c> globbing without running MSBuild.
-    /// </summary>
-    private static ProjectFile? ProjectFor(AnalysisScope scope, string repositoryRelativePath) =>
-        scope.Projects
-            .Where(project => repositoryRelativePath.Replace('\\', '/')
-                .StartsWith(RelativeDirectoryOf(scope, project), StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(project => project.Directory.Length)
-            .FirstOrDefault();
-
-    /// <summary>
-    /// Compared as repository-relative forward-slashed prefixes, because that is the spelling
-    /// git returns and the only one both sides share.
-    /// </summary>
-    private static string RelativeDirectoryOf(AnalysisScope scope, ProjectFile project)
-    {
-        var root = CommonRoot(scope);
-        var relative = Path.GetRelativePath(root, project.Directory).Replace('\\', '/');
-
-        return relative == "." ? string.Empty : relative + "/";
-    }
-
-    private static string CommonRoot(AnalysisScope scope)
-    {
-        var directories = scope.Projects.Select(project => project.Directory).ToArray();
-
-        if (directories.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        var root = directories[0];
-
-        while (!Array.TrueForAll(directories, directory => Paths.IsUnder(directory, root)))
-        {
-            var parent = Path.GetDirectoryName(root);
-
-            if (parent is null)
-            {
-                return root;
-            }
-
-            root = parent;
-        }
-
-        return root;
-    }
 }
 
 /// <summary>
