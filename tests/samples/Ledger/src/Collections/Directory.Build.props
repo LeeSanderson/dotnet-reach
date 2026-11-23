@@ -1,0 +1,21 @@
+<Project>
+
+  <!--
+    Applies to Ledger.Dunning only: MSBuild stops at the first Directory.Build.props walking up
+    from a project, and nothing else lives under src/Collections/. Row 21 changes this file.
+
+    It imports the next one up, so that in place, inside the repository, Ledger.Dunning keeps the
+    repository's coding standard. In the acceptance harness's copy there is nothing above, and the
+    condition skips the import.
+  -->
+  <PropertyGroup>
+    <ParentBuildProps>$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))</ParentBuildProps>
+  </PropertyGroup>
+
+  <Import Project="$(ParentBuildProps)" Condition="'$(ParentBuildProps)' != ''" />
+
+  <PropertyGroup>
+    <Product>Ledger Collections</Product>
+  </PropertyGroup>
+
+</Project>
