@@ -184,21 +184,8 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["paths"] = paths }));
     }
 
-    /// <summary>
-    /// The nearest ancestor project directory, which reproduces the SDK's default
-    /// <c>**/*.cs</c> globbing without running MSBuild. Errs over — a path excluded by
-    /// <c>&lt;Compile Remove&gt;</c> over-selects — and is imprecise only for linked files
-    /// pulled in from outside the project directory.
-    /// </summary>
-    private ProjectFile? ProjectContaining(string repositoryRelativePath)
-    {
-        var full = Paths.Normalise(Path.Combine(repositoryRoot, repositoryRelativePath));
-
-        return scope.Projects
-            .Where(project => Paths.IsUnder(full, project.Directory))
-            .OrderByDescending(project => project.Directory.Length)
-            .FirstOrDefault();
-    }
+    private ProjectFile? ProjectContaining(string repositoryRelativePath) =>
+        scope.ProjectContaining(Paths.Normalise(Path.Combine(repositoryRoot, repositoryRelativePath)));
 
     /// <summary>
     /// An untracked <c>.cs</c> file entering the changed set is worth a report line: it is

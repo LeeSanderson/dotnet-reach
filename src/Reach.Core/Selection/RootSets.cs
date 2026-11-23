@@ -103,25 +103,34 @@ internal sealed class RootSets
             var project = ProjectFor(scope, result.Member.Path);
 
             changes.Add(new Change(
-                Entry(
-                    changes.Count,
-                    result.Member.ToString(),
-                    ChangeTier.WholeAssembly,
-                    "the declaration could not be matched to compiled code"),
+                Scoped(
+                    Entry(
+                        changes.Count,
+                        result.Member.ToString(),
+                        ChangeTier.WholeAssembly,
+                        "the declaration could not be matched to compiled code"),
+                    result.Member.Path,
+                    ladder),
                 project is null ? [] : InAssembly(project.AssemblyName)));
         }
 
         foreach (var widening in changed.TypeWidenings.OrderBy(w => w.DeclaringType, StringComparer.Ordinal))
         {
             changes.Add(new Change(
-                Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeType, Describe(widening.Reason)),
+                Scoped(
+                    Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeType, Describe(widening.Reason)),
+                    widening.Path,
+                    ladder),
                 InType(widening.DeclaringType)));
         }
 
         foreach (var widening in changed.AssemblyWidenings.OrderBy(w => w.DeclaringType, StringComparer.Ordinal))
         {
             changes.Add(new Change(
-                Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeAssembly, Describe(widening.Reason)),
+                Scoped(
+                    Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeAssembly, Describe(widening.Reason)),
+                    widening.Path,
+                    ladder),
                 widening.Project is null ? [] : InAssembly(widening.Project.AssemblyName)));
         }
 
@@ -156,6 +165,19 @@ internal sealed class RootSets
 
     private static ChangeEntry Entry(int index, string display, ChangeTier tier, string reason) =>
         new(index, display, tier, reason);
+
+    /// <summary>
+    /// A change in a file no in-scope project contains says so, whatever tier routed it. Only the
+    /// report reads this: the change's roots are computed exactly as they were.
+    /// </summary>
+    private static ChangeEntry Scoped(ChangeEntry entry, string path, TierLadder ladder) =>
+        ladder.ProjectContaining(path) is null
+            ? entry with
+            {
+                Reason = "the file is in no project a test project references, so it is outside the analysis scope",
+                OutsideAnalysisScope = true,
+            }
+            : entry;
 
     private static string Describe(WideningReason reason) => reason switch
     {
