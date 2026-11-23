@@ -1,6 +1,6 @@
 # Test running: full parallelism and the two CI steps
 
-Status: ready-for-agent
+Status: resolved
 Depends on: —
 Spec: [§5.3](../../acceptance-layer/spec.md#53-parallelism), [§6](../../acceptance-layer/spec.md#6-where-the-acceptance-tests-run)
 
@@ -52,3 +52,30 @@ Link it from the README's "Where to go next".
 ## Out of scope
 
 Any change to the acceptance tests themselves. A time budget of any kind (spec §6).
+
+## Comments
+
+**Done.** `tests/Reach.Tests/Parallelization.cs` sets
+`[assembly: Xunit.v3.Parallelization(Mode = ParallelMode.All)]` (xunit.v3 4.0.0's replacement for
+the deprecated `CollectionBehavior` properties), with `MaxThreads` left at its default. **No test
+broke under `All`**, so nothing carries `DisableParallelization` and there was no fallback to
+`Collections`. A scan found no shared temp path or test-owned static: `TempDirectory` names each
+directory with a GUID, and `SpanJoinTests`' fixed `reach-deterministic-join` path is only ever read,
+never written.
+
+CI: `Test (fast layer)` and `Test (acceptance layer)` over the one build, writing `fast.trx` and
+`acceptance.trx` into the uploaded `./TestResults`. The acceptance step has `timeout-minutes: 20`
+and the "hung build, not a budget" comment. It runs whenever the fast step ran, pass or fail, so a
+red fast layer still reports the acceptance layer. `--list-tests` confirms the split: 553 fast +
+12 acceptance = 565, with no acceptance test in the fast list. `CONTRIBUTING.md` is added and
+linked from the README.
+
+**Runs (Windows, 565 tests):** baseline under `Collections` was 10m16s. Under `All`: 6m35s, then
+2m47s and 3m00s, all green. (The first run under `All` was cold, and runs 2 and 3 overlapped a
+container build.)
+
+**Finding: the Linux run is not done.** WSL has no .NET SDK, so the Linux pass ran in a
+`mcr.microsoft.com/dotnet/sdk:10.0` container. It built clean, but the host stopped it for low
+memory during its first test run, before any results came in. The Linux side of this ticket's
+acceptance criterion is still open: CI's `ubuntu-latest` leg is the first real check, or rerun the
+container on a machine with more memory.
