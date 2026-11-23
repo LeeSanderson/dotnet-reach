@@ -20,10 +20,10 @@ namespace Reach.Tests.Acceptance;
 /// </remarks>
 public sealed class AcceptanceTests : IDisposable
 {
-    private readonly FixtureSolution _fixture;
+    private readonly SampleCopy _fixture;
     private readonly string _baseline;
 
-    public AcceptanceTests() => _fixture = FixtureSolution.Build(out _baseline);
+    public AcceptanceTests() => _fixture = SampleCopy.Build(out _baseline);
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -127,37 +127,7 @@ public sealed class AcceptanceTests : IDisposable
         Assert.Contains(report.Notices, notice => notice.Code == NoticeCodes.WholeProjectFallback);
     }
 
-    // ---- 4. Determinism --------------------------------------------------------------------------------
-
-    [Fact]
-    public async Task The_same_input_twice_produces_byte_identical_json()
-    {
-        Touch("src/Contoso.Core/Invoice.cs", "=> net + Tax(net);", "=> net + Tax(net) + 0;");
-
-        var first = ReportWriter.Serialise(await _fixture.SelectAsync(_baseline, Token));
-        var second = ReportWriter.Serialise(await _fixture.SelectAsync(_baseline, Token));
-
-        // This is what makes exact expected selections the cheap option rather than the brittle
-        // one, which is why it is mandatory despite proving nothing about selection.
-        Assert.Equal(WithoutTimings(first), WithoutTimings(second));
-    }
-
-    // ---- Exact expected selections, which determinism makes affordable ------------------------------------
-
-    [Fact]
-    public async Task A_change_selects_exactly_the_tests_that_reach_it()
-    {
-        Touch("src/Contoso.Core/Invoice.cs", "public static int Tax(int net) => net * StandardRate / Percent;",
-            "public static int Tax(int net) => (net * StandardRate / Percent) + 0;");
-
-        var report = await _fixture.SelectAsync(_baseline, Token);
-        var xunit = EntryFor(report, "Contoso.Tests.Xunit");
-
-        // Exact, not an in/out set: Totals_include_tax reaches Tax, Untouched_is_zero does not.
-        Assert.Equal(
-            ["Contoso.Tests.InvoiceTests.Totals_include_tax"],
-            xunit.Tests.Select(test => test.Display));
-    }
+    // ---- Determinism and the exact selection now live in Basics/BasicsTests and Expect ------------
 
     [Fact]
     public async Task A_multi_targeted_project_contributes_an_entry_per_framework()
@@ -269,24 +239,6 @@ public sealed class AcceptanceTests : IDisposable
             relativePath,
             contents.Replace(matched, replace.ReplaceLineEndings(newline), StringComparison.Ordinal));
         _fixture.Rebuild();
-    }
-
-    private static string WithoutTimings(string json)
-    {
-        using var document = System.Text.Json.JsonDocument.Parse(json);
-
-        var kept = document.RootElement.EnumerateObject()
-            .ToDictionary(
-                property => property.Name,
-                property => property.Name == "envelope"
-                    ? System.Text.Json.JsonSerializer.SerializeToElement(
-                        property.Value.EnumerateObject()
-                            .Where(inner => inner.Name != "timings")
-                            .ToDictionary(inner => inner.Name, inner => inner.Value, StringComparer.Ordinal))
-                    : property.Value,
-                StringComparer.Ordinal);
-
-        return System.Text.Json.JsonSerializer.Serialize(kept);
     }
 
     public void Dispose() => _fixture.Dispose();

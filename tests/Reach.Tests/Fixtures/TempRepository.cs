@@ -9,11 +9,15 @@ namespace Reach.Tests.Fixtures;
 /// </summary>
 internal sealed class TempRepository : IDisposable
 {
-    private readonly TempDirectory _directory;
+    private readonly TempDirectory _owner;
 
-    private TempRepository(TempDirectory directory) => _directory = directory;
+    private TempRepository(TempDirectory owner, string path)
+    {
+        _owner = owner;
+        Path = path;
+    }
 
-    internal string Path => _directory.Path;
+    internal string Path { get; }
 
     /// <summary>
     /// Creates an initialised repository with no commits yet.
@@ -21,7 +25,30 @@ internal sealed class TempRepository : IDisposable
     internal static TempRepository Create(string name = "reach-repo")
     {
         var directory = TempDirectory.Create(name);
-        var repository = new TempRepository(directory);
+
+        return Initialise(directory, directory.Path);
+    }
+
+    /// <summary>
+    /// Creates an initialised repository in a subdirectory of <paramref name="owner"/>, and takes
+    /// ownership of it: disposing the repository deletes the whole of <paramref name="owner"/>.
+    /// </summary>
+    /// <remarks>
+    /// For a test that writes things of its own beside the repository, where Reach, which treats
+    /// every untracked file under its root as a change, cannot see them.
+    /// </remarks>
+    internal static TempRepository CreateIn(TempDirectory owner, string subdirectory)
+    {
+        var path = owner.Combine(subdirectory);
+
+        Directory.CreateDirectory(path);
+
+        return Initialise(owner, path);
+    }
+
+    private static TempRepository Initialise(TempDirectory owner, string path)
+    {
+        var repository = new TempRepository(owner, path);
 
         repository.Git("init", "--initial-branch=main");
 
@@ -34,10 +61,18 @@ internal sealed class TempRepository : IDisposable
         return repository;
     }
 
-    internal string WriteFile(string relativePath, string contents) =>
-        _directory.WriteFile(relativePath, contents);
+    /// <summary>
+    /// Writes a file, creating any intermediate directories.
+    /// </summary>
+    internal string WriteFile(string relativePath, string contents)
+    {
+        var full = Combine(relativePath);
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(full)!);
+        File.WriteAllText(full, contents);
+        return full;
+    }
 
-    internal string Combine(params string[] parts) => _directory.Combine(parts);
+    internal string Combine(params string[] parts) => System.IO.Path.Combine([Path, .. parts]);
 
     /// <summary>
     /// Stages everything and commits, returning the new commit's SHA.
@@ -90,5 +125,5 @@ internal sealed class TempRepository : IDisposable
         return standardOutput.Result;
     }
 
-    public void Dispose() => _directory.Dispose();
+    public void Dispose() => _owner.Dispose();
 }

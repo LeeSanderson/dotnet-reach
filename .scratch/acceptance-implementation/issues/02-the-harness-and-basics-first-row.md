@@ -1,6 +1,6 @@
 # The harness, and Basics' first row
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 01
 Spec: [§2.1](../../acceptance-layer/spec.md#21-where-they-live-and-the-main-solution), [§2.3](../../acceptance-layer/spec.md#23-basics), [§3.5](../../acceptance-layer/spec.md#35-drift), [§4](../../acceptance-layer/spec.md#4-declaring-an-acceptance-test), [§5](../../acceptance-layer/spec.md#5-the-harness)
 
@@ -68,3 +68,31 @@ determinism invariant replace them (spec §8.1).
 
 The patch tool and the stripped-form guard (ticket 03). The known-gap trait (ticket 09). Moving or
 renaming Contoso (ticket 12). Persistent slots (spec §5.6).
+
+## Comments
+
+- **Done.** Basics first cut (`Basics.Core`: `Discount`, `Basket`; `Basics.Tests`: three tests), in
+  `Reach.slnx` under `/samples/`; Release `-warnaserror` build and `dotnet format --verify-no-changes`
+  clean. `FixtureSolution` reworked into `Fixtures/SampleCopy.cs` (steps 1–7, the §5.2 build-mode
+  rule, `repo/` and `out/` under one temp root; the old Contoso API kept). The surface is
+  `SampleTests` (base class naming its sample), `Baseline(...)`, `Apply(patch, params more)`,
+  `ExpectAsync(Expected)`, in `Acceptance/`. Comparison and invariants are a pure function,
+  `Expectation.Failures`, tested in memory in `Harness/ExpectationTests.cs` (24 tests);
+  drift, missing patch and the stray-file status check in `Harness/SampleCopyTests.cs` (6 tests,
+  patches in a temp folder). Harness tests sit outside `Reach.Tests.Acceptance` so they run in the
+  fast CI step. Row 1 patch: `Acceptance/Basics/discount-body-change.patch`. The two old tests are
+  deleted. Full suite: 623 passed, 0 failed (Windows, Release).
+- **Finding: `Expect` is spelled `ExpectAsync`.** Sonar S4261 (async method without the `Async`
+  suffix) fires on `Expect`; per the standing rule the name was changed rather than suppressed.
+  Later tickets should write `.ExpectAsync(new() { ... })`.
+- **Finding: every run carries `baseline-resolved` and `baseline-is-head`.** The harness passes
+  the baseline SHA as `--base`, and change patches are uncommitted, so `HEAD` is the baseline. Any
+  test that gives `Notices` must list both (a shared static piece is the natural home), or the spec
+  should say otherwise. Reach's output was not changed.
+- **Finding for ticket 08: the unknown-total invariant as the spec words it** ("a project run in
+  full serialises `"total": "unknown"`") is implemented literally. Reach also renders `run-all` for
+  an underivable platform-suffixed moniker and for a runsettings filter conflict, where the total
+  may be known, so row 10 may trip it. That is a spec question, not a harness change.
+- Patches are CRLF on disk (`.gitattributes` `eol=crlf`), and the temp repository sets
+  `core.autocrlf false`, so `git apply` compares the same bytes on Windows and Linux. Linux not run
+  locally; CI will show it.
