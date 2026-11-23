@@ -23,7 +23,12 @@ row:
 
 ## Gap-shaped members
 
-None yet. Known-gap tests depend on the members listed here, and gate patches never touch them.
+Known-gap tests depend on the members listed here, and gate patches never touch them.
+
+| Member | Known gap |
+|---|---|
+| `Handler<T>`, `Message`, `Foo`, `Bar`, and their test class `HandlerTests` | 24: a change reached only through `Handler<Foo>` also selects the users of `Handler<Bar>` |
+| `Temperature` (its `ToString`), and its test class `TemperatureTests` | 25: a `ToString` reached only through string interpolation selects nothing |
 
 ## Building it
 

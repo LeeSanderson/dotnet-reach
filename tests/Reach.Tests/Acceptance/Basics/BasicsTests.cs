@@ -22,4 +22,38 @@ public sealed class BasicsTests() : SampleTests("Basics")
             },
             RunInFull = [],
         });
+
+    [Fact]
+    [KnownGap]
+    public async Task Known_gap_a_change_reached_only_through_Handler_of_Foo_selects_the_users_of_Handler_of_Bar() =>
+        await Apply("foo-describe-change.patch").ExpectAsync(new()
+        {
+            Because = "Only Foo.Describe changed, which only Handler<Foo> reaches, but Handler<Bar>'s test is "
+                + "selected too: docs/limitations.md, \"Generic instantiations are collapsed\" (ADR-0006).",
+            Outcome = Outcome.Selected,
+            Selected = new()
+            {
+                ["Basics.Tests"] =
+                [
+                    "Basics.Tests.HandlerTests.A_bar_handler_describes_a_bar",
+                    "Basics.Tests.HandlerTests.A_foo_handler_describes_a_foo",
+                ],
+            },
+            RunInFull = [],
+            Changes = new() { ["Basics.Core.Foo.Describe()"] = 2 },
+        });
+
+    [Fact]
+    [KnownGap]
+    public async Task Known_gap_a_ToString_reached_only_through_interpolation_selects_nothing() =>
+        await Apply("temperature-tostring-change.patch").ExpectAsync(new()
+        {
+            Because = "Only Temperature.ToString changed, and its one test reaches it only through string "
+                + "interpolation, which never names ToString in IL: docs/limitations.md, \"First-party members "
+                + "invoked only from outside the analysis scope\".",
+            Outcome = Outcome.NothingSelected,
+            Selected = [],
+            RunInFull = [],
+            Changes = new() { ["Basics.Core.Temperature.ToString()"] = 0 },
+        });
 }

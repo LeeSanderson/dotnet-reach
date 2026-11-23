@@ -1,0 +1,9 @@
+--- a/src/Basics.Core/Temperature.cs
++++ b/src/Basics.Core/Temperature.cs
+@@ -7,5 +7,5 @@ namespace Basics.Core;
+ /// </summary>
+ public sealed class Temperature(int degrees)
+ {
+-    public override string ToString() => $"{degrees} C";
++    public override string ToString() => $"{degrees} degrees C";
+ }
