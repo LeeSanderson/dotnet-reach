@@ -28,10 +28,10 @@ public sealed partial class ExampleReportTests : IDisposable
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    private readonly FixtureSolution _fixture;
+    private readonly SampleCopy _fixture;
     private readonly string _baseline;
 
-    public ExampleReportTests() => _fixture = FixtureSolution.Build(out _baseline);
+    public ExampleReportTests() => _fixture = SampleCopy.Build(out _baseline);
 
     [Fact]
     public async Task The_committed_example_is_what_the_determinism_fixture_produces()

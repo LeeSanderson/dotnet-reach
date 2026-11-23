@@ -1,0 +1,11 @@
+--- a/src/Basics.Core/Discount.cs
++++ b/src/Basics.Core/Discount.cs
+@@ -7,7 +7,7 @@ public static class Discount
+ {
+     private const int WholePercent = 100;
+ 
+-    public static decimal Apply(decimal price, int percent) => price - (price * percent / WholePercent);
++    public static decimal Apply(decimal price, int percent) => price * (WholePercent - percent) / WholePercent;
+ 
+     public static bool IsValid(int percent) => percent is >= 0 and <= WholePercent;
+ }
