@@ -52,7 +52,6 @@ public static class NoticeCatalogue
             [NoticeCodes.UnmappedDeterministicSourceRoot] = NoticeKind.BlindSpot,
             [NoticeCodes.UnmappedFileNoProject] = NoticeKind.BlindSpot,
             [NoticeCodes.ParseFailed] = NoticeKind.BlindSpot,
-            [NoticeCodes.CalliUnresolved] = NoticeKind.BlindSpot,
             [NoticeCodes.UnresolvedFirstPartyMember] = NoticeKind.BlindSpot,
         };
 

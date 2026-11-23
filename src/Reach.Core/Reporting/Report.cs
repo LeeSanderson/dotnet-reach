@@ -154,13 +154,13 @@ public sealed record ReportEntry
     public required string TargetFramework { get; init; }
 
     /// <summary>
-    /// All four are needed: the package version changed xUnit's filter surface.
+    /// The recognised framework. <see cref="Dialect"/> is the more specific of the two, because
+    /// the package version as well as the framework decides the filter surface: <c>xunit.v3</c>
+    /// 4.0.0 changed it. There is no package-version field: Reach knows only the referenced
+    /// assembly's version, which can differ from the package's.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Framework { get; init; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PackageVersion { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? RunnerHost { get; init; }

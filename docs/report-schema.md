@@ -82,7 +82,6 @@ select differently — collapsing them would force a union and destroy the answe
 |---|---|
 | `project`, `targetFramework` | the key. Always present |
 | `framework`, `dialect` | the recognised test framework, and the filter grammar it renders into. **Both absent when the framework is unrecognised** — which is the case the rest of the entry describes. In this release they carry the same string: the dialect is gated on package version as well as framework, because `xunit.v3` 4.0.0 changed the filter surface, so it is the more specific of the two and is what both fields report |
-| `packageVersion` | **reserved. Not emitted by this release**, so always absent |
 | `runnerHost` | `dotnet-test`, or absent on `skip`. Present on a project run in full |
 | `mode` | `filtered` · `run-all` · `skip` |
 | `delivery` | `inline` · `response-file` · `chunked` · `run-settings`, or **absent** on an entry that carries no command of its own — see below |
@@ -126,7 +125,7 @@ call it a total. `summary.projectsRunInFull` is how many entries are in this sta
 | Field | Notes |
 |---|---|
 | `display` | the fully-qualified test method name |
-| `id` | stable within a run, comparable across runs of the same tool version |
+| `id` | stable: the same input produces the same `id` |
 | `rules` | why it was selected: `reverse-reachable`, `own-source-changed`, `new-since-baseline` |
 | `changes` | indices into the top-level `changes` array |
 | `pathClass` | `compiled` or `widened` |
@@ -249,7 +248,6 @@ not holes are documented in full here.
 | `unmapped-deterministic-source-root` | compiled source recorded under a deterministic root other than `/_/` and not found in the NuGet global packages folder. Reach does not guess at it. `data.roots`. [Register](limitations.md#deterministic-source-roots-other-than-the-repository-root) |
 | `unmapped-file-no-project` | a changed file matched no rule and sits inside no project. [Register](limitations.md#a-changed-file-matching-no-rule-and-no-project) |
 | `parse-failed` | a changed file did not parse cleanly, so its project widened. [Register](limitations.md#c-newer-than-reachs-parser-misparsed-silently) |
-| `calli-unresolved` | a function pointer invoked with no visible `ldftn`. [Register](limitations.md#function-pointers-obtained-outside-analysed-il) |
 | `unresolved-first-party-member` | a call site names a member of a first-party assembly that is not in it. [Register](limitations.md#a-first-party-member-a-call-site-names-but-the-assembly-does-not-contain) |
 
 ### `widening` — may over-select
@@ -287,12 +285,10 @@ The last three appear in `reasons` rather than in `notices`.
 | `selection-delivered-out-of-band` | the selection exceeded the command-line ceiling, so it went through a response file or several invocations | — |
 | `test-runner-not-configured` | a project needs the Microsoft.Testing.Platform runner setting and `global.json` does not have it, so every command Reach emitted is unrunnable. The rendering is correct; the repository is not | `projects` |
 
-### Reserved `data` keys
+### `data`
 
-`projects`, `assemblies`, `paths` and `members` mean the same thing wherever they appear, which
-is what lets you build *"everything affecting this project"* without knowing every code. Every
-other key is free-form per code, and typing each one here would make every new code a breaking
-change.
+The keys in `data` are free-form per code. Typing every key here would make every new code a
+breaking change.
 
 **Notices cannot be suppressed.** A suppression switch would un-surface exactly the gaps the
 correctness bargain depends on surfacing. If suppression ever ships, `blind-spot` must be

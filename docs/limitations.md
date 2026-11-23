@@ -105,7 +105,8 @@ The gaps that can cost you a regression. Listed worst first.
 - **Shape**: `Delegate.CreateDelegate`, `Marshal.GetFunctionPointerForDelegate`, native interop.
   Reach edges from the **capture** site (`ldftn`), so a pointer produced without one has no edge.
 - **Direction**: under-selection.
-- **Detectable**: partially — `calli-unresolved` fires on a `calli` with no inferable source.
+- **Detectable**: no — Reach has no notice for a `calli` with no inferable source. Detecting one is
+  new IL dataflow work, follow-up after the alpha.
 - **Why no widening**: every method whose address is taken in analysed code already has its
   capture-site edge, so the only widening available is unbounded.
 

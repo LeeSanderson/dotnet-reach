@@ -131,7 +131,6 @@ One verb, one positional, eleven options.
 | `--report <path\|->` | `.reach/report.json` | §13.8 |
 | `--report-dir <dir>` | `.reach` | §13.8 |
 | `--paths` | off | §13.4 |
-| `--list-unselected` | off | §13.5 |
 | `--runsettings <path>` | unset | [ADR-0009](../../docs/adr/0009-per-host-private-filter-channels-over-runsettings.md) |
 | `-v\|--verbosity <level>` | `normal` | §4.4 |
 | `--no-color` | auto-detected | §4.4 |
@@ -1098,7 +1097,7 @@ Each entry carries:
 | `mode` | `filtered` · `run-all` · `skip` |
 | `delivery` | `inline` · `response-file` · `testlist` · `chunked` · `runsettings` |
 | `counts` | `selected`, `willRun`, `total` — and `total` **must be able to say `unknown`** |
-| `tests` | §13.3; enumerated only when selected, unless `--list-unselected` |
+| `tests` | §13.3; enumerated only when selected. Unselected tests are counted, never enumerated (§13.5) |
 | `invocations` | an **array** of argv vectors — many when chunked, one for `run-all`, zero for `skip` |
 
 `total: unknown` is not cosmetic: reporting `0` for an unenumerable project would silently corrupt
@@ -1150,7 +1149,10 @@ selection.
 
 ### 13.5 Unselected tests
 
-Counted, not enumerated. Enumeration is opt-in via `--list-unselected`.
+Counted, never enumerated.
+
+> Amended: `--list-unselected` was parsed and never read, so it was removed. See the
+> [acceptance-layer spec §10.2](../acceptance-layer/spec.md#102-cut).
 
 ### 13.6 Naming a method
 
