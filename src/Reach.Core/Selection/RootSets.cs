@@ -3,6 +3,7 @@ using Reach.Changes;
 using Reach.Graph;
 using Reach.Join;
 using Reach.Projects;
+using Reach.Reporting;
 using static Reach.Buckets;
 
 namespace Reach.Selection;
@@ -70,13 +71,15 @@ internal sealed class RootSets
     }
 
     /// <summary>
-    /// The changes the walk runs over, in a stable order.
+    /// The changes the walk runs over, in a stable order. Each recompilation widening also adds
+    /// its <c>recompilation-widening</c> notice to <paramref name="notices"/>.
     /// </summary>
     internal IReadOnlyList<Change> ChangesFrom(
         ChangedSet changed,
         IReadOnlyList<JoinResult> joined,
         AnalysisScope scope,
-        TierLadder ladder)
+        TierLadder ladder,
+        List<Notice> notices)
     {
         var changes = new List<Change>();
 
@@ -136,6 +139,8 @@ internal sealed class RootSets
                     ChangeTier.WholeAssembly,
                     widened.Reason),
                 [.. widened.Consumers.SelectMany(project => InAssembly(project.AssemblyName)).Distinct()]));
+
+            notices.Add(widened.ToNotice());
         }
 
         foreach (var routed in ladder.RouteAll(

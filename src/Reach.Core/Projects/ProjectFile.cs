@@ -24,6 +24,12 @@ public sealed record ProjectFile(
     IReadOnlyList<string> PackageReferences)
 {
     /// <summary>
+    /// The <c>LangVersion</c> property as written, or <c>null</c> when the project does not
+    /// declare one. Read only to report a version above what Reach's parser understands.
+    /// </summary>
+    public string? LangVersion { get; init; }
+
+    /// <summary>
     /// The file's base name, which is how a project is named in messages.
     /// </summary>
     internal string Name => System.IO.Path.GetFileNameWithoutExtension(Path);

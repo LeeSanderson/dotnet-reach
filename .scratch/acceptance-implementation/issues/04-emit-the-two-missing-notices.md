@@ -1,6 +1,6 @@
 # Emit `recompilation-widening` and `langversion-above-ceiling`
 
-Status: ready-for-agent
+Status: resolved
 Depends on: —
 Spec: [§10.1](../../acceptance-layer/spec.md#101-implemented)
 
@@ -33,3 +33,27 @@ Two notice codes the docs promise are catalogued but never emitted. Make Reach e
 
 Acceptance rows 18 and 19, which expect the notice (ticket 11). The notice-index parity test
 (ticket 15).
+## Comments
+
+**Done.** Both codes are now emitted; no selection result changed.
+
+- **`recompilation-widening`**: `RecompilationWidening.Widened.ToNotice()`, raised by
+  `RootSets.ChangesFrom` (which now takes the selector's notice list, the same pattern as
+  `TestEnumeration.Enumerate`) once per triggering change. Kind `widening`; `data.members` names
+  the trigger (same spelling as its forward-change entry), `data.projects` the widened projects.
+  The schema said neither per-run nor per-change, so per change it is, and the schema line now
+  says so.
+- **`langversion-above-ceiling`**: `ProjectFile` gained an optional `LangVersion` (read from the
+  project, else the nearest `Directory.Build.props`). `ParseHealthCheck.AboveCeilingNotice`
+  builds one `environment` notice listing every in-scope project above the ceiling in
+  `data.projects`; `AnalysisScopeResolver` raises it. Reported only. The schema's `data` column
+  for it changed from `—` to `projects`.
+- Tests: two in `RecompilationWideningTests` (through `RootSets.ChangesFrom`), two in
+  `ParseHealthTests`, two in `AnalysisScopeTests` (reading the property from disk end to end).
+- `docs/limitations.md` already described both correctly; unchanged.
+
+**Finding.** The `langversion-above-ceiling` check only fires on a numeric `LangVersion` Roslyn
+cannot parse or that exceeds `Preview`'s effective version. With `Preview` as the ceiling, any
+version this Roslyn knows is at or below it, so in practice the notice fires only for a number
+newer than the shipped Roslyn (as intended), and never for a conditioned or `$(...)` value, which
+is read literally and ignored as non-numeric.
