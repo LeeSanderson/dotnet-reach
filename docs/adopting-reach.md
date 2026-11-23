@@ -66,6 +66,16 @@ Two ways to see exit 8 from a correct invocation, both your own choice:
 ([MTP options](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-cli-options)),
 and a rebuild between Reach's run and the test step.
 
+### VSTest projects and the testing-platform runner
+
+If your `global.json` selects Microsoft.Testing.Platform, `dotnet test` refuses any test project
+that still uses VSTest
+([`dotnet test` with MTP](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test-mtp#description)).
+Reach does not check for this. It still emits commands for those projects, and they fail when
+your loop runs them. Move every test project to one runner before you wire Reach in. The
+[limitations register](limitations.md#a-vstest-project-under-a-globaljson-that-selects-microsofttestingplatform)
+has the details.
+
 ## CI
 
 Reach needs the full history: it resolves a baseline with `git merge-base`, and
@@ -98,6 +108,12 @@ jobs:
         with:
           # Without this, git merge-base has no history to walk and Reach exits 4.
           fetch-depth: 0
+
+      # dnx comes with the .NET 10 SDK. Without this step the hosted runner finds dotnet but
+      # not dnx, and the selection step fails with "dnx: command not found".
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
 
       - name: Build
         run: dotnet build -c Release
@@ -145,6 +161,11 @@ is deliberate for now: gating on a selection nobody has measured is the unproven
 tool exists not to do. Running both is a miniature shadow mode, and the gap between them is the
 first real datapoint.
 
+`dnx` is a script the .NET SDK installer puts on `PATH`, from .NET 10 on
+([`dotnet tool exec`](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-tool-exec#description)).
+Without `actions/setup-dotnet`, the hosted runner found `dotnet` but not `dnx` on this
+repository's own pull requests, so the recipe sets the SDK up itself.
+
 `jq` is preinstalled on GitHub's hosted Ubuntu runners
 ([the `ubuntu-latest` image](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md)).
 The `@sh` filter quotes each argv element for a POSIX shell
@@ -189,9 +210,12 @@ against the checksum the compiler recorded for it, in **both** modes — and in 
 build has just recompiled your change, so every checksum agrees. Under `--no-build` a file you
 edited since the last build fails the check and the run exits 5.
 
-This is not a timestamp heuristic. Git does not preserve timestamps, so checking out an older
-commit onto a warm agent can leave source *older* than the binaries beside it, and MSBuild will
-correctly conclude nothing needs rebuilding while the binaries belong to a different commit.
+This is not a timestamp heuristic. Git does not preserve modification times
+([Git FAQ](https://archive.kernel.org/oldwiki/git.wiki.kernel.org/index.php/Git_FAQ.html#Why_isn.27t_Git_preserving_modification_time_on_files.3F)),
+so checking out an older commit onto a warm agent can leave source *older* than the binaries
+beside it. MSBuild skips a target whose outputs are the same age as its inputs or newer
+([incremental builds](https://learn.microsoft.com/en-us/visualstudio/msbuild/incremental-builds)),
+so it will conclude nothing needs rebuilding while the binaries belong to a different commit.
 
 ### `--runsettings <path>` merges your filter, it does not use your settings
 

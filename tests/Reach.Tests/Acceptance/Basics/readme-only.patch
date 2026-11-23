@@ -1,6 +1,6 @@
 --- a/README.md
 +++ b/README.md
-@@ -32,6 +32,8 @@ Known-gap tests depend on the members listed here, and gate patches never touch
+@@ -51,6 +51,8 @@ Known-gap tests depend on the members listed here, and gate patches never touch
  
  ## Building it
  

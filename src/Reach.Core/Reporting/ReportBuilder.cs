@@ -36,8 +36,9 @@ public static class ReportBuilder
 
     /// <summary>
     /// An empty selection and an empty change set are different news. They exit the same and
-    /// mean opposite things — a docs-only pull request, against code changes that reached
-    /// nothing, which is either a coverage gap or an under-selection bug.
+    /// mean opposite things — nothing to act on (no change, or only formatting inside C#), against
+    /// changes that reached nothing, which for code is either a coverage gap or an
+    /// under-selection bug. A docs-only change is the second kind: its path is a change.
     /// </summary>
     internal static Outcome OutcomeOf(SelectRun run)
     {
