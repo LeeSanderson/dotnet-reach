@@ -1,6 +1,6 @@
 # A generator source change widens its consumers
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 07, 17
 Spec: [§7.1](../../acceptance-layer/spec.md#71-release-gate-small-samples) row 12
 
@@ -40,3 +40,31 @@ Ticket 17 changes the same fall-through in `RootSets.ChangesFrom`, so this ticke
   memory.
 - No change outside a generator project gets this routing.
 - The full suite is green, and the Release `-warnaserror` build and format check are clean.
+
+## Comments
+
+- **Done.** Detection is rule 4's own (`TierLadder.IsGenerator`: some in-scope project references
+  it with `OutputItemType="Analyzer"`), applied to the nearest ancestor project of the change's
+  file. Two places use it:
+  - `TierLadder.Route`: an unmappable path inside a generator (a file declaring no type, a
+    template, any content) routes to rule 4, not rows 5–6.
+  - `RootSets.ChangesFrom`: a member (joined or not), a type widening or an assembly widening
+    (a deleted type or file, an unparseable file) whose file is in a generator keeps its entry,
+    retiered `whole-assembly` with rule 4's reason, and its roots become its own roots **plus**
+    every method of the consumers. The own roots are kept so a generator that a test project
+    also references normally loses nothing.
+  - Recompilation widening is untouched.
+- Seam tests: `Selection/GeneratorChangeTests` (changed member, new type, deleted file, type
+  widening, and a member outside a generator that is not routed) and a `TierLadderTests` theory
+  for files inside a generator.
+- Row 12 is now `A_change_to_a_generators_source_widens_its_consumers` over
+  `generator-source-change.patch` (`Marker.Name`'s value); `generator-project-change.patch` is
+  deleted, since the spec lists one row 12 and the `.csproj` case is covered by `TierLadderTests`.
+  `Tiers` = `Basics.Generation.Marker.Name` `whole-assembly`. `docs/limitations.md` and the
+  Basics README updated; `docs/report-schema.md` and the root README describe no generator rule.
+- **Finding (docs vs Reach):** `docs/limitations.md` says detection also reads `IsRoslynComponent`
+  and `EnforceExtendedAnalyzerRules`, but nothing in `src/` reads either: only the `Analyzer`
+  reference marker is used. Left as is; out of this ticket's scope.
+- **Not routed (by design of the ticket's scope):** a `Directory.Build.props` *inside* a generator's
+  directory still goes to row 2, which widens the generator itself, so roots nothing. Rare, but
+  the same under-selection shape; worth a follow-up if wanted.

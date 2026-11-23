@@ -90,9 +90,12 @@ internal sealed class RootSets
                 // The one place ChangeTier.Member is constructed, which is what lets the walk
                 // read the tier to tell "these roots are the declaration" from "these roots
                 // are an expansion".
-                changes.Add(new Change(
-                    Entry(changes.Count, result.Member.ToString(), ChangeTier.Member, "the member changed"),
-                    result.Methods));
+                changes.Add(ThroughGenerator(
+                    new Change(
+                        Entry(changes.Count, result.Member.ToString(), ChangeTier.Member, "the member changed"),
+                        result.Methods),
+                    result.Member.Path,
+                    ladder));
 
                 continue;
             }
@@ -110,27 +113,36 @@ internal sealed class RootSets
             // survivable rather than a silent hole.
             var project = ProjectFor(scope, result.Member.Path);
 
-            changes.Add(new Change(
-                Entry(
-                    changes.Count,
-                    result.Member.ToString(),
-                    ChangeTier.WholeAssembly,
-                    "the declaration could not be matched to compiled code"),
-                project is null ? [] : InAssembly(project.AssemblyName)));
+            changes.Add(ThroughGenerator(
+                new Change(
+                    Entry(
+                        changes.Count,
+                        result.Member.ToString(),
+                        ChangeTier.WholeAssembly,
+                        "the declaration could not be matched to compiled code"),
+                    project is null ? [] : InAssembly(project.AssemblyName)),
+                result.Member.Path,
+                ladder));
         }
 
         foreach (var widening in changed.TypeWidenings.OrderBy(w => w.DeclaringType, StringComparer.Ordinal))
         {
-            changes.Add(new Change(
-                Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeType, Describe(widening.Reason)),
-                InType(widening.DeclaringType)));
+            changes.Add(ThroughGenerator(
+                new Change(
+                    Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeType, Describe(widening.Reason)),
+                    InType(widening.DeclaringType)),
+                widening.Path,
+                ladder));
         }
 
         foreach (var widening in changed.AssemblyWidenings.OrderBy(w => w.DeclaringType, StringComparer.Ordinal))
         {
-            changes.Add(new Change(
-                Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeAssembly, Describe(widening.Reason)),
-                widening.Project is null ? [] : InAssembly(widening.Project.AssemblyName)));
+            changes.Add(ThroughGenerator(
+                new Change(
+                    Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeAssembly, Describe(widening.Reason)),
+                    widening.Project is null ? [] : InAssembly(widening.Project.AssemblyName)),
+                widening.Path,
+                ladder));
         }
 
         // The blast radius is real and accepted because it is legible: each one is its own
@@ -160,6 +172,27 @@ internal sealed class RootSets
         }
 
         return changes;
+    }
+
+    /// <summary>
+    /// A change in a generator project, re-routed to rule 4: the generator's consumers widen
+    /// whole, as they do when its project file changes. The change's own roots are kept, so a
+    /// generator that is also referenced normally loses nothing.
+    /// </summary>
+    private Change ThroughGenerator(Change change, string repositoryRelativePath, TierLadder ladder)
+    {
+        if (ladder.ConsumersOfGeneratorContaining(repositoryRelativePath) is not { } routed)
+        {
+            return change;
+        }
+
+        return new Change(
+            change.Entry with { Tier = ChangeTier.WholeAssembly, Reason = routed.Rule.Description },
+            [
+                .. change.Roots
+                    .Concat(routed.Projects.SelectMany(project => InAssembly(project.AssemblyName)))
+                    .Distinct()
+            ]);
     }
 
     /// <summary>

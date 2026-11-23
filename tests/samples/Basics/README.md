@@ -30,7 +30,7 @@ row:
 | `Greeting` | 9: a multi-targeted test project gives one entry per framework |
 | `Mileage` | 10: a platform-suffixed framework makes its project run in full |
 | `Vowels` | 11: `xunit.v3` 4.0.0 without the runner setting gets its notice |
-| `Basics.Generation.Marker`, and the generator's project file | 12: a generator change widens its consumers |
+| `Basics.Generation.Marker` | 12: a change to a generator's source widens its consumers |
 | `Receipt` (no test reaches it) | 13: formatting only; 15: a change reaching no test; 28: a change that breaks the build |
 | `Voucher` (added by row 16's patch, so not in the sample) | 16: a new file git does not track |
 | `Basics.Tools.Housekeeping` | 29: a change outside the analysis scope |
