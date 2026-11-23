@@ -1,0 +1,9 @@
+--- a/tests/Basics.Tests/RoundingChecks.cs
++++ b/tests/Basics.Tests/RoundingChecks.cs
+@@ -11,5 +11,6 @@ public class RoundingChecks
+ {
+     private readonly decimal _halfCentOverTwelve = 0.125m;
+ 
++    [Fact]
+     public void A_half_cent_rounds_to_even() => Assert.Equal(0.12m, Rounding.ToCents(_halfCentOverTwelve));
+ }

@@ -20,6 +20,11 @@ row:
 | Type | Row |
 |---|---|
 | `Discount`, `Basket` | 1: a body change selects exactly the tests that reach it |
+| `Initials` | 2: a test whose own body changed is selected |
+| `Rounding`, `RoundingChecks` | 3: an existing non-test method that gains `[Fact]` is selected |
+| `IShippingRate`, `FlatRate`, `WeightRate`, `Shipping`, `Label`, `UpperLabel`, `BracketLabel`, `Printer` | 4: interface and virtual dispatch select every candidate |
+| `Thermometer`, `Readings` (in `Basics.Tests`) | 5: a deleted method widens its declaring type |
+| `Tally` | 6: a move to another directory, same namespace, widens the type |
 
 ## Gap-shaped members
 
