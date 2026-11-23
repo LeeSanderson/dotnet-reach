@@ -186,6 +186,23 @@ public class MeasurementTests
     }
 
     [Fact]
+    public void The_ratio_is_rounded_to_four_places_in_the_report()
+    {
+        var report = ReportFixture.Minimal() with
+        {
+            Summary = new ReportMeasurement(
+                Selected: 1,
+                WillRun: 1,
+                Total: 7,
+                ProjectsRunInFull: 0,
+                WidenedPairs: 0),
+        };
+
+        // One of seven is 0.142857…; four places is 0.1429, rounded rather than truncated.
+        Assert.Contains("\"ratio\": 0.1429\n", ReportWriter.Serialise(report));
+    }
+
+    [Fact]
     public void Nothing_enumerable_reports_an_unknown_ratio()
     {
         var measurement = Measure(
