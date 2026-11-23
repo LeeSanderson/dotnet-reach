@@ -1,0 +1,10 @@
+--- a/src/Basics.Core/Receipt.cs
++++ b/src/Basics.Core/Receipt.cs
+@@ -5,5 +5,6 @@ namespace Basics.Core;
+ /// </summary>
+ public static class Receipt
+ {
+-    public static string Header(string shop) => "Receipt: " + shop;
++    // A receipt names the shop first.
++    public static string Header(string shop) =>  "Receipt: " + shop;
+ }

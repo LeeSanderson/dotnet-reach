@@ -11,6 +11,8 @@ patches they apply.
 | Project | What it is here for |
 |---|---|
 | `src/Basics.Core` | the production code, single `net10.0` |
+| `src/Basics.Generator` | a stand-in source generator, consumed by `Basics.Core` as an analyser (row 12) |
+| `src/Basics.Tools` | production code no test project references, so outside the analysis scope (row 29) |
 | `tests/Basics.Tests` | `xunit.v3` 4.0.0, the tests Reach selects from |
 | `global.json` | the testing-platform runner setting, and nothing else that changes the build |
 
@@ -25,6 +27,11 @@ row:
 | `IShippingRate`, `FlatRate`, `WeightRate`, `Shipping`, `Label`, `UpperLabel`, `BracketLabel`, `Printer` | 4: interface and virtual dispatch select every candidate |
 | `Thermometer`, `Readings` (in `Basics.Tests`) | 5: a deleted method widens its declaring type |
 | `Tally` | 6: a move to another directory, same namespace, widens the type |
+| `Basics.Generation.Marker`, and the generator's project file | 12: a generator change widens its consumers |
+| `Receipt` (no test reaches it) | 13: formatting only; 15: a change reaching no test; 28: a change that breaks the build |
+| `Voucher` (added by row 16's patch, so not in the sample) | 16: a new file git does not track |
+| `Basics.Tools.Housekeeping` | 29: a change outside the analysis scope |
+| this README | 14: a docs-only change |
 
 ## Gap-shaped members
 
