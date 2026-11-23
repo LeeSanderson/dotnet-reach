@@ -1,6 +1,7 @@
+using Frameworks.Core;
 using NUnit.Framework;
 
-namespace Contoso.Tests.Nunit;
+namespace Frameworks.Tests.NUnit;
 
 public class InvoiceTests
 {

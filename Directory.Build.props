@@ -2,7 +2,7 @@
 
   <!--
     No TargetFramework here: a non-empty TargetFramework turns off a project's own
-    TargetFrameworks, which would stop the Contoso fixture multi-targeting in place. Each
+    TargetFrameworks, which would stop any project that multi-targets from doing so. Each
     project declares its own (ADR-0013 for Reach's).
   -->
   <PropertyGroup>

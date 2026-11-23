@@ -161,74 +161,6 @@ internal sealed class SampleCopy : IDisposable
         return new Observation(first, second, _root.Path, build.ExitCode == 0 ? null : Tail(build.Output));
     }
 
-    // ---- The Contoso API, until ticket 12 moves the last test off it ---------------------------
-
-    /// <summary>
-    /// Copies <c>tests/fixtures/Contoso/</c>, commits the baseline, and builds. The returned SHA
-    /// is the baseline.
-    /// </summary>
-    internal static SampleCopy Build(out string baseline)
-    {
-        var copy = new SampleCopy(
-            TempDirectory.Create("reach-contoso"),
-            "Contoso",
-            "Contoso.slnx",
-            patches: string.Empty,
-            baselinePatch: null);
-
-        Copy(ContosoDirectory(), copy.Path);
-        copy.CommitBaseline();
-        baseline = copy.Baseline;
-
-        var build = Run("dotnet", ["build", copy.Solution], copy.Path);
-
-        Assert.True(build.ExitCode == 0, "the fixture solution did not build:\n" + build.Output);
-
-        return copy;
-    }
-
-    internal string WriteFile(string relativePath, string contents) =>
-        _repository.WriteFile(relativePath, contents);
-
-    internal string ReadFile(string relativePath) =>
-        File.ReadAllText(System.IO.Path.Combine(Path, relativePath));
-
-    /// <summary>
-    /// Rebuilds after a change, for the assertions that need the binaries to agree.
-    /// </summary>
-    internal void Rebuild()
-    {
-        var build = Run("dotnet", ["build", Solution], Path);
-
-        Assert.True(build.ExitCode == 0, "the fixture solution did not rebuild:\n" + build.Output);
-    }
-
-    /// <summary>
-    /// Runs Reach over the copy and returns the report it wrote.
-    /// </summary>
-    internal async Task<Report> SelectAsync(string baseline, CancellationToken cancellationToken, bool paths = false)
-    {
-        var timings = new PhaseTimings();
-
-        var run = await new ReachPipeline(new ProcessRunner())
-            .SelectAsync(
-                new SelectRequest
-                {
-                    WorkingDirectory = Path,
-                    Base = baseline,
-                    NoBuild = true,
-                    Paths = paths,
-                },
-                name => null,
-                timings,
-                cancellationToken);
-
-        return ReportBuilder.Build(
-            run,
-            new SelectRequest { WorkingDirectory = Path, NoBuild = true },
-            timings);
-    }
-
     public void Dispose() => _repository.Dispose();
 
     // ---- The steps ------------------------------------------------------------------------------
@@ -314,15 +246,6 @@ internal sealed class SampleCopy : IDisposable
         Assert.True(Directory.Exists(directory), $"No sample solution at {directory}.");
 
         return directory;
-    }
-
-    private static string ContosoDirectory()
-    {
-        var fixture = RepositoryRoot.Combine("tests", "fixtures", "Contoso");
-
-        Assert.True(Directory.Exists(fixture), $"No fixture solution at {fixture}.");
-
-        return fixture;
     }
 
     /// <summary>

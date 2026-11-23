@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Reach.Reporting;
+using Reach.Tests.Acceptance.Frameworks;
 using Reach.Tests.Fixtures;
 
 namespace Reach.Tests.Acceptance;
@@ -11,15 +12,21 @@ namespace Reach.Tests.Acceptance;
 /// There is deliberately no JSON Schema file: the contract is tolerant — unknown fields ignored,
 /// selection sections optional, <c>data</c> free-form — and a schema document would have to be
 /// permissive everywhere the promise lives, then be held in sync with the code forever. A
-/// committed example that <em>is</em> the determinism fixture's output costs one file and cannot
-/// rot, because this test fails the moment it does.
+/// committed example that <em>is</em> a real run's output costs one file and cannot rot, because
+/// this test fails the moment it does.
+/// <para>
+/// The run is the Frameworks sample with row 7's patch, the same patch file
+/// <see cref="FrameworksTests"/> applies, so the example and a gate test cannot drift apart.
+/// </para>
 /// <para>
 /// When the change is intended, run the suite once with <c>REACH_UPDATE_EXAMPLE=1</c> and commit
 /// the rewritten file.
 /// </para>
 /// </remarks>
-public sealed partial class ExampleReportTests : IDisposable
+public sealed partial class ExampleReportTests
 {
+    private const string Sample = "Frameworks";
+
     private static readonly JsonSerializerOptions Readable = new()
     {
         WriteIndented = true,
@@ -28,30 +35,20 @@ public sealed partial class ExampleReportTests : IDisposable
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    private readonly SampleCopy _fixture;
-    private readonly string _baseline;
-
-    public ExampleReportTests() => _fixture = SampleCopy.Build(out _baseline);
-
     [Fact]
-    public async Task The_committed_example_is_what_the_determinism_fixture_produces()
+    public async Task The_committed_example_is_what_row_7s_patch_produces()
     {
-        var path = _fixture.ReadFile("src/Contoso.Core/Invoice.cs");
+        using var copy = SampleCopy.Create(Sample, SampleCopy.PatchFolderOf(Sample));
 
-        // A miss would leave the fixture unchanged and the report a quiet no-changes.
-        Assert.Contains("public static int Tax(int net) => net * StandardRate / Percent;", path);
+        copy.ApplyChanges([FrameworksTests.TaxChange]);
+        copy.AssertOnlyPatchedPathsChanged();
 
-        _fixture.WriteFile(
-            "src/Contoso.Core/Invoice.cs",
-            path.Replace(
-                "public static int Tax(int net) => net * StandardRate / Percent;",
-                "public static int Tax(int net) => (net * StandardRate / Percent) + 0;",
-                StringComparison.Ordinal));
+        var observation = await copy.RunTwiceAsync(TestContext.Current.CancellationToken);
 
-        _fixture.Rebuild();
+        // A build failure would make the example a report of a failed run.
+        Assert.Null(observation.BuildFailure);
 
-        var report = await _fixture.SelectAsync(_baseline, TestContext.Current.CancellationToken);
-        var actual = Stabilise(ReportWriter.Serialise(report), _fixture.Path);
+        var actual = Stabilise(ReportWriter.Serialise(observation.First.Report), copy.Path);
 
         AssertExample(actual);
     }
@@ -98,7 +95,7 @@ public sealed partial class ExampleReportTests : IDisposable
     /// <para>
     /// <strong>Pinning the version means this test cannot notice a version bump</strong>, which
     /// is the intent rather than an oversight — the example illustrates the schema, and rewriting
-    /// all 224 lines on every release would make the file churn for a field nobody reads it for.
+    /// the whole file on every release would make the file churn for a field nobody reads it for.
     /// The pin the documentation <em>does</em> have to keep current is the <c>dnx</c> line, and
     /// <c>WorkflowParityTests</c> asserts that against <c>Directory.Build.props</c>.
     /// </para>
@@ -145,6 +142,4 @@ public sealed partial class ExampleReportTests : IDisposable
 
         Assert.Equal(File.ReadAllText(path).ReplaceLineEndings("\n").TrimEnd(), actual.TrimEnd());
     }
-
-    public void Dispose() => _fixture.Dispose();
 }

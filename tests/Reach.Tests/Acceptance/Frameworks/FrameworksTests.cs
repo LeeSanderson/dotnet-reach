@@ -1,0 +1,68 @@
+namespace Reach.Tests.Acceptance.Frameworks;
+
+/// <summary>
+/// The acceptance tests over the Frameworks sample, <c>tests/samples/Frameworks/</c>: one test
+/// project per dialect, all calling the same production code.
+/// </summary>
+public sealed class FrameworksTests() : SampleTests("Frameworks")
+{
+    /// <summary>
+    /// The patch row 7 applies, and the one <c>ExampleReportTests</c> applies, so the example and
+    /// a gate test cannot drift apart.
+    /// </summary>
+    internal const string TaxChange = "tax-rounds-half-up.patch";
+
+    /// <summary>
+    /// The notices every Frameworks run carries. The harness passes the baseline commit as
+    /// <c>--base</c> and leaves its change patches uncommitted, so <c>HEAD</c> is the baseline;
+    /// and the NUnit and unrecognised projects bring their standing notices, whatever the patch.
+    /// </summary>
+    private static readonly string[] StandingNotices =
+    [
+        "baseline-resolved",
+        "baseline-is-head",
+        "nunit-filter-overmatch",
+        "whole-project-fallback",
+    ];
+
+    [Fact]
+    public async Task Each_dialect_renders_its_own_filter_and_NUnit_runs_more_than_it_selects() =>
+        await Apply(TaxChange).ExpectAsync(new()
+        {
+            Because = "Only Invoice.Tax changed: in every recognised project the test that totals "
+                + "an invoice reaches it and the one that calls Untouched does not, the "
+                + "unrecognised project runs in full, and NUnit's ~MyTest filter also matches "
+                + "MyTest2.",
+            Outcome = Outcome.Selected,
+            Selected = new()
+            {
+                ["Frameworks.Tests.MSTest"] = ["Frameworks.Tests.MSTest.InvoiceTests.Totals_include_tax"],
+                ["Frameworks.Tests.NUnit"] = ["Frameworks.Tests.NUnit.InvoiceTests.MyTest"],
+                ["Frameworks.Tests.XunitV2"] = ["Frameworks.Tests.XunitV2.InvoiceTests.Totals_include_tax"],
+                ["Frameworks.Tests.XunitV3"] = ["Frameworks.Tests.XunitV3.InvoiceTests.Totals_include_tax"],
+                ["Frameworks.Tests.XunitV3_4"] = ["Frameworks.Tests.XunitV3_4.InvoiceTests.Totals_include_tax"],
+            },
+            RunInFull = ["Frameworks.Tests.Unrecognised"],
+            WillRun = new()
+            {
+                ["Frameworks.Tests.MSTest"] = 1,
+                ["Frameworks.Tests.NUnit"] = 2,
+                ["Frameworks.Tests.XunitV2"] = 1,
+                ["Frameworks.Tests.XunitV3"] = 1,
+                ["Frameworks.Tests.XunitV3_4"] = 1,
+            },
+            Notices = [.. StandingNotices, "dialect-over-selects"],
+        });
+
+    [Fact]
+    public async Task A_project_on_an_unrecognised_framework_runs_in_full_with_an_unknown_total() =>
+        await Apply("unrecognised-check-message.patch").ExpectAsync(new()
+        {
+            Because = "Only a check in the unrecognised project changed, which no recognised "
+                + "test reaches, and that project cannot be enumerated, so it runs in full.",
+            Outcome = Outcome.Selected,
+            Selected = [],
+            RunInFull = ["Frameworks.Tests.Unrecognised"],
+            Notices = StandingNotices,
+        });
+}

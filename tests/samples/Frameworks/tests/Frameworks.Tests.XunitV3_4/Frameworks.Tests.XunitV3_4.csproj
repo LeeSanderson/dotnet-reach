@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- Microsoft.Testing.Platform enforces this with a bespoke MSBuild error. -->
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- xunit.v3 4.0.0: its own dialect, and it needs the runner setting in global.json. -->
+    <PackageReference Include="xunit.v3" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Frameworks.Core/Frameworks.Core.csproj" />
+  </ItemGroup>
+
+</Project>
