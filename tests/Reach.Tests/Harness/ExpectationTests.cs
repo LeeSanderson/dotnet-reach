@@ -346,7 +346,7 @@ public sealed class ExpectationTests
     }
 
     [Fact]
-    public void A_project_run_in_full_must_serialise_an_unknown_total()
+    public void A_project_run_in_full_never_serialises_a_total_of_zero()
     {
         var report = SelectedReport() with
         {
@@ -360,6 +360,20 @@ public sealed class ExpectationTests
             "Invariant, unknown is never zero:\n  Basics.Unrecognised: runs in full, total serialised as 0",
             message,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_project_run_in_full_may_carry_a_total_it_counted()
+    {
+        // A platform-suffixed project (row 10) is analysed, so its total is known, and only its
+        // rendering runs it in full.
+        var report = SelectedReport() with
+        {
+            Entries = [.. SelectedReport().Entries.Select(entry =>
+                entry.Mode == "run-all" ? entry with { Counts = new ReportCounts(0, 0, 4) } : entry)],
+        };
+
+        Assert.Null(Failures(Matching, report));
     }
 
     [Fact]

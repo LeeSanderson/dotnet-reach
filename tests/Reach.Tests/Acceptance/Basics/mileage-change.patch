@@ -1,0 +1,9 @@
+--- a/src/Basics.Core/Mileage.cs
++++ b/src/Basics.Core/Mileage.cs
+@@ -6,5 +6,5 @@ namespace Basics.Core;
+ /// </summary>
+ public static class Mileage
+ {
+-    public static decimal KilometresPerLitre(decimal kilometres, decimal litres) => kilometres / litres;
++    public static decimal KilometresPerLitre(decimal kilometres, decimal litres) => decimal.Round(kilometres / litres, 2);
+ }

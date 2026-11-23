@@ -27,11 +27,18 @@ row:
 | `IShippingRate`, `FlatRate`, `WeightRate`, `Shipping`, `Label`, `UpperLabel`, `BracketLabel`, `Printer` | 4: interface and virtual dispatch select every candidate |
 | `Thermometer`, `Readings` (in `Basics.Tests`) | 5: a deleted method widens its declaring type |
 | `Tally` | 6: a move to another directory, same namespace, widens the type |
+| `Greeting` | 9: a multi-targeted test project gives one entry per framework |
+| `Mileage` | 10: a platform-suffixed framework makes its project run in full |
+| `Vowels` | 11: `xunit.v3` 4.0.0 without the runner setting gets its notice |
 | `Basics.Generation.Marker`, and the generator's project file | 12: a generator change widens its consumers |
 | `Receipt` (no test reaches it) | 13: formatting only; 15: a change reaching no test; 28: a change that breaks the build |
 | `Voucher` (added by row 16's patch, so not in the sample) | 16: a new file git does not track |
 | `Basics.Tools.Housekeeping` | 29: a change outside the analysis scope |
 | this README | 14: a docs-only change |
+
+Rows 9 to 11 need a starting state that differs from the one here (two frameworks, a platform
+suffix, no `global.json`). That state is a baseline patch beside the row's change patch, so no
+other row pays for it.
 
 ## Gap-shaped members
 

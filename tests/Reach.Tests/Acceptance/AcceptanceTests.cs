@@ -85,40 +85,6 @@ public sealed class AcceptanceTests : IDisposable
         Assert.Contains(report.Notices, notice => notice.Code == NoticeCodes.WholeProjectFallback);
     }
 
-    // ---- Determinism and the exact selection now live in Basics/BasicsTests and Expect ------------
-
-    [Fact]
-    public async Task A_multi_targeted_project_contributes_an_entry_per_framework()
-    {
-        Touch("src/Contoso.Core/Invoice.cs", "=> net + Tax(net);", "=> net + Tax(net) + 0;");
-
-        var report = await _fixture.SelectAsync(_baseline, Token);
-
-        // Contoso.Core is net8.0;net10.0, so discovery resolved two assembly instances for it.
-        Assert.Equal(
-            ["net10.0", "net8.0"],
-            report.Scope.Assemblies
-                .Where(assembly => assembly.Name == "Contoso.Core")
-                .Select(assembly => assembly.TargetFramework)
-                .Order(StringComparer.Ordinal));
-    }
-
-    [Fact]
-    public async Task A_project_on_a_framework_needing_the_runner_setting_says_so()
-    {
-        Touch("src/Contoso.Core/Invoice.cs", "=> net + Tax(net);", "=> net + Tax(net) + 0;");
-
-        var report = await _fixture.SelectAsync(_baseline, Token);
-
-        // The fixture has no global.json, and its xUnit project is on xunit.v3 4.0.0 — where
-        // `dotnet test` is a hard build error whose message names nothing Reach-shaped. Reach
-        // still emits the invocations: the rendering is correct, the repository is not.
-        var notice = Assert.Single(report.Notices, n => n.Code == NoticeCodes.TestRunnerNotConfigured);
-
-        Assert.Contains("Microsoft.Testing.Platform", notice.Message);
-        Assert.NotEmpty(EntryFor(report, "Contoso.Tests.Xunit").Invocations);
-    }
-
     /// <summary>
     /// Applies a change and rebuilds. The rebuild is not optional: editing source under
     /// --no-build is a correspondence failure by design, which is a different assertion from

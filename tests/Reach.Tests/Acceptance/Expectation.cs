@@ -270,8 +270,14 @@ internal static class Expectation
     ];
 
     /// <summary>
-    /// Read from the serialised report, because the claim is about what a consumer reads.
+    /// A total Reach could not count serialises as <c>"unknown"</c>, and a project run in full
+    /// never serialises a total of <c>0</c>, which is how an unknown total would read if it
+    /// leaked. Read from the serialised report, because the claim is about what a consumer reads.
     /// </summary>
+    /// <remarks>
+    /// A project run in full may still have a known total: one whose framework selector is
+    /// underivable (row 10) is analysed like any other and only rendered project-wide.
+    /// </remarks>
     private static List<string> UnknownIsNeverZero(Report report, EntryKeys keys)
     {
         var entries = JsonNode.Parse(ReportWriter.Serialise(report))!["entries"]!.AsArray();
@@ -279,22 +285,28 @@ internal static class Expectation
 
         for (var index = 0; index < entries.Count; index++)
         {
-            var entry = entries[index]!;
-
-            if (entry["mode"]!.GetValue<string>() != RunAll)
+            if (TotalDifference(report.Entries[index], entries[index]!["counts"]!["total"]!) is { } difference)
             {
-                continue;
-            }
-
-            var total = entry["counts"]!["total"]!;
-
-            if (total.GetValueKind() != System.Text.Json.JsonValueKind.String || total.GetValue<string>() != "unknown")
-            {
-                differences.Add($"{keys.KeyOf(report.Entries[index])}: runs in full, total serialised as {total.ToJsonString()}");
+                differences.Add($"{keys.KeyOf(report.Entries[index])}: {difference}");
             }
         }
 
         return differences;
+    }
+
+    private static string? TotalDifference(ReportEntry entry, JsonNode total)
+    {
+        if (total.GetValueKind() == System.Text.Json.JsonValueKind.String && total.GetValue<string>() == "unknown")
+        {
+            return null;
+        }
+
+        return (entry.Counts.Total, entry.Mode) switch
+        {
+            (null, _) => $"total not counted, serialised as {total.ToJsonString()}",
+            (0, RunAll) => "runs in full, total serialised as 0",
+            _ => null,
+        };
     }
 
     private static string Number(int value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);

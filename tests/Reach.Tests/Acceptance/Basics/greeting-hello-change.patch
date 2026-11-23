@@ -1,0 +1,11 @@
+--- a/src/Basics.Core/Greeting.cs
++++ b/src/Basics.Core/Greeting.cs
+@@ -6,7 +6,7 @@ namespace Basics.Core;
+ /// </summary>
+ public static class Greeting
+ {
+-    public static string Hello(string name) => "Hello, " + name;
++    public static string Hello(string name) => "Hello, " + name.Trim();
+ 
+     public static string Goodbye(string name) => "Goodbye, " + name;
+ }

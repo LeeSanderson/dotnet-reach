@@ -1,6 +1,6 @@
 # Basics: starting-state variants
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 03
 Spec: [§3.3](../../acceptance-layer/spec.md#33-baseline-patches), [§7.1](../../acceptance-layer/spec.md#71-release-gate-small-samples) rows 9–11, [§8.1](../../acceptance-layer/spec.md#81-where-each-test-goes)
 
@@ -43,3 +43,35 @@ Write each baseline patch with `patch.cs save`, and each change patch with `save
 ## Out of scope
 
 Removing `Contoso.Core`'s multi-targeting (ticket 12).
+
+## Comments
+
+- **Done.** Rows 9-11 in `Acceptance/Basics/BasicsTests.cs`, each a baseline patch plus a change
+  patch, all saved with `patch.cs` (`save`, then `apply` the baseline and `save --on` it):
+  `multi-targeted` + `greeting-hello-change` (row 9), `platform-suffixed` + `mileage-change`
+  (row 10), `no-global-json` + `vowels-change` (row 11). Each row has its own type and test class:
+  `Greeting`, `Mileage`, `Vowels` (README table updated; the four new sample tests are in
+  `EveryBasicsTest`). Every other Basics test stays single `net10.0`; the variants exist only in the
+  baseline patches. The generator project (ticket 07) is not on this branch, so nothing else was
+  retargeted. The baseline patches touch only the two `.csproj` files, so they should merge with it
+  unchanged.
+- Deleted `A_multi_targeted_project_contributes_an_entry_per_framework` and
+  `A_project_on_a_framework_needing_the_runner_setting_says_so` from `AcceptanceTests.cs`.
+- **Checked by hand once** (a temporary dump of the report, since removed):
+  - Row 9: two entries, each with one invocation carrying the matching `-f net8.0` / `-f net10.0`.
+    `WillRun` is 1 on each, which shows nothing `Selected` does not, so it is not given.
+  - Row 10: both entries `run-all`, keys `Basics.Tests@net10.0` and `Basics.Tests@net10.0-windows`.
+    The first carries the one project-wide invocation with no `-f`; the second has none. The
+    selected test is still listed on both, and `total` is **known (24)**, with `willRun` 24.
+  - Row 11: removing `global.json` changes only the notice: same selection, same invocation shape.
+    `global.json` holds nothing else, as spec §2.2 requires.
+- **Harness change (owner-approved): "unknown is never zero" narrowed to spec §4.4's intent.**
+  Row 10 fails the literal check (every `run-all` entry must serialise `"unknown"`), because a
+  platform-suffixed project is analysed and only rendered project-wide, so its total is known. The
+  invariant now fails when an uncounted total (`Total` null) serialises as anything but
+  `"unknown"`, or a `run-all` entry serialises a total of `0`. `ExpectationTests` renames the zero
+  case and adds one where a run-in-full project carries a counted total.
+- **Full suite:** 656 passed, 0 failed (Windows, Debug).
+- No Reach-vs-spec findings: all three rows matched the hand-written expectations on the first run.
+- The worktree had no Husky.Net hooks installed; `dotnet tool restore` and `dotnet husky install`
+  fixed the pre-commit hook. Linux not run locally.
