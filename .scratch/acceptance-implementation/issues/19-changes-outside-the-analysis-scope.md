@@ -1,6 +1,6 @@
 # Changes outside the analysis scope
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 07
 Spec: [§7.4](../../acceptance-layer/spec.md#74-rows-added-by-this-spec) row 29
 
@@ -45,3 +45,28 @@ selection is never emitted without a reason list. The analysis scope is defined 
 - A run that mixes an out-of-scope change with an in-scope change that reaches nothing keeps
   `no-changed-member-reached-a-test`, and a test proves it.
 - The full suite is green, and the Release `-warnaserror` build and format check are clean.
+
+## Comments
+
+- **Done.** A change whose file no in-scope project contains (nearest-ancestor containment, now
+  one method, `AnalysisScope.ProjectContaining`, which `TierLadder` and `ChangedSetBuilder` share)
+  keeps its entry in `changes`, with its tier and `testsReached: 0`, but its `reason` says it is
+  outside the analysis scope and `ChangeEntry.OutsideAnalysisScope` is set. This covers unjoined
+  members and type and assembly widenings (`RootSets`, three entry constructions wrapped; roots
+  untouched, so no selection changes). `ReportBuilder.Reasons` gives
+  `all-changes-outside-analysis-scope` when every change is so marked. Unit tests in
+  `Reporting/ReportTests` (all outside; mixed with an in-scope change reaching nothing keeps
+  `no-changed-member-reached-a-test`). Row 29 now asserts the new reason. `docs/report-schema.md`
+  updated (the index rows and the `changes` section). Full suite 674/674, Release `-warnaserror`
+  and format clean.
+- **Not classified, deliberately:** an unmappable path. A file in no project (a README) keeps its
+  `unmapped-file-no-project` category, so row 14 is unchanged. A project file of an out-of-scope
+  project (`Basics.Tools.csproj`) routes by rule 1 to no project and still gets
+  `changes-were-formatting-only`, which is wrong in the way ticket 07 noted for that reason.
+- **Finding (Reach, possible under-selection): `RootSets.ProjectFor` is relative to the common
+  root of the in-scope projects, not the repository root.** Changed paths are repository-relative,
+  so when every in-scope project sits below one directory (all under `src/`, say), an unjoined
+  in-scope member matches no project and roots nothing, and recompilation widening finds no
+  declaring project. With a single in-scope project the opposite: every path matches it. Not
+  fixed here, because fixing it changes selection. The scope classification uses the correct
+  containment instead.

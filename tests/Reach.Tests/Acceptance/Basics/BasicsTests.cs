@@ -282,13 +282,13 @@ public sealed class BasicsTests() : SampleTests("Basics")
     public async Task A_change_only_to_a_project_no_test_reaches_selects_nothing() =>
         await Apply("tools-only-change.patch").ExpectAsync(new()
         {
-            Because = "Only Basics.Tools changed, and no test project references it, so its changed member is "
-                + "listed as reaching no test.",
+            Because = "Only Basics.Tools changed, and no test project references it, so the change is outside "
+                + "the analysis scope: listed, reaching no test, and the reason says why.",
             Outcome = Outcome.NothingSelected,
             Selected = [],
             RunInFull = [],
             Notices = EveryRunNotices,
-            Reasons = ["no-changed-member-reached-a-test"],
+            Reasons = ["all-changes-outside-analysis-scope"],
             Changes = new() { ["Basics.Tools.Housekeeping.DaysToKeep(int)"] = 0 },
         });
 
