@@ -30,6 +30,7 @@ regression nobody sees.
 | parse `report.json`, or understand a selection you do not believe | [The report schema](docs/report-schema.md) |
 | know what Reach cannot do, and which way each gap fails | [The limitations register](docs/limitations.md) |
 | know why Reach exists and where it is going — background, not a manual | [PRD.md](PRD.md) |
+| build Reach, or run its tests | [Contributing](CONTRIBUTING.md) |
 
 The command line documents itself: `dnx dotnet-reach@0.1.0-alpha.1 select --help`.
 
