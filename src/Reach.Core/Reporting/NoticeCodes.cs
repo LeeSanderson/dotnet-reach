@@ -84,8 +84,9 @@ internal static class NoticeCodes
     internal const string AllChangesOutsideAnalysisScope = "all-changes-outside-analysis-scope";
 
     /// <summary>
-    /// Paths changed, but nothing inside them did: comments, whitespace, or a declaration whose
-    /// canonical form is unchanged.
+    /// Paths changed, but no member did, and nothing they widened reached a test: a README, say.
+    /// Despite the name, a formatting-only C# edit never gets here; its changed set is empty, so
+    /// the outcome is <c>no-changes</c>.
     /// </summary>
     internal const string ChangesWereFormattingOnly = "changes-were-formatting-only";
 

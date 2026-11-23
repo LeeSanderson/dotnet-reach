@@ -84,3 +84,102 @@ anything else to the owner.
   incremental-build claim.
 - Ticket 09's release-gate filter, for step 4:
   `-- --filter-namespace "Reach.Tests.Acceptance*" --filter-not-trait "Batch=known-gap"`.
+
+**Orchestrator's adjustments (2026-11-23)**, recorded as given:
+
+- "Both CI legs green on `main`" becomes green on PR #2's branch, `acceptance-layer`. The PR merges
+  to `main` only after review. CI runs only when the orchestrator pushes, so the run below is for
+  the branch's head when this ticket started, not for this ticket's commits.
+- The dogfood workflow's `dnx: command not found` is to be fixed here, in the workflow and the
+  documented recipe together.
+- Two owner calls are prepared, not made: row 18, and a `Directory.Build.props` inside a
+  generator's directory. Every other finding is resolved by correcting the spec or the docs.
+- `readme-only.patch` is re-saved.
+
+**Done.** What changed:
+
+1. **§9.2 filled in.** Every "ticket NN" is replaced by a real test (file and method). A new
+   rows-to-tests table names each row's test. The rows for cut claims (`calli-unresolved`,
+   `packageVersion`, reserved `data` keys) are gone. 183 test references in §9.2 were checked
+   against the test sources by script; every one exists.
+2. **Docs walked again.** Claims found in no row, now added with their tests: everything
+   `select --help` says (a new `select --help` block: target discovery, `--base` auto-detection,
+   `--report -`, the `.reach` default, `--no-build`, `NO_COLOR`); `-c`/`-v`/`--no-color` in
+   `adopting-reach.md`; the outside-the-scope `changes` paragraph in the schema. New cited facts
+   carry their source: `dnx` on `PATH`, Git and modification times, MSBuild incremental builds, and
+   the VSTest/MTP refusal. No unproven claim was found, and no claim was cut or added beyond the
+   decisions below.
+3. **Findings resolved:**
+   - **Rows 13 and 14 (ticket 07) and the out-of-scope `.csproj` (ticket 19): docs and spec
+     corrected to Reach.** Spec §7.1 rows 13 and 14 now say what Reach does (formatting-only C# is
+     `no-changes`; README-only is `nothing-selected` with `unmapped-file-no-project` and
+     `changes-were-formatting-only`), with a note. `docs/report-schema.md`'s "different news"
+     paragraph no longer calls a docs-only PR `no-changes`, and the index row for
+     `changes-were-formatting-only` says what fires it (no member changed) and that its name
+     misleads. The doc comments on `NoticeCodes.ChangesWereFormattingOnly` and
+     `ReportBuilder.OutcomeOf` say the same. Comments only; Reach's behaviour and output are
+     unchanged. Not changed, because it is Reach's output: the human summary's `no-changes` line
+     ("Nothing in this working tree differs from the baseline") is not quite true for a
+     formatting-only edit. Worth a later wording fix in Reach.
+   - **Row 22, a changed field (ticket 10): registered.** No doc said it. `docs/limitations.md`
+     has a new over-selection entry, "A changed declaration with no compiled body widens its whole
+     assembly" (a field with no initialiser, a `const`, abstract, `extern`, bodiless `partial`).
+     Spec §7.2 notes it under row 22.
+   - **Frameworks has seven projects (ticket 12):** spec §8.2 corrected.
+   - **§3.5's drift routine (ticket 03):** reworded. `apply` cannot merge a stripped patch; drift
+     git can't absorb is redone by hand, then `save --force`. §3.4's `apply` line says the same.
+   - **`ExpectAsync` and the two standing notices (ticket 02):** §4.2 shows `ExpectAsync` and says
+     why; §4.3 says every report carries `baseline-resolved` and `baseline-is-head`.
+   - **"Unknown is never zero" (ticket 08, owner-approved):** §4.4 now states the narrowed
+     invariant.
+   - **Generator detection markers (ticket 18):** `docs/limitations.md` corrected. Only the
+     `Analyzer` project-reference marker is read; `IsRoslynComponent` and
+     `EnforceExtendedAnalyzerRules` are not.
+   - **Two uncited claims (ticket 05):** both now cited (the Git FAQ; MSBuild's incremental-builds
+     page), not cut.
+   - **VSTest under an MTP `global.json` (ticket 12, owner decision):** a new Environment entry in
+     `docs/limitations.md` ("Detectable: no"), and a short section in `docs/adopting-reach.md`
+     under the exit codes. Reach unchanged.
+   - Rows 5, 12 and 29: fixed in Reach by tickets 17, 18 and 19 (owner decisions above). Their
+     notes in spec §7 say so.
+4. **Dogfood fix.** `dnx` is a script the .NET SDK installer puts on `PATH`, from .NET 10. The
+   hosted image's preinstalled SDK has `dotnet` on `PATH` but not `dnx` (the failing runs show
+   `dnx: command not found` after a successful build). Both `dogfood.yml` and the documented recipe
+   gain an `actions/setup-dotnet@v5` step with `dotnet-version: 10.0.x`, which installs the SDK
+   and puts its directory on `PATH`. `WorkflowParityTests` passes with the two still
+   byte-identical. Not checked on a runner, because CI runs only when the orchestrator pushes. The
+   workflow will still fail before `0.1.0-alpha.1` is published, now at the package lookup. That is
+   expected (spec §9.2) and does not block publishing. **The recipe's shell-loop claim is proven
+   only once dogfood runs against the published package.**
+5. **`readme-only.patch` re-saved** with `apply` then `save --force` (the hunk header moved from
+   `-32` to `-51`, where the README now has it). Row 14 unchanged.
+
+**Local checks (Windows, Release):** `Reach.slnx` builds with `-warnaserror` (0 warnings) and
+`dotnet format --verify-no-changes` is clean. Full suite: 687 passed, 0 failed. Release-gate run
+(ticket 09's filter, every acceptance test except `Batch=known-gap`): 27 passed, 0 failed. That
+is the 25 gate rows, `ExampleReportTests` and `ReachDirectorySurvivalTests`, with the four
+known gaps left out.
+
+**CI** (the latest run, for `5164600`, the `acceptance-layer` head this ticket branched from):
+<https://github.com/LeeSanderson/dotnet-reach/actions/runs/45236183344>, both legs
+(`ubuntu-latest`, `windows-latest`) green. The same push's dogfood run failed with
+`dnx: command not found`, which this ticket fixes.
+
+**Open for the owner.** Status stays `ready-for-human` until these two are decided:
+
+- **Row 18 selects `Ledger.Dunning.Tests.ReminderSenderTests`, which spec §7.2 says it must not.**
+  Api is widened whole, and the reverse walk from `WebhookChannel.Send` reaches Dunning through
+  `ReminderSender`'s `IReminderChannel.Send` call (row 26's gap shape). Choices: (a) reshape
+  Ledger so `Ledger.Api` holds no `IReminderChannel` implementer, for example by moving
+  `WebhookChannel` into a project of its own that Api's tests still use, so row 26 still holds; (b) amend §7.2 row 18 to
+  include `ReminderSenderTests`, saying why. **Recommendation: (a).** Row 18's point is what is
+  *not* selected, and standing rule 4 says no row's patch reaches another row's gap shape. (b)
+  makes the gate claim depend on a known gap. (a) is a sample change, and Reach stays unchanged.
+- **A `Directory.Build.props` inside a generator's directory widens only the generator, so it
+  selects nothing.** It is the same under-selection shape as the old row 12. Choices: (a) fix Reach,
+  so rule 2 routes a props file inside a generator to its consumers, as ticket 18 did for every
+  other file; (b) add a limitations entry and leave Reach as it is for the alpha. **Recommendation:
+  (a)**, as a small follow-up ticket like 18. It is under-selection, which the owner has fixed each
+  time so far (rows 5, 12, 29). If the alpha must not wait, take (b) now and (a) after it.
+  `docs/limitations.md`'s generator entry says "whatever changed in it" and stays as it is until
+  this is decided.

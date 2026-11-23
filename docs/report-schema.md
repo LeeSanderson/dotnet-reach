@@ -49,8 +49,12 @@ error (exit 1), whose arguments were never valid enough to establish where to wr
 | `notices` | one global array, with locators in `data` |
 
 **`no-changes` and `nothing-selected` are different news.** They exit the same and mean opposite
-things: a docs-only pull request, against code changes that reached no test — which is either a
-coverage gap or a bug in Reach.
+things. `no-changes` means the change set is empty: nothing changed, or the only edits were
+formatting and comments inside C# source, which leave every declaration as it was.
+`nothing-selected` means something changed and no test could reach it, and `reasons` says which
+kind of change it was. A code change that reached no test is either a coverage gap or a bug in
+Reach. A change only to files that hold no code, such as a README, is `nothing-selected` too, not
+`no-changes`.
 
 On `no-changes` the full project list is still emitted, every entry `skip` with zero
 invocations, so your loop behaves identically across all four outcomes.
@@ -313,7 +317,7 @@ not holes are documented in full here.
 | `untracked-source-files` | C# files git has never seen entered the changed set: intentional codegen, or a forgotten `git add` | `paths` |
 | `no-changed-member-reached-a-test` | there were changes, not every one of them outside the analysis scope, and no test could reach any of them | — |
 | `all-changes-outside-analysis-scope` | every change was to C# source that no in-scope project contains, such as code in a project no test project references, which no test process can execute. Each is still listed in `changes`, with `testsReached: 0` and a `reason` saying it is outside the analysis scope | — |
-| `changes-were-formatting-only` | paths changed, but nothing inside them did | — |
+| `changes-were-formatting-only` | paths changed, but no member did, and nothing the changed paths widened reached a test. **Despite its name, it is not about formatting**: a formatting-only C# edit gives `no-changes` instead. It fires whenever no member changed, such as on a change only to a README | — |
 
 The last three appear in `reasons` rather than in `notices`.
 
