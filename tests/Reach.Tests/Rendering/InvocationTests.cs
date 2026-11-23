@@ -244,6 +244,9 @@ public class InvocationTests
         // In the directory Reach owns — never a path MSBuild or Visual Studio reads by
         // convention, and never the system temp directory.
         Assert.StartsWith(ReachDirectory.For(directory.Path, null).Path, responseFile[1..]);
+
+        // A filter that is not on the command line is one a reader of the argv cannot see.
+        Assert.Contains(rendered.Notices, notice => notice.Code == "selection-delivered-out-of-band");
     }
 
     [Fact]
@@ -270,6 +273,8 @@ public class InvocationTests
         Assert.All(
             entry.Invocations,
             invocation => Assert.NotEmpty(invocation[(invocation.ToList().IndexOf("--filter") + 1)]));
+
+        Assert.Contains(rendered.Notices, notice => notice.Code == "selection-delivered-out-of-band");
     }
 
     [Fact]
