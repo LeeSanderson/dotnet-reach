@@ -1,5 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Reach.Projects;
+using Reach.Reporting;
 
 namespace Reach.Changes;
 
@@ -64,7 +66,6 @@ internal static class ParseHealthCheck
 
         var value = declared.Trim();
 
-
         // `preview`, `latest` and `default` are all at or below the ceiling by construction.
         if (!decimal.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out _))
         {
@@ -73,5 +74,35 @@ internal static class ParseHealthCheck
 
         return !LanguageVersionFacts.TryParse(value, out var parsed)
             || parsed > LanguageVersionFacts.MapSpecifiedToEffectiveVersion(ParserCeiling);
+    }
+
+    /// <summary>
+    /// The <c>langversion-above-ceiling</c> notice for every project whose declared
+    /// <c>LangVersion</c> exceeds the ceiling, or <c>null</c> when none does.
+    /// </summary>
+    /// <remarks>
+    /// Reported, <strong>not</strong> widened — see <see cref="ExceedsCeiling"/>. Nothing about
+    /// selection reads this.
+    /// </remarks>
+    internal static Notice? AboveCeilingNotice(IEnumerable<ProjectFile> projects)
+    {
+        var above = projects
+            .Where(project => ExceedsCeiling(project.LangVersion))
+            .OrderBy(project => project.Path, StringComparer.Ordinal)
+            .ToArray();
+
+        if (above.Length == 0)
+        {
+            return null;
+        }
+
+        var named = above.Select(project => $"{project.Name} (LangVersion {project.LangVersion})");
+
+        return Notice.Environment(
+            NoticeCodes.LangVersionAboveCeiling,
+            $"{above.Length} project(s) declare a language version above what Reach's parser "
+            + $"understands: {string.Join(", ", named)}. Newer syntax can misparse without any "
+            + "diagnostic, so a change inside it may be missed. Reported only; nothing was widened.",
+            ("projects", above.Select(project => project.Path).ToArray()));
     }
 }

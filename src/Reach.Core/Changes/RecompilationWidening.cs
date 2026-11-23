@@ -1,4 +1,5 @@
 using Reach.Projects;
+using Reach.Reporting;
 using static Reach.Buckets;
 
 namespace Reach.Changes;
@@ -47,7 +48,25 @@ internal static class RecompilationWidening
     internal sealed record Widened(
         ChangedMember Trigger,
         string Reason,
-        IReadOnlyList<ProjectFile> Consumers);
+        IReadOnlyList<ProjectFile> Consumers)
+    {
+        /// <summary>
+        /// The <c>recompilation-widening</c> notice for this one change. One per triggering
+        /// change rather than one per run, because each names what caused its blast radius.
+        /// </summary>
+        internal Notice ToNotice() =>
+            new(
+                NoticeCodes.RecompilationWidening,
+                NoticeKind.Widening,
+                $"{Trigger} widened every in-scope project that transitively references its "
+                + $"declaring project ({string.Join(", ", Consumers.Select(project => project.Name))}), "
+                + $"because {Reason}.",
+                new Dictionary<string, object?>(StringComparer.Ordinal)
+                {
+                    ["members"] = new[] { Trigger.ToString() },
+                    ["projects"] = Consumers.Select(project => project.Path).ToArray(),
+                });
+    }
 
     /// <summary>
     /// The consumers of every changed member that triggers. Only two things do: a removed

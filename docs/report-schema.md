@@ -262,7 +262,7 @@ not holes are documented in full here.
 | `dialect-over-selects` | names the extras when the count is non-zero. `data.projects` |
 | `runsettings-filter-conflict` | the supplied runsettings already filters, so the project runs in full. [Register](limitations.md#a-callers-testcasefilter-downgrades-widening-to-whole-project-selection) |
 | `framework-selector-underivable` | a multi-targeted project's moniker cannot be recovered, so it runs in full. [Register](limitations.md#a-platform-suffixed-target-framework-downgrades-its-project-to-whole-project-selection) |
-| `recompilation-widening` | a removal or a changed compile-time constant widened every transitive referencer. [Register](limitations.md#recompilation-widenings-blast-radius) |
+| `recompilation-widening` | a removal or a changed compile-time constant widened every transitive referencer. One per triggering change, naming it in `data.members` and the widened projects in `data.projects`. [Register](limitations.md#recompilation-widenings-blast-radius) |
 
 ### `scope` — where a change landed
 
@@ -283,7 +283,7 @@ The last three appear in `reasons` rather than in `notices`.
 | `baseline-resolved` | how the baseline was arrived at, and what it resolved to | `sha`, `reference`, `origin`, `variable` |
 | `baseline-is-head` | the baseline is `HEAD`, so only uncommitted work can appear as a change | `sha` |
 | `baseline-unresolvable` | no baseline could be found; the message prints the line to add | `problem` |
-| `langversion-above-ceiling` | a project declares a language version above what Reach's parser understands. Reported, **not** widened | — |
+| `langversion-above-ceiling` | a project declares a language version above what Reach's parser understands. Reported, **not** widened | `projects` |
 | `selection-delivered-out-of-band` | the selection exceeded the command-line ceiling, so it went through a response file or several invocations | — |
 | `test-runner-not-configured` | a project needs the Microsoft.Testing.Platform runner setting and `global.json` does not have it, so every command Reach emitted is unrunnable. The rendering is correct; the repository is not | `projects` |
 

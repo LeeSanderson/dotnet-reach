@@ -1,3 +1,4 @@
+using Reach.Changes;
 using Reach.Reporting;
 
 namespace Reach.Projects;
@@ -46,6 +47,11 @@ internal static class AnalysisScopeResolver
         }
 
         var projects = Union(graph, testProjects);
+
+        if (ParseHealthCheck.AboveCeilingNotice(projects) is { } aboveCeiling)
+        {
+            notices.Add(aboveCeiling);
+        }
 
         return new AnalysisScopeResult(
             new AnalysisScope(projects, Sorted(testProjects), Expected(graph, projects, testProjects)),

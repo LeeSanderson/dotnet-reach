@@ -25,7 +25,7 @@ internal static class Selector
         var notices = new List<Notice>();
         var ladder = new TierLadder(scope, repositoryRoot);
         var roots = new RootSets(graph.Assemblies);
-        var changes = roots.ChangesFrom(changed, joined, scope, ladder);
+        var changes = roots.ChangesFrom(changed, joined, scope, ladder, notices);
 
         if (TierLadder.UnattributedNotice(ladder.RouteAll(changed.UnmappablePaths)) is { } unattributed)
         {

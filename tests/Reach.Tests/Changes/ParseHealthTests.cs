@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Reach.Changes;
+using Reach.Projects;
 using Reach.Reporting;
 using Reach.Tests.Fixtures;
 
@@ -76,6 +77,44 @@ public class ParseHealthTests
         // usually is not present.
         Assert.True(ParseHealthCheck.ExceedsCeiling("99.0"));
         Assert.Equal("langversion-above-ceiling", NoticeCodes.LangVersionAboveCeiling);
+    }
+
+    [Fact]
+    public void A_project_declaring_a_language_version_above_the_ceiling_raises_an_environment_notice()
+    {
+        var modern = new ProjectFile(Paths.Normalise("/repo/src/Modern/Modern.csproj"), "Modern", ["net10.0"], [], [])
+        {
+            LangVersion = "99.0",
+        };
+
+        var ordinary = new ProjectFile(Paths.Normalise("/repo/src/Core/Core.csproj"), "Core", ["net10.0"], [], [])
+        {
+            LangVersion = "latest",
+        };
+
+        var notice = ParseHealthCheck.AboveCeilingNotice([ordinary, modern]);
+
+        Assert.NotNull(notice);
+        Assert.Equal("langversion-above-ceiling", notice.Code);
+
+        // An environment fact, not a widening: nothing about selection changes.
+        Assert.Equal(NoticeKind.Environment, notice.Kind);
+        Assert.Equal(new[] { modern.Path }, notice.Data!["projects"]);
+        Assert.Contains("Modern", notice.Message, StringComparison.Ordinal);
+        Assert.Contains("99.0", notice.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void No_project_above_the_ceiling_raises_no_notice()
+    {
+        var core = new ProjectFile(Paths.Normalise("/repo/src/Core/Core.csproj"), "Core", ["net10.0"], [], [])
+        {
+            LangVersion = "13.0",
+        };
+
+        var undeclared = new ProjectFile(Paths.Normalise("/repo/src/App/App.csproj"), "App", ["net10.0"], [], []);
+
+        Assert.Null(ParseHealthCheck.AboveCeilingNotice([core, undeclared]));
     }
 
     [Fact]

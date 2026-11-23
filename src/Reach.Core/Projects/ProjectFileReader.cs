@@ -32,7 +32,10 @@ internal static class ProjectFileReader
             AssemblyNameOf(full, project, inherited),
             TargetFrameworksOf(project, inherited),
             ReferencesOf(project, directory),
-            [.. PackageIdsOf(project), .. PackageIdsOf(inherited)]);
+            [.. PackageIdsOf(project), .. PackageIdsOf(inherited)])
+        {
+            LangVersion = Property(project, "LangVersion") ?? Property(inherited, "LangVersion"),
+        };
     }
 
     private static XElement? Load(string path)
