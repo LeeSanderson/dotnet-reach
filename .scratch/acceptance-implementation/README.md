@@ -55,6 +55,15 @@ parallel with it.
 | 15 | [Parity tests: the notice index, the walk-through and the help](issues/15-parity-tests.md) | 04, 05, 12 |
 | 16 | [The gate audit](issues/16-the-gate-audit.md) | all |
 
+**Stage E: Reach fixes found during implementation.** Added on 2026-11-23 after the owner decided
+to fix Reach rather than pin what it did. Ticket 16 depends on them.
+
+| # | Ticket | Depends on |
+|---|---|---|
+| 17 | [A deleted member widens only its declaring type](issues/17-a-deleted-member-widens-only-its-type.md) | 06 |
+| 18 | [A generator source change widens its consumers](issues/18-a-generator-source-change-widens-its-consumers.md) | 07, 17 |
+| 19 | [Changes outside the analysis scope](issues/19-changes-outside-the-analysis-scope.md) | 07 |
+
 ## One hard ordering constraint
 
 **No old acceptance test is deleted before its replacement lands** (spec §1.3). Each ticket that

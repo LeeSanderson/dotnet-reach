@@ -1,7 +1,7 @@
 # The gate audit
 
 Status: ready-for-agent
-Depends on: 01–15
+Depends on: 01–15, 17, 18, 19
 Spec: [§9](../../acceptance-layer/spec.md#9-the-release-gate)
 
 ## Goal
@@ -39,3 +39,41 @@ is unblocked.
 ## Out of scope
 
 Publishing itself (`m1-implementation` ticket 21, `ready-for-human`).
+
+## Comments
+
+**Owner decisions already taken (2026-11-23)**, from findings raised while implementing. Record
+them, don't re-ask:
+
+- **Row 12, a generator `.cs` edit selects nothing:** fix Reach, in [ticket 18](18-a-generator-source-change-widens-its-consumers.md).
+- **Row 29, `all-changes-outside-analysis-scope` can't fire:** fix Reach, in [ticket 19](19-changes-outside-the-analysis-scope.md).
+- **Row 5, a deleted member widens its whole assembly:** fix Reach, in [ticket 17](17-a-deleted-member-widens-only-its-type.md).
+- **VSTest projects under a `global.json` that selects Microsoft.Testing.Platform** (found by
+  ticket 12): the SDK refuses `dotnet test` on them, and Reach emits those commands with no notice.
+  Decision: **a limitations entry**, not a notice. Add it to `docs/limitations.md` and mention it in
+  `docs/adopting-reach.md`. Reach is unchanged for the alpha. Do this in this ticket.
+- **The "unknown is never zero" invariant** was narrowed to its intent by ticket 08, with owner
+  approval. Make spec §4.4 match.
+
+**Findings collected for step 3**. Each needs the docs, the spec or Reach brought into line, and the
+outcome recorded here. Where only the spec or docs need to change, change them and record that. Bring
+anything else to the owner.
+
+- Ticket 07, rows 13 and 14: a formatting-only change gives `no-changes`, while a README-only change
+  gives `nothing-selected` with the reason `changes-were-formatting-only`. The docs and spec have
+  these the other way round, and the reason's name misdescribes when it fires.
+- Ticket 11, row 18: it also selects Dunning's `ReminderSenderTests`, through Api's whole-assembly
+  widening and `IReminderChannel.Send`. That contradicts spec §7.2 and breaks standing rule 4.
+  Reshape Ledger, or amend the spec.
+- Ticket 10, row 22: a changed field is routed `whole-assembly`, because a field has no method to
+  join. Check that the docs say so.
+- Ticket 12: Frameworks has seven projects, not the eight spec §8.2 says.
+- Ticket 03: spec §3.5's drift routine ("apply --3way, resolve, save --force") can't work, because
+  a stripped patch has no `index` lines to merge from. The tool says to redo the change by hand.
+  Reword §3.5.
+- Ticket 02: the API is `ExpectAsync`, not `Expect`. Every report carries `baseline-resolved` and
+  `baseline-is-head`. Make the spec match.
+- Ticket 05: two claims are still uncited: "Git does not preserve timestamps", and MSBuild's
+  incremental-build claim.
+- Ticket 09's release-gate filter, for step 4:
+  `-- --filter-namespace "Reach.Tests.Acceptance*" --filter-not-trait "Batch=known-gap"`.
