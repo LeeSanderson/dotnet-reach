@@ -1,8 +1,8 @@
 namespace Basics.Core;
 
 /// <summary>
-/// Row 5's subject: a method no test calls is deleted, which widens the whole type. Only
-/// row 5's patch touches it.
+/// Row 5: the conversions its tests check. Row 5's patch deletes a method of the tests' own
+/// <c>Readings</c> helper, not of this type.
 /// </summary>
 public static class Thermometer
 {
@@ -13,6 +13,4 @@ public static class Thermometer
     public static decimal ToFahrenheit(decimal celsius) => (celsius * FahrenheitPerCelsius) + FahrenheitOffset;
 
     public static decimal ToKelvin(decimal celsius) => celsius + KelvinOffset;
-
-    public static decimal ToRankine(decimal celsius) => ToKelvin(celsius) * FahrenheitPerCelsius;
 }
