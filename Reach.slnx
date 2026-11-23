@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/samples/">
     <Project Path="tests/samples/Basics/src/Basics.Core/Basics.Core.csproj" />
+    <Project Path="tests/samples/Basics/src/Basics.Generator/Basics.Generator.csproj" />
+    <Project Path="tests/samples/Basics/src/Basics.Tools/Basics.Tools.csproj" />
     <Project Path="tests/samples/Basics/tests/Basics.Tests/Basics.Tests.csproj" />
     <Project Path="tests/fixtures/Contoso/src/Contoso.Core/Contoso.Core.csproj" />
     <Project Path="tests/fixtures/Contoso/src/Contoso.Generator/Contoso.Generator.csproj" />

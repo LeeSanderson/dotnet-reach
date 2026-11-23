@@ -8,4 +8,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Row 12: consumed as an analyser, so it produces neither a metadata reference nor a
+         copy, and Reach must not expect it on disk. -->
+    <ProjectReference Include="../Basics.Generator/Basics.Generator.csproj"
+                      ReferenceOutputAssembly="false"
+                      OutputItemType="Analyzer" />
+  </ItemGroup>
+
 </Project>

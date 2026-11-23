@@ -1,4 +1,6 @@
 <Solution>
   <Project Path="src/Basics.Core/Basics.Core.csproj" />
+  <Project Path="src/Basics.Generator/Basics.Generator.csproj" />
+  <Project Path="src/Basics.Tools/Basics.Tools.csproj" />
   <Project Path="tests/Basics.Tests/Basics.Tests.csproj" />
 </Solution>
