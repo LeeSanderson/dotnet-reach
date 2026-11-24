@@ -15,6 +15,7 @@
     <Project Path="tests/samples/Ledger/src/Ledger.Api/Ledger.Api.csproj" />
     <Project Path="tests/samples/Ledger/src/Ledger.Billing/Ledger.Billing.csproj" />
     <Project Path="tests/samples/Ledger/src/Ledger.Domain/Ledger.Domain.csproj" />
+    <Project Path="tests/samples/Ledger/src/Ledger.Webhooks/Ledger.Webhooks.csproj" />
     <Project Path="tests/samples/Ledger/tests/Ledger.Api.Tests/Ledger.Api.Tests.csproj" />
     <Project Path="tests/samples/Ledger/tests/Ledger.Billing.Tests/Ledger.Billing.Tests.csproj" />
     <Project Path="tests/samples/Ledger/tests/Ledger.Domain.Tests/Ledger.Domain.Tests.csproj" />

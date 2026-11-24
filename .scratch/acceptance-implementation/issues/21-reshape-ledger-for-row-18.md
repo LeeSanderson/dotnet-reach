@@ -1,6 +1,6 @@
 # Reshape Ledger so row 18 selects what the spec says
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 11, 16
 Spec: [§7.2](../../acceptance-layer/spec.md#72-release-gate-the-multi-project-sample) row 18, [§2.2](../../acceptance-layer/spec.md#22-how-samples-are-split)
 
@@ -39,3 +39,29 @@ through `IReminderChannel.Send`. That's the shape known gap 26 pins. Ticket 16 r
   show it.
 - The full suite and the release-gate run are green, and the Release `-warnaserror` build and
   format check are clean.
+
+## Comments
+
+**2026-11-24, implementation.** Kept ticket 16's suggestion: `WebhookChannel` moved out of Api
+into a new project, `src/Ledger.Webhooks` (→ Domain, no test project), which Api references and
+which joins `Ledger.slnx` and `Reach.slnx`. Api now holds no `IReminderChannel` implementer, so
+widening it whole no longer fans back into Dunning through `ReminderSender`'s interface call.
+
+Expected results, re-worked by hand for every Ledger row:
+
+- **Row 18 changed.** It drops `Ledger.Dunning.Tests.ReminderSenderTests.A_reminder_names_the_days_overdue`
+  and now selects exactly spec §7.2: all of Billing.Tests and all of Api.Tests. Billing's
+  referencers are Billing.Tests, Api and Api.Tests; Webhooks does not reference Billing, and
+  nothing widened whole holds an `IReminderChannel.Send` body any more.
+- **Rows 17, 19, 20, 21, 22, 23 unchanged.** None of their patches touches Api or the channel;
+  Webhooks references neither Billing nor Dunning, so no recompilation widening reaches it, and it
+  has no tests of its own. Row 19 widens Api whole too, and selects what it did.
+- **Row 26 unchanged**, and still pins its gap: `EmailChannel.Send` reaches the callers of
+  `IReminderChannel.Send`, so Dunning's `ReminderSenderTests` and Api's reminders test (which only
+  sends by webhook) are both selected.
+- **Row 27 unchanged** (10, then 12): Webhooks references Domain and widens with it, but has no
+  tests and adds no path that was not already there.
+
+No patch needed re-saving: none touches the moved file or `RemindersEndpoint.cs`. Spec §2.5, §7.2's
+note on row 18 and §9.2's row 18 entry (the "open" marker removed), and the Ledger README are
+updated. Test names are unchanged.

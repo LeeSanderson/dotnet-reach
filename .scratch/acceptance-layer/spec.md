@@ -155,13 +155,14 @@ report.
 
 The multi-project sample ([ticket 05](issues/05-the-first-multi-project-sample-solution.md)). A
 small invoicing and collections back office: four production projects in a **diamond**, one test
-project each.
+project each, and a fifth, `Ledger.Webhooks`, with no test project of its own.
 
 ```
 src/Ledger.Domain                Invoice, Money, consts, IReminderChannel
 src/Ledger.Billing               → Domain
 src/Collections/Ledger.Dunning   → Domain   (under src/Collections/Directory.Build.props)
-src/Ledger.Api                   → Billing, Dunning
+src/Ledger.Webhooks              → Domain     (WebhookChannel only)
+src/Ledger.Api                   → Billing, Dunning, Webhooks
 tests/Ledger.Domain.Tests        → Domain
 tests/Ledger.Billing.Tests       → Billing
 tests/Ledger.Dunning.Tests       → Dunning
@@ -179,8 +180,13 @@ tests/Ledger.Api.Tests           → Api
   `Requesting_reminders_lists_the_overdue_invoices` reaches Dunning only; `Health_check_reports_ok`
   reaches neither. At least one Domain test touches `Invoice.DaysOverdue`, which only Dunning calls.
 - **Gap-shaped members**: `IReminderChannel`, its implementers (`EmailChannel` in Dunning,
-  `WebhookChannel` in Api, called through the interface by Dunning's `ReminderSender`) and
+  `WebhookChannel` in Webhooks, called through the interface by Dunning's `ReminderSender`) and
   `Money.DefaultCurrency`. No gate patch touches them.
+- **`WebhookChannel` has a project of its own** so that no assembly a gate row widens whole holds an
+  `IReminderChannel` implementer. Rows 18 and 19 widen Api whole. With the channel in Api, the
+  reverse walk from its `Send` came back into Dunning through `ReminderSender`'s interface call, and
+  row 18 selected Dunning's `ReminderSenderTests` (implementation ticket 21). Api's reminders test
+  still uses it, so row 26 holds.
 
 **One multi-project sample is enough.** A later feature that needs a second one gets its own
 ticket.
@@ -569,11 +575,11 @@ Each of these is about what is **not** selected. All on Ledger.
 - Rows 18 and 19 select **all** of `Ledger.Api.Tests`, health test included, because that project
   itself transitively references the declaring assembly and is widened whole. Rows 20 and 22 do
   not. The contrast is worth showing.
-- **Row 18 contradicts this table today, and is open for the owner** (implementation ticket 16).
-  It also selects `Ledger.Dunning.Tests.ReminderSenderTests`. Api is widened whole, and the reverse
-  walk from `WebhookChannel.Send` comes back into Dunning through `ReminderSender`'s
-  `IReminderChannel.Send` call: row 26's interface fan-out reaching into row 18. The test pins
-  what Reach does.
+- **Row 18 once also selected `Ledger.Dunning.Tests.ReminderSenderTests`.** Api is widened whole,
+  and with `WebhookChannel` in Api the reverse walk came back into Dunning through
+  `ReminderSender`'s `IReminderChannel.Send` call: row 26's interface fan-out reaching into row 18.
+  The owner chose to reshape Ledger (§2.5): `WebhookChannel` moved to `Ledger.Webhooks`, and row 18
+  now selects exactly this table (implementation ticket 21).
 - **Row 22's `Tiers` include a field at `whole-assembly`.** A field with no initialiser has no
   compiled body to join, so it falls back to whole-assembly widening. It widens the assembly the
   moved type already widened, so the selection is unchanged. `docs/limitations.md` registers the
@@ -701,7 +707,7 @@ audit; claims cut by implementation ticket 05 are gone from the table.
 | 15 | `B.A_changed_member_that_reaches_no_test_is_listed_with_a_count_of_zero` |
 | 16 | `B.A_new_source_file_not_tracked_by_git_is_flagged` |
 | 17 | `L.A_domain_change_reached_only_through_dunning_leaves_billing_out` |
-| 18 | `L.A_changed_const_widens_only_the_projects_that_reference_its_assembly` (open: §7.2) |
+| 18 | `L.A_changed_const_widens_only_the_projects_that_reference_its_assembly` |
 | 19 | `L.A_removed_member_widens_only_the_projects_that_reference_its_assembly` |
 | 20 | `L.A_project_file_change_widens_its_project_and_leaves_its_sibling_out` |
 | 21 | `L.A_directory_build_props_change_widens_only_the_projects_beneath_it` |
