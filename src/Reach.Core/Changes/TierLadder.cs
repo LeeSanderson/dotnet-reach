@@ -83,6 +83,16 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
 
     internal RoutedChange Route(ChangedPath path)
     {
+        var routed = RouteByRule(path);
+
+        return routed with { Projects = WithGeneratorConsumers(routed.Projects) };
+    }
+
+    internal IReadOnlyList<RoutedChange> RouteAll(IEnumerable<ChangedPath> paths) =>
+        [.. paths.Select(Route)];
+
+    private RoutedChange RouteByRule(ChangedPath path)
+    {
         var name = System.IO.Path.GetFileName(path.Path);
         var extension = System.IO.Path.GetExtension(path.Path);
 
@@ -114,9 +124,6 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
 
         return RouteToContainingProject(path, extension);
     }
-
-    internal IReadOnlyList<RoutedChange> RouteAll(IEnumerable<ChangedPath> paths) =>
-        [.. paths.Select(Route)];
 
     /// <summary>
     /// Row 4 for a change that <em>did</em> map to a member or a type, when the file it is in
@@ -185,6 +192,19 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
     [
         .. scope.Projects.Where(consumer => consumer.References.Any(reference =>
             Paths.Same(Paths.Normalise(reference.Path), generator.Path)))
+    ];
+
+    /// <summary>
+    /// Whatever rule routed a change, a generator it names reaches the build only through its
+    /// consumers, so they widen too. Without this, a <c>Directory.Build.props</c> inside a
+    /// generator's directory widens only the generator, whose assembly is in no graph. Only ever
+    /// adds: the projects the rule chose are all kept.
+    /// </summary>
+    private IReadOnlyList<ProjectFile> WithGeneratorConsumers(IReadOnlyList<ProjectFile> projects) =>
+    [
+        .. projects
+            .Concat(projects.Where(IsGenerator).SelectMany(ConsumersOf))
+            .Distinct()
     ];
 
     /// <summary>

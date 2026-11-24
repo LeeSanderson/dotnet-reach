@@ -122,6 +122,24 @@ public class GeneratorChangeTests
         Assert.NotEqual(GeneratorReason, change.Entry.Reason);
     }
 
+    [Fact]
+    public void A_props_file_inside_a_generator_widens_its_consumers()
+    {
+        using var graphs = CoreOnly();
+        var roots = new RootSets(graphs.Assemblies);
+
+        var change = Assert.Single(ChangesFrom(
+            roots,
+            ChangedSet.Empty with
+            {
+                UnmappablePaths = [new ChangedPath("src/Generator/Directory.Build.props", ChangeStatus.Modified)],
+            },
+            []));
+
+        Assert.Equal(ChangeTier.WholeAssembly, change.Entry.Tier);
+        Assert.Equal(roots.InAssembly("Core"), change.Roots);
+    }
+
     private static Graphs CoreOnly() =>
         Graphs.Of(("Core", "namespace N; public class Widget { public int Spin() => 1; }"));
 
