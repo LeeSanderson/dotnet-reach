@@ -440,6 +440,16 @@ class's tests one at a time". The first implementation step runs the whole suite
 marks whatever breaks. **If more than a handful of tests break, fall back to `Collections`** and
 record the per-sample floor (Ledger serial ≈ 1 minute).
 
+**Sample builds share a machine-wide limit** (`BuildSlots`), added on 2026-11-24 after parallel
+agent runs exhausted a developer machine's memory. Uncapped, every acceptance test builds at once
+and each build starts one MSBuild node per processor, so the process count grows with the square
+of the core count, times every concurrent test run. Steps 6 and 7 run only while the test holds a
+slot. A slot is an exclusive lock on a file under `%TEMP%/reach-build-slots/`, so test runs in
+different worktrees share the limit, and the OS frees a slot when its process dies. There are
+half as many slots as processors, between 1 and 4 (`REACH_BUILD_SLOTS` overrides that). Each build
+gets `-maxCpuCount` of processors ÷ slots. MSBuild node reuse stays on: with concurrency bounded,
+nodes are reused, and a build that has to start cold nodes takes three times as long.
+
 ### 5.4 Determinism
 
 Two Reach runs are never byte-identical as written: `timings` differs every run, as

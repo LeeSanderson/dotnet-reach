@@ -143,7 +143,13 @@ internal sealed class SampleCopy : IDisposable
     /// </remarks>
     internal async Task<Observation> RunTwiceAsync(CancellationToken cancellationToken)
     {
-        var build = Run("dotnet", ["build", Solution], Path);
+        // The slot covers Reach's runs as well as the build: Reach builds again itself when the
+        // harness's build fails.
+        using var slot = await BuildSlots.AcquireAsync(cancellationToken);
+
+        // MSBuild node reuse stays on: with the slots bounding concurrency, the nodes are reused
+        // rather than piling up, and a build starting cold nodes takes three times as long.
+        var build = Run("dotnet", ["build", Solution, $"-maxCpuCount:{BuildSlots.NodesPerBuild}"], Path);
 
         await File.WriteAllTextAsync(System.IO.Path.Combine(Out, "build.log"), build.Output, cancellationToken);
 
