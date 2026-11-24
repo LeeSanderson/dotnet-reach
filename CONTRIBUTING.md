@@ -2,12 +2,16 @@
 
 ## Running the tests
 
-Plain `dotnet test` runs everything, the acceptance tests included. There is no separate fast
-suite and no opt-in flag.
+Run the `Reach.Tests` project. It holds everything, the acceptance tests included. There is no
+separate fast suite and no opt-in flag.
 
 ```
-dotnet test
+dotnet test --project tests/Reach.Tests/Reach.Tests.csproj
 ```
+
+Target the project, not the solution. `Reach.slnx` also contains the sample solutions' test
+projects, and those run only through Reach, inside the acceptance tests. A bare `dotnet test`
+runs them directly as well.
 
 To narrow a run, use an ordinary filter for the area you touched. For example, to run only the
 call-graph tests:

@@ -22,9 +22,9 @@ Communication to and from subagents should be sparse. Communicate primarily thro
 
 3. Create a branch, and a draft PR. The PR should be marked as 'closing' the spec issue and tickets.
 
-4. Use **implementer subagents** to implement each ticket. Each implementer subagent should work in its own worktree, on its own branch.
+4. Use **implementer subagents** to implement each ticket. Each implementer subagent should work in its own worktree, on its own branch. Implementers verify with the tests their ticket touches, using the commands in `AGENTS.md`'s "Building and testing"; the full check is the merger's.
 
-5. Once an **implementer subagent** completes, merge its work to the PR branch with a **merger subagent**.
+5. Once an **implementer subagent** completes, merge its work to the PR branch with a **merger subagent**. Mergers run **one at a time**: each runs the full check from `AGENTS.md` (Release build, full `Reach.Tests` suite, format) on the merged branch before the next merge starts.
 
 6. If this changes the **frontier** of available tickets, kick off more **implementer subagents** to work on the new tickets. This allows for maximum concurrency.
 
