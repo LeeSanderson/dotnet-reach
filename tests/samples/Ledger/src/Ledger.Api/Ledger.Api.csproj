@@ -11,6 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="../Ledger.Billing/Ledger.Billing.csproj" />
     <ProjectReference Include="../Collections/Ledger.Dunning/Ledger.Dunning.csproj" />
+    <ProjectReference Include="../Ledger.Webhooks/Ledger.Webhooks.csproj" />
   </ItemGroup>
 
 </Project>

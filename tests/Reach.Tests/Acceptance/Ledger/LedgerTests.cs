@@ -69,9 +69,8 @@ public sealed class LedgerTests() : SampleTests("Ledger")
             Because = "TaxRules.StandardRatePercent is a const, which the compiler bakes into every "
                 + "consumer, so every project referencing Billing widens whole: Ledger.Api.Tests "
                 + "references it through Api, so all of it is selected, health test included, while "
-                + "Domain and Dunning reference nothing of Billing's and are left out, bar the one "
-                + "Dunning test calling IReminderChannel.Send, which fans out to Api's widened "
-                + "WebhookChannel (known-gap row 26's shape).",
+                + "Domain and Dunning reference nothing of Billing's and are left out. Api holds no "
+                + "IReminderChannel implementer, so widening it whole does not fan back into Dunning.",
             Outcome = Outcome.Selected,
             Selected = new()
             {
@@ -81,10 +80,6 @@ public sealed class LedgerTests() : SampleTests("Ledger")
                     "Ledger.Billing.Tests.InvoicePosterTests.Posting_adds_tax_to_the_total",
                     "Ledger.Billing.Tests.TaxRulesTests.Tax_is_the_standard_rate_of_the_net",
                 ],
-                // Pinned, not wanted: spec §7.2 leaves all of Dunning.Tests out. Widening stops at
-                // Billing's referencers; the reverse walk from Api's WebhookChannel.Send then comes
-                // back into Dunning through the interface call in ReminderSender.
-                ["Ledger.Dunning.Tests"] = ["Ledger.Dunning.Tests.ReminderSenderTests.A_reminder_names_the_days_overdue"],
                 ["Ledger.Api.Tests"] = AllOfApi,
             },
             RunInFull = [],
