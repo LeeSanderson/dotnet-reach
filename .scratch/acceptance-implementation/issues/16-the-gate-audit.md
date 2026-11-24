@@ -1,6 +1,6 @@
 # The gate audit
 
-Status: ready-for-agent
+Status: resolved
 Depends on: 01–15, 17–20
 Spec: [§9](../../acceptance-layer/spec.md#9-the-release-gate)
 
@@ -188,3 +188,4 @@ known gaps left out.
   [ticket 21](21-reshape-ledger-for-row-18.md); a `Directory.Build.props` inside a generator, fix
   Reach, in [ticket 22](22-props-inside-a-generator-widens-its-consumers.md). This ticket resolves
   once both land.
+- **Resolved (2026-11-24):** ticket 21 landed (b28e677) and ticket 22 landed (a2ed5f7).
