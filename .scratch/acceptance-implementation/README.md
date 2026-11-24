@@ -64,6 +64,10 @@ to fix Reach rather than pin what it did. Ticket 16 depends on them.
 | 18 | [A generator source change widens its consumers](issues/18-a-generator-source-change-widens-its-consumers.md) | 07, 17 |
 | 19 | [Changes outside the analysis scope](issues/19-changes-outside-the-analysis-scope.md) | 07 |
 | 20 | [Project containment is relative to the repository](issues/20-project-containment-is-repository-relative.md) | 17, 18, 19 |
+| 21 | [Reshape Ledger so row 18 selects what the spec says](issues/21-reshape-ledger-for-row-18.md) | 11, 16 |
+| 22 | [A props file inside a generator widens its consumers](issues/22-props-inside-a-generator-widens-its-consumers.md) | 18, 16 |
+
+Tickets 21 and 22 settle the two owner calls the gate audit raised. Ticket 16 closes once they land.
 
 ## One hard ordering constraint
 

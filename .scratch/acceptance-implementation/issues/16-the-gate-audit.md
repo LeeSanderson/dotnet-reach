@@ -183,3 +183,8 @@ known gaps left out.
   time so far (rows 5, 12, 29). If the alpha must not wait, take (b) now and (a) after it.
   `docs/limitations.md`'s generator entry says "whatever changed in it" and stays as it is until
   this is decided.
+
+- **Owner decisions on the audit's two open calls (2026-11-24):** row 18, reshape Ledger, in
+  [ticket 21](21-reshape-ledger-for-row-18.md); a `Directory.Build.props` inside a generator, fix
+  Reach, in [ticket 22](22-props-inside-a-generator-widens-its-consumers.md). This ticket resolves
+  once both land.
