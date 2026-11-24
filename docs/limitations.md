@@ -97,7 +97,8 @@ The gaps that can cost you a regression. Listed worst first.
   `PackageReference` or a bare `<Analyzer>` item is invisible, so a change to it does not widen its
   consumers. A generator
   Reach does identify widens its consumers whatever changed in it: its project file, a source
-  file, a new or deleted file.
+  file, a new or deleted file, or a `Directory.Build.props`, `Directory.Build.targets` or
+  `.editorconfig` inside its directory.
 - **Direction**: under-selection.
 - **Detectable**: no — the failure is not knowing the generator exists.
 - **Why not whole-suite on failure**: it would fire on every solution that has no generator at
