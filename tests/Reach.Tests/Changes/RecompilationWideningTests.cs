@@ -195,14 +195,11 @@ public class RecompilationWideningTests
             MemberChange.Removed,
             "src/Core/Widget.cs");
 
-        var notices = new List<Notice>();
-
-        new RootSets(graphs.Assemblies).ChangesFrom(
+        var notices = new RootSets(graphs.Assemblies).ChangesFrom(
             new ChangedSet([constant, removed], [], [], [], [], []),
             [],
             scope,
-            new TierLadder(scope, "/repo"),
-            notices);
+            "/repo").Notices;
 
         var raised = notices.Where(notice => notice.Code == "recompilation-widening").ToArray();
 
@@ -224,14 +221,11 @@ public class RecompilationWideningTests
         using var graphs = Graphs.Of(("Core", "namespace N; public class Widget { public int Value() => 1; }"));
 
         var scope = Scope();
-        var notices = new List<Notice>();
-
-        new RootSets(graphs.Assemblies).ChangesFrom(
+        var notices = new RootSets(graphs.Assemblies).ChangesFrom(
             new ChangedSet([Member(MemberChange.Modified)], [], [], [], [], []),
             [],
             scope,
-            new TierLadder(scope, "/repo"),
-            notices);
+            "/repo").Notices;
 
         Assert.DoesNotContain(notices, notice => notice.Code == "recompilation-widening");
     }

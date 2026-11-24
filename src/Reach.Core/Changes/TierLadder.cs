@@ -103,9 +103,9 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
             // A generator project is consumed rather than executed, so what widens is every
             // project that references it — not the generator itself, whose output lands nowhere
             // Reach scans.
-            if (project is not null && IsGenerator(project))
+            if (GeneratorConsumers(project) is { } consumers)
             {
-                return new RoutedChange(path, Generator, ConsumersOf(project));
+                return new RoutedChange(path, consumers.Rule, consumers.Projects);
             }
 
             return new RoutedChange(path, Project, project is null ? [] : [project]);
@@ -132,9 +132,7 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
     /// file outside every generator.
     /// </summary>
     internal RoutedConsumers? ConsumersOfGeneratorContaining(string repositoryRelativePath) =>
-        ProjectContaining(repositoryRelativePath) is { } project && IsGenerator(project)
-            ? new RoutedConsumers(Generator, ConsumersOf(project))
-            : null;
+        GeneratorConsumers(scope.ProjectContaining(repositoryRoot, repositoryRelativePath));
 
     /// <summary>
     /// Tier 2: a changed source file with no changed member, but which some assembly's debug
@@ -188,6 +186,16 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
         scope.Projects.Any(consumer => consumer.References.Any(reference =>
             reference.IsAnalyzer && Paths.Same(Paths.Normalise(reference.Path), project.Path)));
 
+    /// <summary>
+    /// Row 4, the one place it is decided: a generator reaches the build only through the
+    /// projects that consume it, so they are what widens. Null for a project that is not a
+    /// generator, or for no project.
+    /// </summary>
+    private RoutedConsumers? GeneratorConsumers(ProjectFile? project) =>
+        project is not null && IsGenerator(project)
+            ? new RoutedConsumers(Generator, ConsumersOf(project))
+            : null;
+
     private IReadOnlyList<ProjectFile> ConsumersOf(ProjectFile generator) =>
     [
         .. scope.Projects.Where(consumer => consumer.References.Any(reference =>
@@ -212,7 +220,7 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
     /// </summary>
     private RoutedChange RouteToContainingProject(ChangedPath path, string extension)
     {
-        var containing = ProjectContaining(path.Path);
+        var containing = scope.ProjectContaining(repositoryRoot, path.Path);
 
         if (containing is null)
         {
@@ -226,9 +234,9 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
 
         // Anything inside a generator, not only its project file: a source file or a template
         // reaches the build only through the generator's consumers.
-        if (IsGenerator(containing))
+        if (GeneratorConsumers(containing) is { } consumers)
         {
-            return new RoutedChange(path, Generator, ConsumersOf(containing));
+            return new RoutedChange(path, consumers.Rule, consumers.Projects);
         }
 
         return new RoutedChange(
@@ -242,13 +250,6 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
 
     private IReadOnlyList<ProjectFile> AtOrBelow(string directory) =>
         [.. scope.Projects.Where(project => Paths.IsUnder(project.Directory, directory))];
-
-    /// <summary>
-    /// The nearest ancestor in-scope project of a repository-relative path, or null when the
-    /// path is outside the analysis scope.
-    /// </summary>
-    internal ProjectFile? ProjectContaining(string repositoryRelativePath) =>
-        scope.ProjectContaining(Absolute(repositoryRelativePath));
 
     private static bool IsContent(string extension) => ContentExtensions.Contains(extension, NameComparer);
 

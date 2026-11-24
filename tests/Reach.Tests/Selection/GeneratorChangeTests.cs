@@ -144,5 +144,5 @@ public class GeneratorChangeTests
         Graphs.Of(("Core", "namespace N; public class Widget { public int Spin() => 1; }"));
 
     private static IReadOnlyList<Change> ChangesFrom(RootSets roots, ChangedSet changed, IReadOnlyList<JoinResult> joined) =>
-        roots.ChangesFrom(changed, joined, Scope, new TierLadder(Scope, "/repo"), []);
+        roots.ChangesFrom(changed, joined, Scope, "/repo").Changes;
 }

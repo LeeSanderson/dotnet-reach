@@ -79,7 +79,7 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
                 deleted.Name,
                 WideningReason.DeletedType,
                 deleted.Path,
-                ProjectContaining(deleted.Path)))
+                scope.ProjectContaining(repositoryRoot, deleted.Path)))
             .ToList();
 
         NoteUntracked(paths, notices);
@@ -93,7 +93,7 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
                 path,
                 WideningReason.DeletedType,
                 path,
-                ProjectContaining(path)));
+                scope.ProjectContaining(repositoryRoot, path)));
         }
 
         return new ChangedSet(compared.Members, compared.TypeWidenings, assemblyWidenings, paths, unmappable, notices);
@@ -183,9 +183,6 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
             + "rather than being read as unchanged: " + string.Join(", ", paths),
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["paths"] = paths }));
     }
-
-    private ProjectFile? ProjectContaining(string repositoryRelativePath) =>
-        scope.ProjectContaining(Paths.Normalise(Path.Combine(repositoryRoot, repositoryRelativePath)));
 
     /// <summary>
     /// An untracked <c>.cs</c> file entering the changed set is worth a report line: it is
