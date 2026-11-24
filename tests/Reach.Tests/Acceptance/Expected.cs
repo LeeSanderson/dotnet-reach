@@ -39,7 +39,7 @@ internal sealed record Expected
     public required Dictionary<string, IReadOnlyList<string>> Selected { get; init; }
 
     /// <summary>
-    /// The test-project keys run in full by whole-project fallback.
+    /// The test-project keys run in full by whole-project selection.
     /// </summary>
     public required IReadOnlyList<string> RunInFull { get; init; }
 
@@ -54,6 +54,12 @@ internal sealed record Expected
     /// run nothing.
     /// </summary>
     public Dictionary<string, int>? WillRun { get; init; }
+
+    /// <summary>
+    /// The test-project keys whose <c>counts.total</c> serialises as <c>"unknown"</c>: Reach could
+    /// not count their tests.
+    /// </summary>
+    public IReadOnlyList<string>? UnknownTotal { get; init; }
 
     /// <summary>
     /// The set of notice codes.
@@ -126,6 +132,21 @@ internal enum Tier
 /// </summary>
 internal static class Wire
 {
+    /// <summary>
+    /// The mode of an entry that runs its whole project.
+    /// </summary>
+    internal const string RunAll = "run-all";
+
+    /// <summary>
+    /// The mode of an entry that runs nothing.
+    /// </summary>
+    internal const string Skip = "skip";
+
+    /// <summary>
+    /// What <c>counts.total</c> serialises as when Reach could not count the tests.
+    /// </summary>
+    internal const string Unknown = "unknown";
+
     internal static string Of(Outcome outcome) => outcome switch
     {
         Outcome.Selected => "selected",

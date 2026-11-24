@@ -345,6 +345,7 @@ says `Expect` for the step in prose.
 | `RunInFull` | yes | Test-project keys run in full by whole-project fallback. |
 | `ExitCode` | when `Outcome` is `Failed` | The exit code the failed run must return. Checked at run time: `Expect` fails if it is missing for `Failed`, or given for any other outcome. |
 | `WillRun` | no | Test-project key → the rendered filter's true match count, as the schema has it. |
+| `UnknownTotal` | no | Test-project keys whose `counts.total` serialises `"unknown"`. Added in review so row 8 can state its unknown total. |
 | `Notices` | no | The set of notice codes. |
 | `Reasons` | no | The set of reason codes (`nothing-selected` only). |
 | `Changes` | no | Member `display` → `testsReached`. |
@@ -794,7 +795,7 @@ Known gaps, outside the gate (§4.5): 24 `B.Known_gap_a_change_reached_only_thro
 | `runnerHost`: its value, absent on `skip`, present on run-all | `Reporting/ReportEntryTests.A_filtered_entry_names_dotnet_test_as_its_runner_host`, `A_skip_entry_carries_no_runner_host`, `A_project_run_in_full_still_names_its_runner_host` |
 | `delivery` values; absent on an entry with no command | `Rendering/InvocationTests.A_long_selection_on_the_testing_platform_goes_through_a_response_file`, `A_long_selection_on_a_host_with_no_channel_is_chunked`; `Reporting/ReportEntryTests.A_short_selection_is_delivered_inline`, `A_selection_merged_into_a_runsettings_file_is_delivered_by_run_settings`, `A_skip_entry_carries_no_delivery` |
 | `invocations`: many when chunked, one for run-all, zero for skip | `Rendering/InvocationTests.A_long_selection_on_a_host_with_no_channel_is_chunked`, `Run_all_emits_one_invocation_with_no_filter`; `Reporting/ReportTests.Invocations_is_always_an_array_and_empty_for_skip` |
-| An underivable moniker runs once, the rest empty with no `delivery` | `Rendering/InvocationTests.A_multi_instance_project_with_a_platform_suffix_runs_project_wide_once`; row 10; `Reporting/ReportEntryTests.The_empty_entries_of_an_underivable_moniker_carry_no_delivery` |
+| An underivable moniker runs once, the rest empty with no `delivery` | `Rendering/InvocationTests.A_multi_instance_project_with_a_platform_suffix_runs_project_wide_once`; `Reporting/ReportEntryTests.The_empty_entries_of_an_underivable_moniker_carry_no_delivery` |
 | `counts.total` is `"unknown"`, never `0` | `Reporting/ReportTests.An_unknown_total_round_trips_and_is_distinguishable_from_zero`; row 8; every acceptance test |
 | …and `willRun` is `0` on that entry | `Reporting/ReportEntryTests.An_entry_whose_total_is_unknown_will_run_zero` |
 | `projectsRunInFull` counts those entries | `Reporting/MeasurementTests.An_unenumerable_project_contributes_to_neither_side`, `The_summary_line_carries_both_numbers` |

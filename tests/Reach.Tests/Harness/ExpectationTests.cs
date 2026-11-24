@@ -137,6 +137,18 @@ public sealed class ExpectationTests
     }
 
     [Fact]
+    public void A_counted_total_listed_as_unknown_fails_and_so_does_an_unknown_one_not_listed()
+    {
+        Assert.Null(Failures(Matching with { UnknownTotal = ["Basics.Unrecognised"] }, SelectedReport()));
+
+        var message = Failures(Matching with { UnknownTotal = ["Basics.Tests"] }, SelectedReport());
+
+        Assert.Contains("UnknownTotal:", message, StringComparison.Ordinal);
+        Assert.Contains("Basics.Tests: expected an unknown total, serialised as 3", message, StringComparison.Ordinal);
+        Assert.Contains("Basics.Unrecognised: total is unknown, not expected", message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_notice_nobody_expected_fails_and_so_does_a_missing_one()
     {
         var message = Failures(Matching with { Notices = ["dialect-over-selects"] }, SelectedReport());

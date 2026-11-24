@@ -17,8 +17,6 @@ namespace Reach.Tests.Acceptance;
 /// </remarks>
 internal static class Expectation
 {
-    private const string RunAll = "run-all";
-
     /// <summary>
     /// The failure message, or null when the observation is what was expected.
     /// </summary>
@@ -26,6 +24,7 @@ internal static class Expectation
     {
         var report = observed.First.Report;
         var keys = new EntryKeys(report.Entries);
+        var totals = new SerialisedTotals(report);
 
         (string Name, IReadOnlyList<string> Differences)[] sections =
         [
@@ -34,6 +33,7 @@ internal static class Expectation
             ("RunInFull", RunInFullDifferences(expected, keys)),
             ("ExitCode", ExitCodeDifferences(expected)),
             ("WillRun", expected.WillRun is { } willRun ? WillRunDifferences(willRun, keys) : []),
+            ("UnknownTotal", expected.UnknownTotal is { } unknownTotal ? UnknownTotalDifferences(unknownTotal, keys, totals) : []),
             ("Notices", expected.Notices is { } notices ? SetDifferences(notices, report.Notices.Select(notice => notice.Code)) : []),
             ("Reasons", expected.Reasons is { } reasons ? SetDifferences(reasons, report.Reasons ?? []) : []),
             ("Changes", expected.Changes is { } changes
@@ -45,7 +45,7 @@ internal static class Expectation
             ("Invariant, determinism", Determinism(observed)),
             ("Invariant, exit code matches outcome", ExitCodeMatchesOutcome(expected, observed)),
             ("Invariant, skip means nothing runs", SkipMeansNothingRuns(keys)),
-            ("Invariant, unknown is never zero", UnknownIsNeverZero(report, keys)),
+            ("Invariant, unknown is never zero", UnknownIsNeverZero(keys, totals)),
         ];
 
         var failing = sections.Where(section => section.Differences.Count > 0).ToArray();
@@ -83,60 +83,29 @@ internal static class Expectation
             ? []
             : [$"expected {Wire.Of(expected.Outcome)}, was {report.Outcome}"];
 
-    private static List<string> SelectedDifferences(Expected expected, EntryKeys keys)
-    {
-        var differences = new List<string>();
-        var listed = new HashSet<ReportEntry>(ReferenceEqualityComparer.Instance);
-
-        foreach (var (key, tests) in expected.Selected.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-        {
-            if (keys.Resolve(key, differences) is not { } entry)
+    private static List<string> SelectedDifferences(Expected expected, EntryKeys keys) =>
+        KeyedDifferences(
+            expected.Selected.Keys,
+            keys,
+            (key, entry) =>
             {
-                continue;
-            }
+                var tests = expected.Selected[key];
+                var actual = entry.Tests.Select(test => test.Display).ToArray();
 
-            listed.Add(entry);
+                return
+                [
+                    .. tests.Except(actual).Order(StringComparer.Ordinal).Select(test => $"{key}: not selected {test}"),
+                    .. actual.Except(tests).Order(StringComparer.Ordinal).Select(test => $"{key}: selected but not expected {test}"),
+                ];
+            },
+            entry => entry.Tests.Select(test => $"{keys.KeyOf(entry)}: selected but not expected {test.Display}"));
 
-            var actual = entry.Tests.Select(test => test.Display).ToArray();
-
-            differences.AddRange(tests.Except(actual).Order(StringComparer.Ordinal).Select(test => $"{key}: not selected {test}"));
-            differences.AddRange(actual.Except(tests).Order(StringComparer.Ordinal).Select(test => $"{key}: selected but not expected {test}"));
-        }
-
-        foreach (var entry in keys.Entries.Where(entry => !listed.Contains(entry)))
-        {
-            differences.AddRange(entry.Tests.Select(test => $"{keys.KeyOf(entry)}: selected but not expected {test.Display}"));
-        }
-
-        return differences;
-    }
-
-    private static List<string> RunInFullDifferences(Expected expected, EntryKeys keys)
-    {
-        var differences = new List<string>();
-        var listed = new HashSet<ReportEntry>(ReferenceEqualityComparer.Instance);
-
-        foreach (var key in expected.RunInFull.Order(StringComparer.Ordinal))
-        {
-            if (keys.Resolve(key, differences) is not { } entry)
-            {
-                continue;
-            }
-
-            listed.Add(entry);
-
-            if (entry.Mode != RunAll)
-            {
-                differences.Add($"{key}: expected to run in full, mode was {entry.Mode}");
-            }
-        }
-
-        differences.AddRange(keys.Entries
-            .Where(entry => entry.Mode == RunAll && !listed.Contains(entry))
-            .Select(entry => $"{keys.KeyOf(entry)}: runs in full, not expected"));
-
-        return differences;
-    }
+    private static List<string> RunInFullDifferences(Expected expected, EntryKeys keys) =>
+        KeyedDifferences(
+            expected.RunInFull,
+            keys,
+            (key, entry) => entry.Mode == Wire.RunAll ? [] : [$"{key}: expected to run in full, mode was {entry.Mode}"],
+            entry => entry.Mode == Wire.RunAll ? [$"{keys.KeyOf(entry)}: runs in full, not expected"] : []);
 
     private static List<string> ExitCodeDifferences(Expected expected) =>
         (expected.Outcome, expected.ExitCode) switch
@@ -146,29 +115,49 @@ internal static class Expectation
             _ => [],
         };
 
-    private static List<string> WillRunDifferences(Dictionary<string, int> willRun, EntryKeys keys)
+    private static List<string> WillRunDifferences(Dictionary<string, int> willRun, EntryKeys keys) =>
+        KeyedDifferences(
+            willRun.Keys,
+            keys,
+            (key, entry) => entry.Counts.WillRun == willRun[key]
+                ? []
+                : [$"{key}: expected {Number(willRun[key])}, was {Number(entry.Counts.WillRun)}"],
+            entry => entry.Counts.WillRun == 0
+                ? []
+                : [$"{keys.KeyOf(entry)}: will run {Number(entry.Counts.WillRun)}, not listed"]);
+
+    private static List<string> UnknownTotalDifferences(IReadOnlyList<string> unknownTotal, EntryKeys keys, SerialisedTotals totals) =>
+        KeyedDifferences(
+            unknownTotal,
+            keys,
+            (key, entry) => totals.IsUnknown(entry) ? [] : [$"{key}: expected an unknown total, serialised as {totals.Of(entry)}"],
+            entry => totals.IsUnknown(entry) ? [$"{keys.KeyOf(entry)}: total is unknown, not expected"] : []);
+
+    /// <summary>
+    /// The shape every keyed section shares: each expected key, in order, resolves to one entry
+    /// and is checked against it; then every entry no key named is checked as unlisted.
+    /// </summary>
+    private static List<string> KeyedDifferences(
+        IEnumerable<string> expected,
+        EntryKeys keys,
+        Func<string, ReportEntry, IEnumerable<string>> listed,
+        Func<ReportEntry, IEnumerable<string>> unlisted)
     {
         var differences = new List<string>();
-        var listed = new HashSet<ReportEntry>(ReferenceEqualityComparer.Instance);
+        var named = new HashSet<ReportEntry>(ReferenceEqualityComparer.Instance);
 
-        foreach (var (key, count) in willRun.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        foreach (var key in expected.Order(StringComparer.Ordinal))
         {
             if (keys.Resolve(key, differences) is not { } entry)
             {
                 continue;
             }
 
-            listed.Add(entry);
-
-            if (entry.Counts.WillRun != count)
-            {
-                differences.Add($"{key}: expected {Number(count)}, was {Number(entry.Counts.WillRun)}");
-            }
+            named.Add(entry);
+            differences.AddRange(listed(key, entry));
         }
 
-        differences.AddRange(keys.Entries
-            .Where(entry => entry.Counts.WillRun != 0 && !listed.Contains(entry))
-            .Select(entry => $"{keys.KeyOf(entry)}: will run {Number(entry.Counts.WillRun)}, not listed"));
+        differences.AddRange(keys.Entries.Where(entry => !named.Contains(entry)).SelectMany(unlisted));
 
         return differences;
     }
@@ -263,8 +252,8 @@ internal static class Expectation
     private static List<string> SkipMeansNothingRuns(EntryKeys keys) =>
     [
         .. keys.Entries
-            .Where(entry => entry.Tests.Count == 0 && entry.Mode != RunAll)
-            .Where(entry => entry.Mode != "skip" || entry.Invocations.Count != 0)
+            .Where(entry => entry.Tests.Count == 0 && entry.Mode != Wire.RunAll)
+            .Where(entry => entry.Mode != Wire.Skip || entry.Invocations.Count != 0)
             .Select(entry =>
                 $"{keys.KeyOf(entry)}: nothing selected, mode {entry.Mode}, {Number(entry.Invocations.Count)} invocation(s)"),
     ];
@@ -272,42 +261,50 @@ internal static class Expectation
     /// <summary>
     /// A total Reach could not count serialises as <c>"unknown"</c>, and a project run in full
     /// never serialises a total of <c>0</c>, which is how an unknown total would read if it
-    /// leaked. Read from the serialised report, because the claim is about what a consumer reads.
+    /// leaked.
     /// </summary>
     /// <remarks>
     /// A project run in full may still have a known total: one whose framework selector is
     /// underivable (row 10) is analysed like any other and only rendered project-wide.
     /// </remarks>
-    private static List<string> UnknownIsNeverZero(Report report, EntryKeys keys)
+    private static List<string> UnknownIsNeverZero(EntryKeys keys, SerialisedTotals totals) =>
+    [
+        .. keys.Entries
+            .Where(entry => !totals.IsUnknown(entry))
+            .Select(entry => (entry.Counts.Total, entry.Mode) switch
+            {
+                (null, _) => $"{keys.KeyOf(entry)}: total not counted, serialised as {totals.Of(entry)}",
+                (0, Wire.RunAll) => $"{keys.KeyOf(entry)}: runs in full, total serialised as 0",
+                _ => null,
+            })
+            .OfType<string>(),
+    ];
+
+    private static string Number(int value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+}
+
+/// <summary>
+/// Each entry's <c>counts.total</c> as <c>report.json</c> spells it. Read from the serialised
+/// report, because the claims about an unknown total are about what a consumer reads.
+/// </summary>
+internal sealed class SerialisedTotals
+{
+    private readonly Dictionary<ReportEntry, JsonNode> _totals = new(ReferenceEqualityComparer.Instance);
+
+    internal SerialisedTotals(Report report)
     {
         var entries = JsonNode.Parse(ReportWriter.Serialise(report))!["entries"]!.AsArray();
-        var differences = new List<string>();
 
         for (var index = 0; index < entries.Count; index++)
         {
-            if (TotalDifference(report.Entries[index], entries[index]!["counts"]!["total"]!) is { } difference)
-            {
-                differences.Add($"{keys.KeyOf(report.Entries[index])}: {difference}");
-            }
+            _totals[report.Entries[index]] = entries[index]!["counts"]!["total"]!;
         }
-
-        return differences;
     }
 
-    private static string? TotalDifference(ReportEntry entry, JsonNode total)
-    {
-        if (total.GetValueKind() == System.Text.Json.JsonValueKind.String && total.GetValue<string>() == "unknown")
-        {
-            return null;
-        }
+    internal bool IsUnknown(ReportEntry entry) =>
+        _totals[entry] is { } total
+        && total.GetValueKind() == System.Text.Json.JsonValueKind.String
+        && total.GetValue<string>() == Wire.Unknown;
 
-        return (entry.Counts.Total, entry.Mode) switch
-        {
-            (null, _) => $"total not counted, serialised as {total.ToJsonString()}",
-            (0, RunAll) => "runs in full, total serialised as 0",
-            _ => null,
-        };
-    }
-
-    private static string Number(int value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    internal string Of(ReportEntry entry) => _totals[entry].ToJsonString();
 }

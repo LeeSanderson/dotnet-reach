@@ -59,10 +59,12 @@ public sealed class FrameworksTests() : SampleTests("Frameworks")
         await Apply("unrecognised-check-message.patch").ExpectAsync(new()
         {
             Because = "Only a check in the unrecognised project changed, which no recognised "
-                + "test reaches, and that project cannot be enumerated, so it runs in full.",
+                + "test reaches, and that project cannot be enumerated, so it runs in full and its "
+                + "total is unknown rather than zero.",
             Outcome = Outcome.Selected,
             Selected = [],
             RunInFull = ["Frameworks.Tests.Unrecognised"],
+            UnknownTotal = ["Frameworks.Tests.Unrecognised"],
             Notices = StandingNotices,
         });
 }
