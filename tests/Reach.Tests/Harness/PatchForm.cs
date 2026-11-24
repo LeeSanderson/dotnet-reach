@@ -1,3 +1,5 @@
+using Reach.Tests.Acceptance;
+
 namespace Reach.Tests.Harness;
 
 /// <summary>
@@ -10,8 +12,6 @@ namespace Reach.Tests.Harness;
 /// </remarks>
 internal static class PatchForm
 {
-    private const string Tool = "dotnet run tests/tools/patch.cs --";
-
     private static readonly string[] ExtendedHeaders =
     [
         "diff --git ",
@@ -58,8 +58,8 @@ internal static class PatchForm
         [
             $"{relativePath} is not in the stripped form. {string.Join("\n  ", offending)}\n"
             + "  Only ---/+++ file headers and @@ hunks belong in a checked-in patch. To fix, apply it and save it again:\n"
-            + $"  {Tool} apply {sample} {name}\n"
-            + $"  {Tool} save {sample} {name} --force\n"
+            + $"  {PatchTool.Apply(sample, name)}\n"
+            + $"  {PatchTool.Save(sample, name)}\n"
             + "  (add --on <baseline> to both if it was written on a baseline patch)",
         ];
     }

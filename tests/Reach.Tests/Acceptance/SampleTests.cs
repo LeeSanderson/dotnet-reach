@@ -1,5 +1,3 @@
-using Reach.Tests.Fixtures;
-
 namespace Reach.Tests.Acceptance;
 
 /// <summary>
@@ -19,6 +17,12 @@ namespace Reach.Tests.Acceptance;
 /// </remarks>
 public abstract class SampleTests(string sample)
 {
+    /// <summary>
+    /// The two notices every run carries: the harness passes the baseline commit as
+    /// <c>--base</c>, and leaves its change patches uncommitted, so <c>HEAD</c> is the baseline.
+    /// </summary>
+    private protected static readonly IReadOnlyList<string> EveryRunNotices = ["baseline-resolved", "baseline-is-head"];
+
     /// <summary>
     /// Applies <paramref name="patch"/> before the baseline commit, so it is part of the baseline
     /// and Reach never sees it as a change.

@@ -69,8 +69,7 @@ public class WholeProjectAndWideningTests
                 []),
             [],
             new AnalysisScope([project], [project], []),
-            new TierLadder(new AnalysisScope([project], [project], []), "/repo"),
-            []);
+            "/repo").Changes;
 
         var change = Assert.Single(changes);
 
@@ -161,8 +160,7 @@ public class WholeProjectAndWideningTests
             ChangedSet.Empty,
             [new JoinResult(unjoined, [])],
             new AnalysisScope([project], [project], []),
-            new TierLadder(new AnalysisScope([project], [project], []), "/repo"),
-            []);
+            "/repo").Changes;
 
         var change = Assert.Single(changes);
 
@@ -203,8 +201,7 @@ public class WholeProjectAndWideningTests
             },
             [new JoinResult(removed, [])],
             scope,
-            new TierLadder(scope, "/repo"),
-            []);
+            "/repo").Changes;
 
         // The declaring type's widening is the whole response to a deletion. B is untouched,
         // so nothing of B is a root.
@@ -234,8 +231,7 @@ public class WholeProjectAndWideningTests
             ChangedSet.Empty with { Members = [removed] },
             [new JoinResult(removed, [])],
             scope,
-            new TierLadder(scope, "/repo"),
-            []);
+            "/repo").Changes;
 
         // Only the type's widening covers a deletion. Without one, the fallback stands.
         var change = Assert.Single(changes);

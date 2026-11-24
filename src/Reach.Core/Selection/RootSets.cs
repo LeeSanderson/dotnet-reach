@@ -71,17 +71,25 @@ internal sealed class RootSets
     }
 
     /// <summary>
-    /// The changes the walk runs over, in a stable order. Each recompilation widening also adds
-    /// its <c>recompilation-widening</c> notice to <paramref name="notices"/>.
+    /// The changes the walk runs over, in a stable order, and a <c>recompilation-widening</c>
+    /// notice for each recompilation widening among them.
     /// </summary>
-    internal IReadOnlyList<Change> ChangesFrom(
+    internal RootedChanges ChangesFrom(
         ChangedSet changed,
         IReadOnlyList<JoinResult> joined,
         AnalysisScope scope,
-        TierLadder ladder,
-        List<Notice> notices)
+        string repositoryRoot)
     {
+        var ladder = new TierLadder(scope, repositoryRoot);
         var changes = new List<Change>();
+        var notices = new List<Notice>();
+
+        ProjectFile? ProjectContaining(string path) => scope.ProjectContaining(repositoryRoot, path);
+
+        // A change in a file no in-scope project contains says so, whatever tier routed it, and
+        // a change in a generator widens its consumers too.
+        Change Widened(ChangeEntry entry, string path, IReadOnlyList<MethodId> roots) =>
+            ThroughGenerator(new Change(Scoped(entry, ProjectContaining(path) is not null), roots), path, ladder);
 
         foreach (var result in joined.OrderBy(result => result.Member.ToString(), StringComparer.Ordinal))
         {
@@ -111,55 +119,37 @@ internal sealed class RootSets
             // A declaration that fails to join falls through to whole-assembly widening for its
             // project. Over-selection, and it is what makes a phantom member from a misparse
             // survivable rather than a silent hole.
-            var project = ladder.ProjectContaining(result.Member.Path);
+            var project = ProjectContaining(result.Member.Path);
 
-            changes.Add(ThroughGenerator(
-                new Change(
-                    Scoped(
-                        Entry(
-                            changes.Count,
-                            result.Member.ToString(),
-                            ChangeTier.WholeAssembly,
-                            "the declaration could not be matched to compiled code"),
-                        result.Member.Path,
-                        ladder),
-                    project is null ? [] : InAssembly(project.AssemblyName)),
+            changes.Add(Widened(
+                Entry(
+                    changes.Count,
+                    result.Member.ToString(),
+                    ChangeTier.WholeAssembly,
+                    "the declaration could not be matched to compiled code"),
                 result.Member.Path,
-                ladder));
+                project is null ? [] : InAssembly(project.AssemblyName)));
         }
 
         foreach (var widening in changed.TypeWidenings.OrderBy(w => w.DeclaringType, StringComparer.Ordinal))
         {
-            changes.Add(ThroughGenerator(
-                new Change(
-                    Scoped(
-                        Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeType, Describe(widening.Reason)),
-                        widening.Path,
-                        ladder),
-                    InType(widening.DeclaringType)),
+            changes.Add(Widened(
+                Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeType, Describe(widening.Reason)),
                 widening.Path,
-                ladder));
+                InType(widening.DeclaringType)));
         }
 
         foreach (var widening in changed.AssemblyWidenings.OrderBy(w => w.DeclaringType, StringComparer.Ordinal))
         {
-            changes.Add(ThroughGenerator(
-                new Change(
-                    Scoped(
-                        Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeAssembly, Describe(widening.Reason)),
-                        widening.Path,
-                        ladder),
-                    widening.Project is null ? [] : InAssembly(widening.Project.AssemblyName)),
+            changes.Add(Widened(
+                Entry(changes.Count, widening.DeclaringType, ChangeTier.WholeAssembly, Describe(widening.Reason)),
                 widening.Path,
-                ladder));
+                widening.Project is null ? [] : InAssembly(widening.Project.AssemblyName)));
         }
 
         // The blast radius is real and accepted because it is legible: each one is its own
         // entry, so a pull request that selected everything shows exactly which const did it.
-        foreach (var widened in RecompilationWidening.From(
-            changed,
-            scope,
-            member => ladder.ProjectContaining(member.Path)))
+        foreach (var widened in RecompilationWidening.From(changed, scope, member => ProjectContaining(member.Path)))
         {
             changes.Add(new Change(
                 Entry(
@@ -180,7 +170,7 @@ internal sealed class RootSets
                 [.. routed.Projects.SelectMany(project => InAssembly(project.AssemblyName)).Distinct()]));
         }
 
-        return changes;
+        return new RootedChanges(changes, notices);
     }
 
     /// <summary>
@@ -190,7 +180,7 @@ internal sealed class RootSets
     /// </summary>
     /// <remarks>
     /// It never meets an entry <see cref="Scoped"/> marked outside the analysis scope: both ask
-    /// <see cref="AnalysisScope.ProjectContaining"/>, and a generator is recognised only as an
+    /// <see cref="AnalysisScope.ProjectContaining(string, string)"/>, and a generator is recognised only as an
     /// in-scope project. A generator outside the scope has no in-scope consumer, so nothing it
     /// does can reach a test, and its change is reported as outside the scope.
     /// </remarks>
@@ -224,17 +214,17 @@ internal sealed class RootSets
         new(index, display, tier, reason);
 
     /// <summary>
-    /// A change in a file no in-scope project contains says so, whatever tier routed it. Only the
-    /// report reads this: the change's roots are computed exactly as they were.
+    /// A change in a file no in-scope project contains says so. Only the report reads this: the
+    /// change's roots are computed exactly as they were.
     /// </summary>
-    private static ChangeEntry Scoped(ChangeEntry entry, string path, TierLadder ladder) =>
-        ladder.ProjectContaining(path) is null
-            ? entry with
+    private static ChangeEntry Scoped(ChangeEntry entry, bool inScope) =>
+        inScope
+            ? entry
+            : entry with
             {
                 Reason = "the file is in no project a test project references, so it is outside the analysis scope",
                 OutsideAnalysisScope = true,
-            }
-            : entry;
+            };
 
     private static string Describe(WideningReason reason) => reason switch
     {
@@ -255,3 +245,8 @@ internal sealed class RootSets
 /// more than the fact needs.
 /// </remarks>
 internal sealed record Change(ChangeEntry Entry, IReadOnlyList<MethodId> Roots);
+
+/// <summary>
+/// The changes the walk runs over, and the notices working them out raised.
+/// </summary>
+internal sealed record RootedChanges(IReadOnlyList<Change> Changes, IReadOnlyList<Notice> Notices);

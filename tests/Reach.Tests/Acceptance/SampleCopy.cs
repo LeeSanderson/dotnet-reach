@@ -1,8 +1,8 @@
 using Reach.Processes;
 using Reach.Reporting;
-using Reach.Tests.Acceptance;
+using Reach.Tests.Fixtures;
 
-namespace Reach.Tests.Fixtures;
+namespace Reach.Tests.Acceptance;
 
 /// <summary>
 /// A sample solution copied into a fresh temporary git repository, patched, built, and run
@@ -24,8 +24,6 @@ namespace Reach.Tests.Fixtures;
 /// </remarks>
 internal sealed class SampleCopy : IDisposable
 {
-    private const string FixLine = "dotnet run tests/tools/patch.cs --";
-
     private const int BuildTailLines = 40;
 
     private readonly TempDirectory _root;
@@ -84,7 +82,7 @@ internal sealed class SampleCopy : IDisposable
         // alike, whatever the machine's own setting.
         copy._repository.Git("config", "core.autocrlf", "false");
 
-        Copy(SampleDirectory(sample), copy.Path);
+        CopyFromIndex(SampleDirectory(sample), copy.Path, copy._root.Combine("index"));
 
         if (baselinePatch is not null)
         {
@@ -204,10 +202,10 @@ internal sealed class SampleCopy : IDisposable
     private string Fix(string patch, string? on)
     {
         var name = WithoutExtension(patch);
-        var onBaseline = on is null ? string.Empty : $" --on {WithoutExtension(on)}";
+        var baseline = on is null ? null : WithoutExtension(on);
 
-        return $"To fix: {FixLine} apply {_sample} {name}{onBaseline}, resolve, "
-            + $"then {FixLine} save {_sample} {name}{onBaseline} --force.";
+        return $"To fix: {PatchTool.Apply(_sample, name, baseline)}, resolve, "
+            + $"then {PatchTool.Save(_sample, name, baseline)}.";
     }
 
     private async Task<ReachRun> RunReachAsync(SelectRequest request, int number, CancellationToken cancellationToken)
@@ -255,42 +253,69 @@ internal sealed class SampleCopy : IDisposable
     }
 
     /// <summary>
-    /// Copies the files git tracks under <paramref name="source"/>, and nothing else on disk.
+    /// Copies the sample as git's index holds it under <paramref name="source"/>: the tracked
+    /// files, with their staged contents, and nothing else on disk.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// The sample is built in place (CI does, to hold it to the coding standard), and that build
     /// output must not reach the temporary repository: Reach running with no build would find
     /// the extra assemblies.
+    /// </para>
+    /// <para>
+    /// The index rather than the working tree, so an unstaged local edit to a sample does not
+    /// leak into every test, and a tracked file deleted locally is still copied. <c>git
+    /// checkout-index</c> writes each file under <paramref name="staging"/> at its path in this
+    /// repository, so the sample's files are moved from there to <paramref name="destination"/>.
+    /// </para>
     /// </remarks>
-    private static void Copy(string source, string destination)
+    private static void CopyFromIndex(string source, string destination, string staging)
     {
-        var listing = new ProcessRunner()
-            .RunAsync(new ProcessRequest("git", ["ls-files", "-z"], source), CancellationToken.None)
-            .GetAwaiter()
-            .GetResult();
-
-        Assert.True(listing.ExitCode == 0, "git ls-files failed over the sample:\n" + listing.StandardError);
-
-        var files = listing.StandardOutput.Split('\0', StringSplitOptions.RemoveEmptyEntries);
+        var files = Git(source, "ls-files", "-z").Split('\0', StringSplitOptions.RemoveEmptyEntries);
 
         Assert.NotEmpty(files);
+
+        var prefix = Git(source, "rev-parse", "--show-prefix").Trim();
+
+        Directory.CreateDirectory(staging);
+
+        Git(source, ["checkout-index", $"--prefix={staging}{System.IO.Path.DirectorySeparatorChar}", "--", .. files]);
 
         foreach (var file in files)
         {
             var target = System.IO.Path.Combine(destination, file);
 
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(target)!);
-            File.Copy(System.IO.Path.Combine(source, file), target, overwrite: true);
+            File.Move(System.IO.Path.Combine(staging, prefix, file), target);
         }
+
+        Directory.Delete(staging, recursive: true);
+    }
+
+    /// <summary>
+    /// Runs git over the sample in this repository, failing the test on a non-zero exit.
+    /// </summary>
+    private static string Git(string workingDirectory, params string[] arguments)
+    {
+        var result = RunBlocking("git", arguments, workingDirectory);
+
+        Assert.True(
+            result.ExitCode == 0,
+            $"git {string.Join(' ', arguments.Take(2))} failed over the sample:\n{result.StandardError}");
+
+        return result.StandardOutput;
     }
 
     private static (int ExitCode, string Output) Run(string executable, string[] arguments, string workingDirectory)
     {
-        var result = new ProcessRunner()
-            .RunAsync(new ProcessRequest(executable, arguments, workingDirectory), CancellationToken.None)
-            .GetAwaiter()
-            .GetResult();
+        var result = RunBlocking(executable, arguments, workingDirectory);
 
         return (result.ExitCode, result.StandardOutput + result.StandardError);
     }
+
+    private static ProcessResult RunBlocking(string executable, string[] arguments, string workingDirectory) =>
+        new ProcessRunner()
+            .RunAsync(new ProcessRequest(executable, arguments, workingDirectory), CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
 }

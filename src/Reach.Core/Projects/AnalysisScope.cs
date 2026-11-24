@@ -31,6 +31,13 @@ public sealed record AnalysisScope(
             .Where(project => Paths.IsUnder(absolutePath, project.Directory))
             .OrderByDescending(project => project.Directory.Length)
             .FirstOrDefault();
+
+    /// <summary>
+    /// <see cref="ProjectContaining(string)"/> for a path relative to the repository root, the
+    /// form git reports a change in.
+    /// </summary>
+    internal ProjectFile? ProjectContaining(string repositoryRoot, string repositoryRelativePath) =>
+        ProjectContaining(Paths.Normalise(Path.Combine(repositoryRoot, repositoryRelativePath)));
 }
 
 /// <summary>

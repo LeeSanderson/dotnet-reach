@@ -13,14 +13,12 @@ public sealed class FrameworksTests() : SampleTests("Frameworks")
     internal const string TaxChange = "tax-rounds-half-up.patch";
 
     /// <summary>
-    /// The notices every Frameworks run carries. The harness passes the baseline commit as
-    /// <c>--base</c> and leaves its change patches uncommitted, so <c>HEAD</c> is the baseline;
-    /// and the NUnit and unrecognised projects bring their standing notices, whatever the patch.
+    /// The notices every Frameworks run carries: those of every run, and the standing notices
+    /// the NUnit and unrecognised projects bring, whatever the patch.
     /// </summary>
     private static readonly string[] StandingNotices =
     [
-        "baseline-resolved",
-        "baseline-is-head",
+        .. EveryRunNotices,
         "nunit-filter-overmatch",
         "whole-project-fallback",
     ];
@@ -59,10 +57,12 @@ public sealed class FrameworksTests() : SampleTests("Frameworks")
         await Apply("unrecognised-check-message.patch").ExpectAsync(new()
         {
             Because = "Only a check in the unrecognised project changed, which no recognised "
-                + "test reaches, and that project cannot be enumerated, so it runs in full.",
+                + "test reaches, and that project cannot be enumerated, so it runs in full and its "
+                + "total is unknown rather than zero.",
             Outcome = Outcome.Selected,
             Selected = [],
             RunInFull = ["Frameworks.Tests.Unrecognised"],
+            UnknownTotal = ["Frameworks.Tests.Unrecognised"],
             Notices = StandingNotices,
         });
 }

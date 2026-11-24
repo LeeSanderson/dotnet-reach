@@ -85,11 +85,7 @@ public sealed partial class HelpOptionParityTests
     /// </summary>
     private static List<HelpOption> HelpOptions()
     {
-        var path = RepositoryRoot.Combine("tests", "Reach.Tests", "Cli", "Golden", "select-help.txt");
-
-        Assert.True(File.Exists(path), $"Nothing at {path}.");
-
-        var options = File.ReadAllText(path).ReplaceLineEndings("\n").Split('\n')
+        var options = RepositoryRoot.ReadText("tests", "Reach.Tests", "Cli", "Golden", "select-help.txt").Split('\n')
             .SkipWhile(line => !string.Equals(line, "Options:", StringComparison.Ordinal))
             .Skip(1)
             .TakeWhile(line => line.StartsWith("  ", StringComparison.Ordinal))
@@ -115,13 +111,9 @@ public sealed partial class HelpOptionParityTests
 
         foreach (var document in Documents)
         {
-            var path = RepositoryRoot.Combine(document);
-
-            Assert.True(File.Exists(path), $"Nothing at {path}.");
-
             var fenced = false;
 
-            foreach (var line in File.ReadAllText(path).ReplaceLineEndings("\n").Split('\n'))
+            foreach (var line in RepositoryRoot.ReadText(document).Split('\n'))
             {
                 if (line.StartsWith("```", StringComparison.Ordinal))
                 {

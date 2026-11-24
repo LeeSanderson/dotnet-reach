@@ -33,7 +33,10 @@ public sealed class CommandLineTests : IDisposable
 
     private string Error => _standardError.ToString();
 
-    private static int Numeric(ExitCode code) => Convert.ToInt32(code, CultureInfo.InvariantCulture);
+    /// <summary>
+    /// An exit code as the process returns it.
+    /// </summary>
+    internal static int Numeric(ExitCode code) => Convert.ToInt32(code, CultureInfo.InvariantCulture);
 
     // ---- The verb -----------------------------------------------------------------------
 

@@ -53,8 +53,7 @@ public class ProjectContainmentTests
             ChangedSet.Empty with { Members = [unjoined] },
             [new JoinResult(unjoined, [])],
             scope,
-            new TierLadder(scope, Root),
-            []));
+            Root).Changes);
 
         Assert.Equal(ChangeTier.WholeAssembly, change.Entry.Tier);
         Assert.Equal(roots.InAssembly("Core"), change.Roots);
@@ -68,7 +67,6 @@ public class ProjectContainmentTests
             ("Api", "namespace N.Api; public class B { public int M() => N.A.Value; }"));
 
         var scope = new AnalysisScope([Core, Api, Tests], [Tests], []);
-        var notices = new List<Notice>();
 
         var constant = new ChangedMember(
             "N.A",
@@ -77,12 +75,11 @@ public class ProjectContainmentTests
             "app/src/Core/A.cs",
             ChangesCompileTimeConstant: true);
 
-        new RootSets(graphs.Assemblies).ChangesFrom(
+        var notices = new RootSets(graphs.Assemblies).ChangesFrom(
             ChangedSet.Empty with { Members = [constant] },
             [],
             scope,
-            new TierLadder(scope, Root),
-            notices);
+            Root).Notices;
 
         // Inlining can erase the reference the reverse walk would follow, so Api has to widen.
         var widening = Assert.Single(notices, notice => notice.Code == NoticeCodes.RecompilationWidening);
@@ -108,8 +105,7 @@ public class ProjectContainmentTests
             ChangedSet.Empty with { Members = [elsewhere] },
             [new JoinResult(elsewhere, [])],
             scope,
-            new TierLadder(scope, Root),
-            []));
+            Root).Changes);
 
         // No in-scope project compiles it, so it cannot reach a test: outside the scope, not Core.
         Assert.Empty(change.Roots);

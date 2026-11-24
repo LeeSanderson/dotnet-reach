@@ -57,10 +57,20 @@ jobs:
       # Runs whenever the fast layer ran, pass or fail, so one push reports both layers.
       # The timeout guards against a hung build inside a test. It is not a time budget: the
       # acceptance layer has none.
+      # This is the release gate's acceptance run, so it leaves the known gaps out: they pin
+      # what Reach gets wrong and are never in the gate (spec §4.5). The trait is what excludes
+      # them; the Known_gap_ name is for the reader.
       - name: Test (acceptance layer)
         if: ${{ !cancelled() && (steps.fast.outcome == 'success' || steps.fast.outcome == 'failure') }}
         timeout-minutes: 20
-        run: dotnet test --project tests/Reach.Tests/Reach.Tests.csproj -c Release --no-build --report-xunit-trx --report-xunit-trx-filename acceptance.trx --results-directory ./TestResults -- --filter-namespace "Reach.Tests.Acceptance*"
+        run: dotnet test --project tests/Reach.Tests/Reach.Tests.csproj -c Release --no-build --report-xunit-trx --report-xunit-trx-filename acceptance.trx --results-directory ./TestResults -- --filter-namespace "Reach.Tests.Acceptance*" --filter-not-trait "Batch=known-gap"
+
+      # The known gaps on their own, outside the gate. A known-gap test turns red when its gap
+      # closes, and this step is where that shows, under its own name rather than the gate's.
+      - name: Test (known gaps, not in the gate)
+        if: ${{ !cancelled() && (steps.fast.outcome == 'success' || steps.fast.outcome == 'failure') }}
+        timeout-minutes: 20
+        run: dotnet test --project tests/Reach.Tests/Reach.Tests.csproj -c Release --no-build --report-xunit-trx --report-xunit-trx-filename known-gaps.trx --results-directory ./TestResults -- --filter-trait "Batch=known-gap"
 
       - name: Upload test results
         if: always()

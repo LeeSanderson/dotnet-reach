@@ -9,12 +9,6 @@ namespace Reach.Tests.Acceptance.Ledger;
 public sealed class LedgerTests() : SampleTests("Ledger")
 {
     /// <summary>
-    /// The two notices every run carries: the harness passes the baseline as <c>--base</c>, and
-    /// the change patches are left uncommitted, so it is also <c>HEAD</c>.
-    /// </summary>
-    private static readonly string[] StandingNotices = ["baseline-is-head", "baseline-resolved"];
-
-    /// <summary>
     /// Rows 20 and 22: Billing widens as a whole. Every Billing test reaches Billing, and so
     /// does Api's posting test; nothing else does.
     /// </summary>
@@ -59,7 +53,7 @@ public sealed class LedgerTests() : SampleTests("Ledger")
                 ["Ledger.Api.Tests"] = ["Ledger.Api.Tests.RemindersTests.Requesting_reminders_lists_the_overdue_invoices"],
             },
             RunInFull = [],
-            Notices = StandingNotices,
+            Notices = EveryRunNotices,
         });
 
     [Fact]
@@ -83,7 +77,7 @@ public sealed class LedgerTests() : SampleTests("Ledger")
                 ["Ledger.Api.Tests"] = AllOfApi,
             },
             RunInFull = [],
-            Notices = [.. StandingNotices, "recompilation-widening"],
+            Notices = [.. EveryRunNotices, "recompilation-widening"],
             // The const is two entries: as a field it cannot join, so it falls back to Billing's
             // whole assembly; as a changed constant it widens Billing's referencers.
             Tiers = new()
@@ -112,7 +106,7 @@ public sealed class LedgerTests() : SampleTests("Ledger")
                 ["Ledger.Api.Tests"] = AllOfApi,
             },
             RunInFull = [],
-            Notices = [.. StandingNotices, "recompilation-widening"],
+            Notices = [.. EveryRunNotices, "recompilation-widening"],
             // The deletion widens its type, and the removed member, as a removal, widens Dunning's
             // referencers. Dunning itself does not widen whole.
             Tiers = new()
@@ -132,7 +126,7 @@ public sealed class LedgerTests() : SampleTests("Ledger")
             Outcome = Outcome.Selected,
             Selected = BillingWidenedAlone,
             RunInFull = [],
-            Notices = StandingNotices,
+            Notices = EveryRunNotices,
         });
 
     [Fact]
@@ -154,7 +148,7 @@ public sealed class LedgerTests() : SampleTests("Ledger")
                 ["Ledger.Api.Tests"] = ["Ledger.Api.Tests.RemindersTests.Requesting_reminders_lists_the_overdue_invoices"],
             },
             RunInFull = [],
-            Notices = StandingNotices,
+            Notices = EveryRunNotices,
         });
 
     [Fact]
@@ -167,7 +161,7 @@ public sealed class LedgerTests() : SampleTests("Ledger")
             Outcome = Outcome.Selected,
             Selected = BillingWidenedAlone,
             RunInFull = [],
-            Notices = StandingNotices,
+            Notices = EveryRunNotices,
             // The old name is a deleted type. Under the new name every member is added: Next() joins
             // to its compiled method, and the field, which has no method to join, falls back to
             // its whole assembly.
@@ -188,7 +182,7 @@ public sealed class LedgerTests() : SampleTests("Ledger")
             Outcome = Outcome.NothingSelected,
             Selected = new(),
             RunInFull = [],
-            Notices = [.. StandingNotices, "unmapped-file-no-project"],
+            Notices = [.. EveryRunNotices, "unmapped-file-no-project"],
         });
 
     [Fact]
