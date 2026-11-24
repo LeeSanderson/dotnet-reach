@@ -30,9 +30,14 @@ internal sealed class TempDirectory : IDisposable
     /// <summary>
     /// Writes a file, creating any intermediate directories.
     /// </summary>
-    internal string WriteFile(string relativePath, string contents)
+    internal string WriteFile(string relativePath, string contents) => WriteFile(Path, relativePath, contents);
+
+    /// <summary>
+    /// Writes a file under <paramref name="directory"/>, creating any intermediate directories.
+    /// </summary>
+    internal static string WriteFile(string directory, string relativePath, string contents)
     {
-        var full = Combine(relativePath);
+        var full = System.IO.Path.Combine(directory, relativePath);
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(full)!);
         File.WriteAllText(full, contents);
         return full;

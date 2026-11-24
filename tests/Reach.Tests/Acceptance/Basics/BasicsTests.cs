@@ -6,12 +6,6 @@ namespace Reach.Tests.Acceptance.Basics;
 public sealed class BasicsTests() : SampleTests("Basics")
 {
     /// <summary>
-    /// The two notices every run carries: the harness passes the baseline commit as
-    /// <c>--base</c>, and leaves its change patches uncommitted, so <c>HEAD</c> is the baseline.
-    /// </summary>
-    private static readonly string[] EveryRunNotices = ["baseline-resolved", "baseline-is-head"];
-
-    /// <summary>
     /// Every test in <c>Basics.Tests</c>, each of which reaches <c>Basics.Core</c>: what row 12
     /// selects when the generator's consumer widens. A new sample test belongs here too.
     /// </summary>

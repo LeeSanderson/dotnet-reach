@@ -286,12 +286,5 @@ public sealed partial class WalkThroughParityTests
         JsonNode.Parse(Read("example-report.json"))
         ?? throw new InvalidOperationException("docs/example-report.json is null.");
 
-    private static string Read(string name)
-    {
-        var path = RepositoryRoot.Combine("docs", name);
-
-        Assert.True(File.Exists(path), $"Nothing at {path}.");
-
-        return File.ReadAllText(path).ReplaceLineEndings("\n");
-    }
+    private static string Read(string name) => RepositoryRoot.ReadText("docs", name);
 }

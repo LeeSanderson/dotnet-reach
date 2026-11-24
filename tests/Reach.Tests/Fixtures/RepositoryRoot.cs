@@ -39,4 +39,21 @@ internal static class RepositoryRoot
     /// </summary>
     internal static string Combine(params string[] segments) =>
         Path.Combine([Of(), .. segments]);
+
+    /// <summary>
+    /// The text of a file the repository ships, failing the test when it is missing.
+    /// </summary>
+    /// <remarks>
+    /// Line endings are normalised, and only line endings. Git hands a Windows checkout CRLF and
+    /// a Linux one LF, and a test that failed on the platform rather than on the content would
+    /// be reporting the wrong thing.
+    /// </remarks>
+    internal static string ReadText(params string[] segments)
+    {
+        var path = Combine(segments);
+
+        Assert.True(File.Exists(path), $"Nothing at {path}.");
+
+        return File.ReadAllText(path).ReplaceLineEndings("\n");
+    }
 }

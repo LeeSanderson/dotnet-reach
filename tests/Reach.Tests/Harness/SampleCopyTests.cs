@@ -1,3 +1,4 @@
+using Reach.Tests.Acceptance;
 using Reach.Tests.Fixtures;
 using Xunit.Sdk;
 

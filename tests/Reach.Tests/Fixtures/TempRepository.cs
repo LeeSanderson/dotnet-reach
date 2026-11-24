@@ -64,13 +64,8 @@ internal sealed class TempRepository : IDisposable
     /// <summary>
     /// Writes a file, creating any intermediate directories.
     /// </summary>
-    internal string WriteFile(string relativePath, string contents)
-    {
-        var full = Combine(relativePath);
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(full)!);
-        File.WriteAllText(full, contents);
-        return full;
-    }
+    internal string WriteFile(string relativePath, string contents) =>
+        TempDirectory.WriteFile(Path, relativePath, contents);
 
     internal string Combine(params string[] parts) => System.IO.Path.Combine([Path, .. parts]);
 

@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using Reach.Cli;
 using Reach.Output;
@@ -38,7 +37,6 @@ public sealed class ExitPathTests : IDisposable
             outputIsRedirected: false,
             Token);
 
-    private static int Numeric(ExitCode code) => Convert.ToInt32(code, CultureInfo.InvariantCulture);
 
     // ---- Exit 70 ------------------------------------------------------------------------------
 
@@ -51,7 +49,7 @@ public sealed class ExitPathTests : IDisposable
         // failing in a way no phase anticipated.
         var exitCode = await RunAsync(tree.Root, new ScriptedProcessRunner(), "select", "--base", "main");
 
-        Assert.Equal(Numeric(ExitCode.InternalError), exitCode);
+        Assert.Equal(CommandLineTests.Numeric(ExitCode.InternalError), exitCode);
         Assert.Contains("internal error", _standardError.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
@@ -81,7 +79,7 @@ public sealed class ExitPathTests : IDisposable
 
         var exitCode = await RunAsync(repository.Path, runner, "select", "--base", "main");
 
-        Assert.Equal(Numeric(ExitCode.BuildFailed), exitCode);
+        Assert.Equal(CommandLineTests.Numeric(ExitCode.BuildFailed), exitCode);
 
         using var report = await ReportAsync(repository.Path);
 
@@ -98,7 +96,7 @@ public sealed class ExitPathTests : IDisposable
         // No --base, no CI variables, and no git repository, so resolution stops.
         var exitCode = await RunAsync(tree.Root, new ProcessRunner(), "select");
 
-        Assert.Equal(Numeric(ExitCode.BaselineUnresolvable), exitCode);
+        Assert.Equal(CommandLineTests.Numeric(ExitCode.BaselineUnresolvable), exitCode);
 
         using var report = await ReportAsync(tree.Root);
 
@@ -135,7 +133,7 @@ public sealed class ExitPathTests : IDisposable
 
         var exitCode = await RunAsync(repository.Path, new ProcessRunner(), "select", "--base", "main", "--no-build");
 
-        Assert.Equal(Numeric(ExitCode.CorrespondenceFailed), exitCode);
+        Assert.Equal(CommandLineTests.Numeric(ExitCode.CorrespondenceFailed), exitCode);
 
         using var report = await ReportAsync(repository.Path);
 

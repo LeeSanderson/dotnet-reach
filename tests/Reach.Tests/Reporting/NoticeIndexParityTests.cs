@@ -146,12 +146,5 @@ public sealed partial class NoticeIndexParityTests
     [GeneratedRegex(@"^\| `([a-z][a-z0-9-]*)` \|")]
     private static partial Regex CodeRow { get; }
 
-    private static string Schema()
-    {
-        var path = RepositoryRoot.Combine("docs", "report-schema.md");
-
-        Assert.True(File.Exists(path), $"Nothing at {path}.");
-
-        return File.ReadAllText(path).ReplaceLineEndings("\n");
-    }
+    private static string Schema() => RepositoryRoot.ReadText("docs", "report-schema.md");
 }

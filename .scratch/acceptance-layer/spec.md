@@ -355,7 +355,7 @@ says `Expect` for the step in prose.
   out means not checked.
 - **Every report carries `baseline-resolved` and `baseline-is-head`.** The harness passes the
   baseline SHA as `--base` and leaves change patches uncommitted, so `HEAD` is the baseline. A
-  given `Notices` section lists both, through a shared static piece (`EveryRunNotices` on Basics).
+  given `Notices` section lists both, through a shared static piece (`EveryRunNotices` on `SampleTests`).
 - **Keys.** Test-project name is the `.csproj` file name without extension. A multi-targeted
   project's entries are written **`Name@tfm`**. A bare name matching more than one `report.json`
   entry is an ambiguity error, so a framework cannot be skipped by accident.
