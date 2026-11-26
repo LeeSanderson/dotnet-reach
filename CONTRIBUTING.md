@@ -24,7 +24,7 @@ The acceptance tests live in the `Reach.Tests.Acceptance` namespace. CI runs the
 step from the rest of the suite, so a failing step names the failing layer.
 
 Known-gap tests (`[KnownGap]`, named `Known_gap_...`) pin what Reach gets wrong on purpose, and
-are never in the release gate. CI's acceptance step leaves them out with
+are never in [the release gate](docs/release-gate.md). CI's acceptance step leaves them out with
 `--filter-not-trait "Batch=known-gap"` and runs them in a step of their own. When that step goes
 red, a gap has closed: update the test and `docs/limitations.md`.
 

@@ -5,7 +5,7 @@ Spec: [Publishing](../spec.md). Moved here from M1 ticket 21 on 2026-11-26.
 
 Nothing blocks it. Its dependencies (M1 tickets 19 and 20, and the gate audit) have landed, and the
 release gate is met: every claim in the docs is proven by a passing test
-([spec §3](../spec.md#3-the-release-gate)).
+([the release gate](../../../docs/release-gate.md)).
 
 ## Goal
 

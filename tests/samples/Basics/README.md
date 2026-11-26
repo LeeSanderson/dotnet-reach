@@ -2,7 +2,7 @@
 
 A small **sample solution** for Reach's acceptance layer. It carries every small row of the
 release gate except the two that need the Frameworks sample's standing notices. The rows are
-defined in [the publishing spec](../../../.scratch/publishing/spec.md#3-the-release-gate), and the sample's design in
+defined in [the release gate](../../../docs/release-gate.md#the-rows-small-samples), and the sample's design in
 [the acceptance-layer spec, §2.3](https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/acceptance-layer/spec.md#23-basics).
 
 This folder is the baseline repository Reach reads in an acceptance test, so it holds the sample
