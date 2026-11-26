@@ -1,6 +1,6 @@
 # Coding standards and a green CI
 
-Status: ready-for-agent
+Status: resolved
 
 Derived from a grilling session on 18 November 2026. Decisions that are surprising without
 context are recorded in ADR-0016 (culture-invariant output), ADR-0017 (CRLF line endings) and
