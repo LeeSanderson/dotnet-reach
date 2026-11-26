@@ -5,8 +5,9 @@ using Xunit.v3;
 namespace Reach.Tests.Harness;
 
 /// <summary>
-/// Whether known-gap tests are declared consistently (spec §4.5): the <c>Known_gap_</c> name and
-/// the <c>Batch=known-gap</c> trait go together, or neither is there.
+/// Whether known-gap tests are declared consistently: the <c>Known_gap_</c> name and the
+/// <c>Batch=known-gap</c> trait go together, or neither is there. See the
+/// <see href="https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/acceptance-layer/spec.md#45-known-gaps">acceptance-layer spec §4.5</see>.
 /// </summary>
 /// <remarks>
 /// The trait is what the release gate excludes and the name is what a reader sees, so a test with

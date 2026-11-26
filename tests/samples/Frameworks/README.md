@@ -1,8 +1,9 @@
 # Frameworks
 
 A small **sample solution** for Reach's acceptance layer, whose point is its standing notices. It
-carries rows 7 and 8 of the release gate and the example report. See the acceptance-layer spec,
-§2.4.
+carries rows 7 and 8 of the release gate and the example report. The rows are defined in
+[the publishing spec](../../../.scratch/publishing/spec.md#3-the-release-gate), and the sample's design in
+[the acceptance-layer spec, §2.4](https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/acceptance-layer/spec.md#24-frameworks-was-contoso).
 
 This folder is the baseline repository Reach reads in an acceptance test, so it holds the sample
 and nothing else. The acceptance tests live in `tests/Reach.Tests/Acceptance/Frameworks/`, beside

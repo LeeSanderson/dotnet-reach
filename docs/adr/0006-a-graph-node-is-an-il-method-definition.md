@@ -35,7 +35,7 @@ Identity must combine an assembly ordinal, a target framework and a metadata tok
 a token is unique only within one assembly and a multi-targeted project produces one
 assembly per framework. The representation is
 [Method identity and the performance
-budget](../../.scratch/walking-skeleton/issues/09-method-identity-and-performance-budget.md).
+budget](https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/walking-skeleton/issues/09-method-identity-and-performance-budget.md).
 
 `MethodImpl` is authoritative for mapping an interface member to its implementation,
 because an explicit interface implementation is deliberately not name-matchable; name and

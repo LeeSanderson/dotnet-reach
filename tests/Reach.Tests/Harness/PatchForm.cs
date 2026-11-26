@@ -3,8 +3,9 @@ using Reach.Tests.Acceptance;
 namespace Reach.Tests.Harness;
 
 /// <summary>
-/// Whether a patch is in the checked-in stripped form (spec §3.1): no <c>diff --git</c>,
-/// <c>index</c>, file-mode or other git extended header lines.
+/// Whether a patch is in the checked-in stripped form: no <c>diff --git</c>, <c>index</c>,
+/// file-mode or other git extended header lines. See the
+/// <see href="https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/acceptance-layer/spec.md#31-the-format">acceptance-layer spec §3.1</see>.
 /// </summary>
 /// <remarks>
 /// Every line inside a hunk starts with a space, <c>+</c>, <c>-</c> or <c>\</c>, so a line that

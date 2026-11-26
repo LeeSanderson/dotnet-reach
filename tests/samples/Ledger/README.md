@@ -2,7 +2,8 @@
 
 The multi-project **sample solution** for Reach's acceptance layer: a small invoicing and
 collections back office. Every row it carries is about what is **not** selected, so it is shaped
-to have tests to leave out. See the acceptance-layer spec, §2.5 and §7.2.
+to have tests to leave out. Its rows are §3.3 of [the publishing spec](../../../.scratch/publishing/spec.md#3-the-release-gate), and the
+sample's design is [the acceptance-layer spec, §2.5](https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/acceptance-layer/spec.md#25-ledger).
 
 This folder is the baseline repository Reach reads in an acceptance test, so it holds the sample
 and nothing else. The acceptance tests live in `tests/Reach.Tests/Acceptance/Ledger/`, beside the

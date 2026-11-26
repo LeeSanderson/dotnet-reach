@@ -3,9 +3,10 @@ using Reach.Tests.Acceptance;
 namespace Reach.Tests.Harness;
 
 /// <summary>
-/// The known-gap guard (spec §4.5): a test named <c>Known_gap_…</c> carries the
-/// <c>Batch=known-gap</c> trait, and a test with the trait is named <c>Known_gap_…</c>. Outside
-/// the acceptance namespace, so it runs in the fast CI step.
+/// The known-gap guard: a test named <c>Known_gap_…</c> carries the <c>Batch=known-gap</c> trait,
+/// and a test with the trait is named <c>Known_gap_…</c>. Outside the acceptance namespace, so it
+/// runs in the fast CI step. See the
+/// <see href="https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/acceptance-layer/spec.md#45-known-gaps">acceptance-layer spec §4.5</see>.
 /// </summary>
 public sealed class KnownGapGuardTests
 {

@@ -17,7 +17,7 @@ scoped.
 ## The bargain
 
 The simplification is paid for, not waived. Every one of them names its constraint in the
-[limitations register](../../.scratch/walking-skeleton/issues/19-the-limitations-register.md),
+[limitations register](https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/walking-skeleton/issues/19-the-limitations-register.md),
 with its direction of failure and whether Reach can detect an instance of it. That is what
 separates this from cutting corners: the tool's own account of what it cannot do grows by
 exactly the amount its implementation was simplified, so a user deciding whether to trust a
@@ -30,7 +30,7 @@ Two directions, priced differently:
   is large enough to affect adoption.
 - A simplification that **under-selects** is a debt. It requires a register entry, and where
   Reach can detect an instance it requires a notice code, which
-  [the report contract](../../.scratch/walking-skeleton/issues/07-the-report-contract.md)
+  [the report contract](https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/walking-skeleton/issues/07-the-report-contract.md)
   binds to a register entry with a test. Anything else is a silent hole, which
   [ADR-0008](0008-m1-accepts-named-under-selection.md) already forbids.
 

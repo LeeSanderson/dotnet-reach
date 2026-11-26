@@ -45,4 +45,4 @@ already requires.
 What is compared *within* a matched type is not settled here — a `const`, field initializer
 or attribute argument is not a method body, and a compile-time constant is inlined into
 consumers whose source never changed. That is
-[What counts as a changed member](../../.scratch/walking-skeleton/issues/18-what-counts-as-a-changed-member.md).
+[What counts as a changed member](https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/walking-skeleton/issues/18-what-counts-as-a-changed-member.md).

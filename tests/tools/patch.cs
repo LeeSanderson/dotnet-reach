@@ -3,7 +3,10 @@
 #:property PublishAot=false
 #:property RootNamespace=Reach.Tools
 
-// Writes and applies the acceptance layer's patches (spec §3.4). Run from anywhere in the repository:
+// Writes and applies the acceptance layer's patches. The design is §3 of the acceptance-layer spec:
+// https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/acceptance-layer/spec.md#3-patches
+//
+// Run from anywhere in the repository:
 //
 //   dotnet run tests/tools/patch.cs -- save  <Sample> <name> [--on <baseline>] [--force]
 //   dotnet run tests/tools/patch.cs -- apply <Sample> <name> [--on <baseline>]
@@ -299,8 +302,8 @@ namespace Reach.Tools
     }
 
     /// <summary>
-    /// <c>git diff</c> output reduced to the checked-in form (spec §3.1): only <c>---</c>/<c>+++</c>
-    /// file headers and <c>@@</c> hunks.
+    /// <c>git diff</c> output reduced to the checked-in form (acceptance-layer spec §3.1): only
+    /// <c>---</c>/<c>+++</c> file headers and <c>@@</c> hunks.
     /// </summary>
     internal static class Stripped
     {
@@ -367,7 +370,7 @@ namespace Reach.Tools
     /// </summary>
     /// <remarks>
     /// <c>--3way</c> stages what it applies, and leaves conflict markers for a human to resolve when
-    /// git has the blobs to merge. The harness never uses it (spec §3.1).
+    /// git has the blobs to merge. The harness never uses it (acceptance-layer spec §3.1).
     /// </remarks>
     internal static class Applier
     {

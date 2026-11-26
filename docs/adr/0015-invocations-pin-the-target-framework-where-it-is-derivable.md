@@ -79,7 +79,7 @@ effectively all of them.
 **The output directory name.** It *is* the exact declared moniker under the default layout,
 verified across five probe targets — `bin\Debug\net10.0-windows\` is the literal string `-f`
 wants. Rejected because it reintroduces precisely the path-trust that
-[ticket 14](../../.scratch/walking-skeleton/issues/14-assembly-discovery-under-ambiguous-output-layouts.md)
+[ticket 14](https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/walking-skeleton/issues/14-assembly-discovery-under-ambiguous-output-layouts.md)
 spent its whole resolution removing, and it breaks under custom `OutputPath`,
 `AppendTargetFrameworkToOutputPath=false` and the artifacts layout — the same ambiguous layouts
 that motivated reading metadata in the first place. It buys precision in the one place the path

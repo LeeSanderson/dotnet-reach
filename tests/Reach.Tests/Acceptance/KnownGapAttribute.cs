@@ -3,8 +3,9 @@ using Xunit.v3;
 namespace Reach.Tests.Acceptance;
 
 /// <summary>
-/// Marks a known-gap test (spec §4.5): one that pins a deliberate over-selection or a documented
-/// under-selection with an exact expected result, and turns red when the gap closes.
+/// Marks a known-gap test: one that pins a deliberate over-selection or a documented
+/// under-selection with an exact expected result, and turns red when the gap closes. See the
+/// <see href="https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/acceptance-layer/spec.md#45-known-gaps">acceptance-layer spec §4.5</see>.
 /// </summary>
 /// <remarks>
 /// <para>

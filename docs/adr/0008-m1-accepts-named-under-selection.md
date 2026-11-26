@@ -25,9 +25,9 @@ selection — which is why the register is a deliverable of M1 and not a follow-
 ## The holes accepted at M1
 
 Enumerated by [Generics, delegates and function
-pointers](../../.scratch/walking-skeleton/issues/05-generics-delegates-and-function-pointers.md);
+pointers](https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/walking-skeleton/issues/05-generics-delegates-and-function-pointers.md);
 owned and kept current by [The limitations
-register](../../.scratch/walking-skeleton/issues/19-the-limitations-register.md).
+register](https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/walking-skeleton/issues/19-the-limitations-register.md).
 
 The largest is **first-party members invoked only from outside the analysis scope**.
 Verified: `$"{n}-{o}"` emits `DefaultInterpolatedStringHandler::AppendFormatted<T>` and

@@ -1,12 +1,11 @@
-# Publishing
+# Publish 0.1.0-alpha.1
 
 Status: ready-for-human
-Depends on: 19, 20, and [the gate audit](../../acceptance-implementation/issues/16-the-gate-audit.md)
-(acceptance-implementation ticket 16). The planning hold of 2026-11-14 was lifted on 2026-11-22,
-when the acceptance-layer map reached its destination. The release now waits for the gate itself:
-every claim in the docs proven by a passing test
-([acceptance-layer spec §9](../../acceptance-layer/spec.md#9-the-release-gate)).
-Spec: [§16.4](../../walking-skeleton/spec.md#164-documentation-ci-and-publishing)
+Spec: [Publishing](../spec.md). Moved here from M1 ticket 21 on 2026-11-26.
+
+Nothing blocks it. Its dependencies (M1 tickets 19 and 20, and the gate audit) have landed, and the
+release gate is met: every claim in the docs is proven by a passing test
+([spec §3](../spec.md#3-the-release-gate)).
 
 ## Goal
 
@@ -48,7 +47,7 @@ protection requiring approvals.
 
 **One documentation consequence to re-check before tagging**: `dnx dotnet-reach` with a **bare
 package id will not find a prerelease**, failing with a misleading "not found in NuGet feeds", and
-`--prerelease` is not the fix. Ticket 20 already pins the version in the quickstart; confirm it
+`--prerelease` is not the fix. M1 ticket 20 already pins the version in the quickstart; confirm it
 still does before the tag goes up, because this is the moment the docs stop describing a future
 state.
 
@@ -87,8 +86,9 @@ name and the verb are independent choices.
 
 ## Out of scope
 
-`dogfood.yml` and the docs↔workflow parity test — ticket 22, which **cannot be written before this
-one lands**, because its recipe is a `pull_request` workflow installing a *published* package.
+`dogfood.yml` and the docs↔workflow parity test. Both landed under M1 ticket 22 before this
+ticket. Until the package is published, `dogfood.yml`'s selection step fails at `dnx`, and the
+workflow lets that through (spec §2).
 
 ## Implementation notes
 
@@ -103,8 +103,8 @@ whole reason this ticket is two deliberate human acts is that a published packag
 deleted — a guard that costs four lines and turns *permanent* into *try again* belongs on that
 step.
 
-**Package metadata was added, because the pack was not publishable without it.** Ticket 20 asserts
-that a NuGet page lands a reader on GitHub, and the package had no `PackageProjectUrl`, no
+**Package metadata was added, because the pack was not publishable without it.** M1 ticket 20
+asserts that a NuGet page lands a reader on GitHub, and the package had no `PackageProjectUrl`, no
 description and no licence expression, so it did not. `Description`, `Authors`,
 `PackageLicenseExpression`, `PackageProjectUrl`, `RepositoryUrl` and `PackageTags` are now set.
 

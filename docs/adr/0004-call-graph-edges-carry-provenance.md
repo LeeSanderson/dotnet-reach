@@ -9,7 +9,7 @@ that structure.
 ## Amendment: provenance has three safety classes, not two
 
 Recorded when [Generics, delegates and function
-pointers](../../.scratch/walking-skeleton/issues/05-generics-delegates-and-function-pointers.md)
+pointers](https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/walking-skeleton/issues/05-generics-delegates-and-function-pointers.md)
 enumerated the edge kinds and found seven, not four. Two of them — **containment** (a
 kernel method to the compiler-generated members carrying its body) and **type
 initialization** (an initialization trigger to a `.cctor`) — are synthesised by Reach

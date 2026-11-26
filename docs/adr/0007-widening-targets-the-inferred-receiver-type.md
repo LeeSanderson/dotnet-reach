@@ -42,7 +42,7 @@ runtime behaviour, and no edge that could run is removed.
 
 It puts the only per-instruction work in the graph builder's hot loop, which
 [Method identity and the performance
-budget](../../.scratch/walking-skeleton/issues/09-method-identity-and-performance-budget.md)
+budget](https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/walking-skeleton/issues/09-method-identity-and-performance-budget.md)
 has to account for. It is linear in IL size and rides a pass that already exists, but it
 is not free.
 

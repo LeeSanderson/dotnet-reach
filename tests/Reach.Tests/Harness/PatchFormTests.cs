@@ -3,8 +3,9 @@ using Reach.Tests.Fixtures;
 namespace Reach.Tests.Harness;
 
 /// <summary>
-/// The stripped-form guard (spec §3.1): a checked-in patch holds only <c>---</c>/<c>+++</c> file
-/// headers and <c>@@</c> hunks. Outside the acceptance namespace, so it runs in the fast CI step.
+/// The stripped-form guard: a checked-in patch holds only <c>---</c>/<c>+++</c> file headers and
+/// <c>@@</c> hunks. Outside the acceptance namespace, so it runs in the fast CI step. See the
+/// <see href="https://github.com/LeeSanderson/dotnet-reach/blob/83b450b13dd5cd701c5f9939f97519a50a9645bc/.scratch/acceptance-layer/spec.md#31-the-format">acceptance-layer spec §3.1</see>.
 /// </summary>
 public sealed class PatchFormTests
 {
