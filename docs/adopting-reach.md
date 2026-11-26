@@ -121,7 +121,12 @@ jobs:
       # Reach's own solution also holds the sample projects its tests build, so this names its
       # one test project. Put your solution or test project in its place, here and in the whole
       # suite below. Without one, both find the solution in the working directory.
+      #
+      # Only the whole suite gates, so neither Reach nor the tests it selects can fail the job.
+      # A failure here still shows as a red step, and the next step is skipped.
       - name: Select the tests this change could affect
+        id: select
+        continue-on-error: true
         run: dnx dotnet-reach@0.1.0-alpha.1 select tests/Reach.Tests/Reach.Tests.csproj -c Release --no-build
 
       # An empty selection emits no command, so the loop runs nothing. Two things the obvious
@@ -129,6 +134,8 @@ jobs:
       # test leaves the step green; and a child that reads stdin swallows the commands still
       # queued behind it.
       - name: Run the selection
+        if: ${{ steps.select.outcome == 'success' }}
+        continue-on-error: true
         run: |
           status=0
           while read -r command; do
