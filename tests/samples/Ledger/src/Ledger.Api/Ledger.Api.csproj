@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- Set here as well as in the repository's props: the acceptance harness builds a copy of
+         this sample, outside the repository, where those props do not reach. -->
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Ledger.Billing/Ledger.Billing.csproj" />
+    <ProjectReference Include="../Collections/Ledger.Dunning/Ledger.Dunning.csproj" />
+    <ProjectReference Include="../Ledger.Webhooks/Ledger.Webhooks.csproj" />
+  </ItemGroup>
+
+</Project>

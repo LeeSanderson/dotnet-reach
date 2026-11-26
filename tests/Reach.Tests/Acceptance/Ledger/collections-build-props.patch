@@ -1,0 +1,10 @@
+--- a/src/Collections/Directory.Build.props
++++ b/src/Collections/Directory.Build.props
+@@ -16,6 +16,7 @@
+ 
+   <PropertyGroup>
+     <Product>Ledger Collections</Product>
++    <Company>Ledger</Company>
+   </PropertyGroup>
+ 
+ </Project>

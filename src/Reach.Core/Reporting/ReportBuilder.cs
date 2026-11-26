@@ -36,8 +36,9 @@ public static class ReportBuilder
 
     /// <summary>
     /// An empty selection and an empty change set are different news. They exit the same and
-    /// mean opposite things — a docs-only pull request, against code changes that reached
-    /// nothing, which is either a coverage gap or an under-selection bug.
+    /// mean opposite things — nothing to act on (no change, or only formatting inside C#), against
+    /// changes that reached nothing, which for code is either a coverage gap or an
+    /// under-selection bug. A docs-only change is the second kind: its path is a change.
     /// </summary>
     internal static Outcome OutcomeOf(SelectRun run)
     {
@@ -68,7 +69,11 @@ public static class ReportBuilder
             reasons.Add(NoticeCodes.ChangesWereFormattingOnly);
         }
 
-        if (run.Selection is { } selection && selection.Changes.Count == 0)
+        // Most specific first: none of these changes could have reached a test, because no test
+        // process can execute the code they are in (ADR-0002). One in-scope change that reached
+        // nothing is the more urgent news, so it takes the reason below instead.
+        if (run.Selection is { Changes: [_, ..] entries }
+            && entries.All(entry => entry.OutsideAnalysisScope))
         {
             reasons.Add(NoticeCodes.AllChangesOutsideAnalysisScope);
         }

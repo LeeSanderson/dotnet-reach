@@ -4,8 +4,10 @@ Work out which tests a code change could possibly affect, and run only those.
 
 ```bash
 dnx dotnet-reach@0.1.0-alpha.1 select --base origin/main
-dotnet test --filter "$(…)"   # …or read .reach/report.json and run what it names
 ```
+
+Then run the commands `.reach/report.json` names. [Adopting Reach](docs/adopting-reach.md#github-actions--the-complete-recipe)
+has the loop that does it.
 
 Reach reads your **compiled assemblies**, walks the call graph **backwards** from the code you
 changed to the tests that can reach it, and writes a report naming them.
@@ -30,6 +32,7 @@ regression nobody sees.
 | parse `report.json`, or understand a selection you do not believe | [The report schema](docs/report-schema.md) |
 | know what Reach cannot do, and which way each gap fails | [The limitations register](docs/limitations.md) |
 | know why Reach exists and where it is going — background, not a manual | [PRD.md](PRD.md) |
+| build Reach, or run its tests | [Contributing](CONTRIBUTING.md) |
 
 The command line documents itself: `dnx dotnet-reach@0.1.0-alpha.1 select --help`.
 

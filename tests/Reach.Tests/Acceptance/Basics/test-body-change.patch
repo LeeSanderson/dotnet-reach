@@ -1,0 +1,11 @@
+--- a/tests/Basics.Tests/InitialsTests.cs
++++ b/tests/Basics.Tests/InitialsTests.cs
+@@ -6,7 +6,7 @@ namespace Basics.Tests;
+ public class InitialsTests
+ {
+     [Fact]
+-    public void Initials_take_the_first_letter_of_each_name() => Assert.Equal("AL", Initials.Of("Ada Lovelace"));
++    public void Initials_take_the_first_letter_of_each_name() => Assert.Equal("GBH", Initials.Of("Grace Brewster Hopper"));
+ 
+     [Fact]
+     public void A_single_name_gives_one_initial() => Assert.Equal("P", Initials.Of("Plato"));

@@ -84,8 +84,9 @@ internal static class NoticeCodes
     internal const string AllChangesOutsideAnalysisScope = "all-changes-outside-analysis-scope";
 
     /// <summary>
-    /// Paths changed, but nothing inside them did: comments, whitespace, or a declaration whose
-    /// canonical form is unchanged.
+    /// Paths changed, but no member did, and nothing they widened reached a test: a README, say.
+    /// Despite the name, a formatting-only C# edit never gets here; its changed set is empty, so
+    /// the outcome is <c>no-changes</c>.
     /// </summary>
     internal const string ChangesWereFormattingOnly = "changes-were-formatting-only";
 
@@ -144,12 +145,6 @@ internal static class NoticeCodes
     /// renders into that dialect at all.
     /// </summary>
     internal const string NUnitFilterOvermatch = "nunit-filter-overmatch";
-
-    /// <summary>
-    /// A function pointer was invoked through <c>calli</c>. Where the pointer came from is not
-    /// in the analysed instructions, so no edge could be made.
-    /// </summary>
-    internal const string CalliUnresolved = "calli-unresolved";
 
     /// <summary>
     /// An <c>xunit.v3</c> 4.0.0 project in a repository with no <c>global.json</c> runner

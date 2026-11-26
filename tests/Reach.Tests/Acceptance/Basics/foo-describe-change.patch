@@ -1,0 +1,11 @@
+--- a/src/Basics.Core/Message.cs
++++ b/src/Basics.Core/Message.cs
+@@ -13,7 +13,7 @@ public abstract class Message
+ /// </summary>
+ public sealed class Foo : Message
+ {
+-    public override string Describe() => "foo";
++    public override string Describe() => "a foo";
+ }
+ 
+ /// <summary>

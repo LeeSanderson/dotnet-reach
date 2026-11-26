@@ -229,6 +229,25 @@ public class AssemblyDiscoveryTests
         Assert.True(result.Succeeded, result.Message);
     }
 
+    [Fact]
+    public async Task The_artifacts_path_hint_breaks_it_too()
+    {
+        var (tree, scope) = await SolutionAsync();
+        using var _ = tree;
+
+        Emit(tree, "Core", CoreSource, "src/Core/bin/Debug/net10.0");
+        Emit(tree, "Core", CoreSource, "artifacts/bin/Core/debug");
+        Emit(tree, "Tests", TestsSource, "artifacts/bin/Tests/debug");
+
+        var result = Discover(tree, scope, new LayoutHints(null, null, tree.Combine("artifacts")));
+
+        // Two builds of Core, and the artifacts path says which one the build wrote.
+        Assert.True(result.Succeeded, result.Message);
+        Assert.Contains(
+            Path.Combine("artifacts", "bin", "Core"),
+            Assert.Single(result.Instances, i => i.Name == "Core").Assembly.Path);
+    }
+
     // ---- Errors ------------------------------------------------------------------------------
 
     [Fact]

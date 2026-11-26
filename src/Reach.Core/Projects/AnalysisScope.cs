@@ -17,7 +17,28 @@ namespace Reach.Projects;
 public sealed record AnalysisScope(
     IReadOnlyList<ProjectFile> Projects,
     IReadOnlyList<ProjectFile> TestProjects,
-    IReadOnlyList<ExpectedAssemblyInstance> ExpectedAssemblies);
+    IReadOnlyList<ExpectedAssemblyInstance> ExpectedAssemblies)
+{
+    /// <summary>
+    /// The in-scope project with the nearest ancestor directory, which reproduces the SDK's
+    /// default <c>**/*.cs</c> globbing without running MSBuild. Errs over — a path excluded by
+    /// <c>&lt;Compile Remove&gt;</c> over-selects — and is imprecise only for linked files pulled
+    /// in from outside the project directory.
+    /// </summary>
+    /// <returns>Null when the path is outside the analysis scope: no in-scope project contains it.</returns>
+    internal ProjectFile? ProjectContaining(string absolutePath) =>
+        Projects
+            .Where(project => Paths.IsUnder(absolutePath, project.Directory))
+            .OrderByDescending(project => project.Directory.Length)
+            .FirstOrDefault();
+
+    /// <summary>
+    /// <see cref="ProjectContaining(string)"/> for a path relative to the repository root, the
+    /// form git reports a change in.
+    /// </summary>
+    internal ProjectFile? ProjectContaining(string repositoryRoot, string repositoryRelativePath) =>
+        ProjectContaining(Paths.Normalise(Path.Combine(repositoryRoot, repositoryRelativePath)));
+}
 
 /// <summary>
 /// One project compiled for one target framework — the unit Reach actually analyses.

@@ -60,7 +60,7 @@ public partial class WorkflowParityTests
 
         foreach (var document in new[] { "README.md", Path.Combine("docs", "adopting-reach.md") })
         {
-            var pins = Pins.Matches(Read(RepositoryRoot.Combine(document))).Cast<Match>().ToArray();
+            var pins = Pins.Matches(RepositoryRoot.ReadText(document)).Cast<Match>().ToArray();
 
             // Otherwise a document that lost its quickstart passes this test by having nothing
             // to check, which is the failure it is least able to afford.
@@ -76,7 +76,7 @@ public partial class WorkflowParityTests
 
     private static string Version()
     {
-        var properties = Read(RepositoryRoot.Combine("Directory.Build.props"));
+        var properties = RepositoryRoot.ReadText("Directory.Build.props");
         var version = VersionElement.Match(properties);
 
         Assert.True(version.Success, "Directory.Build.props declares no <Version>.");
@@ -92,7 +92,7 @@ public partial class WorkflowParityTests
         Assert.Contains("fetch-depth: 0", FencedBlock(), StringComparison.Ordinal);
 
     private static string Workflow() =>
-        Read(RepositoryRoot.Combine(".github", "workflows", "dogfood.yml"));
+        RepositoryRoot.ReadText(".github", "workflows", "dogfood.yml");
 
     /// <summary>
     /// The YAML between the markers, with the fence itself removed. The markers are HTML
@@ -100,7 +100,7 @@ public partial class WorkflowParityTests
     /// </summary>
     private static string FencedBlock()
     {
-        var document = Read(RepositoryRoot.Combine("docs", "adopting-reach.md"));
+        var document = RepositoryRoot.ReadText("docs", "adopting-reach.md");
 
         var start = document.IndexOf(Open, StringComparison.Ordinal);
         var end = document.IndexOf(Close, StringComparison.Ordinal);
@@ -114,17 +114,5 @@ public partial class WorkflowParityTests
         Assert.EndsWith("\n```", fenced, StringComparison.Ordinal);
 
         return fenced["```yaml\n".Length..^"\n```".Length] + "\n";
-    }
-
-    /// <summary>
-    /// Line endings are normalised, and only line endings. Git hands a Windows checkout CRLF and
-    /// a Linux one LF, and a test that failed on the platform rather than on the content would
-    /// be reporting the wrong thing on the one line it exists to protect.
-    /// </summary>
-    private static string Read(string path)
-    {
-        Assert.True(File.Exists(path), $"Nothing at {path}.");
-
-        return File.ReadAllText(path).ReplaceLineEndings("\n");
     }
 }

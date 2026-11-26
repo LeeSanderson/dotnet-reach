@@ -79,7 +79,7 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
                 deleted.Name,
                 WideningReason.DeletedType,
                 deleted.Path,
-                ProjectContaining(deleted.Path)))
+                scope.ProjectContaining(repositoryRoot, deleted.Path)))
             .ToList();
 
         NoteUntracked(paths, notices);
@@ -93,7 +93,7 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
                 path,
                 WideningReason.DeletedType,
                 path,
-                ProjectContaining(path)));
+                scope.ProjectContaining(repositoryRoot, path)));
         }
 
         return new ChangedSet(compared.Members, compared.TypeWidenings, assemblyWidenings, paths, unmappable, notices);
@@ -182,22 +182,6 @@ internal sealed class ChangedSetBuilder(GitAdapter git, string repositoryRoot, A
             $"{paths.Length} changed file(s) did not parse cleanly, so their projects widened "
             + "rather than being read as unchanged: " + string.Join(", ", paths),
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["paths"] = paths }));
-    }
-
-    /// <summary>
-    /// The nearest ancestor project directory, which reproduces the SDK's default
-    /// <c>**/*.cs</c> globbing without running MSBuild. Errs over — a path excluded by
-    /// <c>&lt;Compile Remove&gt;</c> over-selects — and is imprecise only for linked files
-    /// pulled in from outside the project directory.
-    /// </summary>
-    private ProjectFile? ProjectContaining(string repositoryRelativePath)
-    {
-        var full = Paths.Normalise(Path.Combine(repositoryRoot, repositoryRelativePath));
-
-        return scope.Projects
-            .Where(project => Paths.IsUnder(full, project.Directory))
-            .OrderByDescending(project => project.Directory.Length)
-            .FirstOrDefault();
     }
 
     /// <summary>

@@ -5,8 +5,9 @@ this document exists to make a surprising one explicable **without rerunning the
 is also why there is no `explain` verb.
 
 [`example-report.json`](example-report.json) is a real report, and is the byte-for-byte output
-of the test suite's determinism fixture. A test fails the moment the two disagree, so the
-example cannot rot.
+of a run in the test suite: one change to the Frameworks sample, the same change one of
+Reach's acceptance tests makes. A test fails the moment the two disagree, so the example cannot
+rot.
 
 ## The compatibility promise
 
@@ -48,8 +49,12 @@ error (exit 1), whose arguments were never valid enough to establish where to wr
 | `notices` | one global array, with locators in `data` |
 
 **`no-changes` and `nothing-selected` are different news.** They exit the same and mean opposite
-things: a docs-only pull request, against code changes that reached no test — which is either a
-coverage gap or a bug in Reach.
+things. `no-changes` means the change set is empty: nothing changed, or the only edits were
+formatting and comments inside C# source, which leave every declaration as it was.
+`nothing-selected` means something changed and no test could reach it, and `reasons` says which
+kind of change it was. A code change that reached no test is either a coverage gap or a bug in
+Reach. A change only to files that hold no code, such as a README, is `nothing-selected` too, not
+`no-changes`.
 
 On `no-changes` the full project list is still emitted, every entry `skip` with zero
 invocations, so your loop behaves identically across all four outcomes.
@@ -82,7 +87,6 @@ select differently — collapsing them would force a union and destroy the answe
 |---|---|
 | `project`, `targetFramework` | the key. Always present |
 | `framework`, `dialect` | the recognised test framework, and the filter grammar it renders into. **Both absent when the framework is unrecognised** — which is the case the rest of the entry describes. In this release they carry the same string: the dialect is gated on package version as well as framework, because `xunit.v3` 4.0.0 changed the filter surface, so it is the more specific of the two and is what both fields report |
-| `packageVersion` | **reserved. Not emitted by this release**, so always absent |
 | `runnerHost` | `dotnet-test`, or absent on `skip`. Present on a project run in full |
 | `mode` | `filtered` · `run-all` · `skip` |
 | `delivery` | `inline` · `response-file` · `chunked` · `run-settings`, or **absent** on an entry that carries no command of its own — see below |
@@ -126,7 +130,7 @@ call it a total. `summary.projectsRunInFull` is how many entries are in this sta
 | Field | Notes |
 |---|---|
 | `display` | the fully-qualified test method name |
-| `id` | stable within a run, comparable across runs of the same tool version |
+| `id` | stable: the same input produces the same `id` |
 | `rules` | why it was selected: `reverse-reachable`, `own-source-changed`, `new-since-baseline` |
 | `changes` | indices into the top-level `changes` array |
 | `pathClass` | `compiled` or `widened` |
@@ -161,6 +165,11 @@ thousand entries.
 notice — and that is either a genuine coverage gap or an under-selection bug. Today both are
 invisible everywhere else.
 
+A change to C# that no in-scope project contains, such as code in a project no test project
+references, is listed too, with `testsReached: 0` and a `reason` saying it is outside the analysis
+scope. That is a third answer, and the honest one: nothing in this repository can test that code.
+When every change is like that, `reasons` is `all-changes-outside-analysis-scope`.
+
 ## `summary`
 
 | Field | Notes |
@@ -180,14 +189,34 @@ would have to say for this to have been the wrong thing to build.
 
 ## Reading a surprising selection
 
+<!--
+Walk-through parity. Every value this section quotes from example-report.json carries a marker,
+and WalkThroughParityTests checks each one against the example.
+
+A marker is an HTML comment starting "example:". Written as "example: PATH = VALUE" right after
+the value it pins, on the same line, it says the example holds VALUE (JSON) at PATH. Written as
+"example: PATH" alone on the line before a json block, it says every field the block quotes
+equals the example's at PATH; an object may quote only some of its fields. A json block with no
+marker fails the test.
+
+A PATH is steps from the top of the report: a field name, [n] for an element, [*] for every
+element, [?key] for the elements that have key, and [?key=text] for those whose key is that
+string. count(PATH) is how many values PATH reaches; any other PATH must reach exactly one.
+Inside a quoted string, an ellipsis stands for anything.
+-->
+
 Walk [`example-report.json`](example-report.json). It is one change to
-`Contoso.Invoice.Tax(int)` in a five-project solution.
+`Frameworks.Core.Invoice.Tax(int)`<!-- example: changes[0].display = "Frameworks.Core.Invoice.Tax(int)" -->
+in a seven-project solution<!-- example: count(scope.assemblies[*]) = 7 -->: one production
+project, and one test project for each framework Reach recognises plus one it does
+not<!-- example: count(scope.testProjects[*]) = 6 -->.
 
-**1. What did Reach think changed?** `changes` has one entry:
+**1. What did Reach think changed?** `changes` has one entry<!-- example: count(changes[*]) = 1 -->:
 
+<!-- example: changes[0] -->
 ```json
-{ "index": 0, "display": "Contoso.Invoice.Tax(int)", "tier": "member",
-  "reason": "the member changed", "testsReached": 2 }
+{ "index": 0, "display": "Frameworks.Core.Invoice.Tax(int)", "tier": "member",
+  "reason": "the member changed", "testsReached": 5 }
 ```
 
 `tier: member` means Reach matched the change to a method and walked from it — the precise case.
@@ -196,20 +225,23 @@ Had it said `whole-assembly`, the `reason` would say why it could not.
 **2. Was the baseline what you expected?** `envelope.baseline` carries the resolved SHA and how
 it was found. This one reads:
 
+<!-- example: envelope.baseline -->
 ```json
 { "sha": "…", "reference": "…", "detectedFrom": "Option", "isHead": true }
 ```
 
 `detectedFrom: "Option"` means it came from `--base` rather than from a CI variable, and
-**`isHead: true` means only uncommitted work could appear as a change** — a `baseline-is-head`
-notice says the same thing in prose. That is the single most common reason a report looks
-emptier than you expected, and the example carries it on purpose. Here it is correct: the fixture
-edits a file and does not commit it.
+**`isHead: true` means only uncommitted work could appear as a change** — a
+`baseline-is-head`<!-- example: count(notices[?code=baseline-is-head]) = 1 --> notice says the
+same thing in prose. That is the single most common reason a report looks
+emptier than you expected, and the example carries it on purpose. Here it is correct: the test
+that produced it edits a file and does not commit it.
 
-**3. Why was this test selected?** `entries[2].tests[0]`:
+**3. Why was this test selected?** `entries[5].tests[0]`:
 
+<!-- example: entries[5].tests[0] -->
 ```json
-{ "display": "Contoso.Tests.InvoiceTests.Totals_include_tax",
+{ "display": "Frameworks.Tests.XunitV3_4.InvoiceTests.Totals_include_tax",
   "rules": ["reverse-reachable"], "changes": [0], "pathClass": "compiled" }
 ```
 
@@ -219,17 +251,31 @@ compiled instructions only. Run it with `--paths` to see every hop.
 
 **4. Why is something running that you did not expect?** Two places to look.
 
-`entries[0]` — the NUnit project — selected one test and will run two:
+`entries[1]` — the NUnit project<!-- example: entries[1].framework = "nunit" --> — selected one
+test and will run two:
 
+<!-- example: entries[1] -->
 ```json
 "counts": { "selected": 1, "willRun": 2, "total": 3 }
 ```
 
-The `notices` array says why: `nunit-filter-overmatch`, and `dialect-over-selects` names the
-gap. The filter renders as `FullyQualifiedName~…MyTest`, which also matches `MyTest2`.
+The `notices` array says why:
+`nunit-filter-overmatch`<!-- example: notices[?code=nunit-filter-overmatch].data.projects = ["Frameworks.Tests.NUnit"] -->,
+and `dialect-over-selects`<!-- example: notices[?code=dialect-over-selects].message = "…Frameworks.Tests.NUnit (net10.0) 1 selected, 2 will run" -->
+names the gap. The filter renders as
+`FullyQualifiedName~…MyTest`<!-- example: entries[1].invocations[0][4] = "FullyQualifiedName~…MyTest" -->,
+which also matches `MyTest2`. Every other recognised project renders with `=` and will run
+exactly what it selected.
 
-`entries[1]` — the unrecognised-framework project — runs in full with `total: "unknown"`, and
-`whole-project-fallback` says so.
+`entries[2]` — the unrecognised-framework
+project<!-- example: entries[2].project = "…Frameworks.Tests.Unrecognised.csproj" --> — runs in
+full<!-- example: entries[2].mode = "run-all" --> with
+`total: "unknown"`<!-- example: entries[2].counts.total = "unknown" -->, and
+`whole-project-fallback`<!-- example: notices[?code=whole-project-fallback].data.projects = ["Frameworks.Tests.Unrecognised"] -->
+says so. It is also the one entry with no `framework`<!-- example: count(entries[2].framework) = 0 -->
+or `dialect`<!-- example: count(entries[2].dialect) = 0 -->: the five recognised
+entries<!-- example: count(entries[?framework]) = 5 --><!-- example: count(entries[?dialect]) = 5 -->
+carry both, each the same string.
 
 **5. What could Reach not see?** Every notice of kind `blind-spot` is a gap that may have cost
 you a test, and every one of them has an entry in the [limitations register](limitations.md) —
@@ -249,7 +295,6 @@ not holes are documented in full here.
 | `unmapped-deterministic-source-root` | compiled source recorded under a deterministic root other than `/_/` and not found in the NuGet global packages folder. Reach does not guess at it. `data.roots`. [Register](limitations.md#deterministic-source-roots-other-than-the-repository-root) |
 | `unmapped-file-no-project` | a changed file matched no rule and sits inside no project. [Register](limitations.md#a-changed-file-matching-no-rule-and-no-project) |
 | `parse-failed` | a changed file did not parse cleanly, so its project widened. [Register](limitations.md#c-newer-than-reachs-parser-misparsed-silently) |
-| `calli-unresolved` | a function pointer invoked with no visible `ldftn`. [Register](limitations.md#function-pointers-obtained-outside-analysed-il) |
 | `unresolved-first-party-member` | a call site names a member of a first-party assembly that is not in it. [Register](limitations.md#a-first-party-member-a-call-site-names-but-the-assembly-does-not-contain) |
 
 ### `widening` — may over-select
@@ -259,10 +304,10 @@ not holes are documented in full here.
 | `signature-ambiguous` | a signature matched more than one method, so every candidate got an edge. [Register](limitations.md#ambiguous-signatures-edge-to-every-candidate) |
 | `whole-project-fallback` | a test project's framework is unrecognised, so it runs in full. [Register](limitations.md#whole-project-selection-on-an-unrecognised-test-framework) |
 | `nunit-filter-overmatch` | NUnit renders with containment, so the filter can run more than was selected. [Register](limitations.md#the-nunit--filter-over-match) |
-| `dialect-over-selects` | names the extras when the count is non-zero. `data.projects` |
+| `dialect-over-selects` | raised when a filtered entry will run more than it selected. The message names each such entry with both counts; it carries no `data` |
 | `runsettings-filter-conflict` | the supplied runsettings already filters, so the project runs in full. [Register](limitations.md#a-callers-testcasefilter-downgrades-widening-to-whole-project-selection) |
 | `framework-selector-underivable` | a multi-targeted project's moniker cannot be recovered, so it runs in full. [Register](limitations.md#a-platform-suffixed-target-framework-downgrades-its-project-to-whole-project-selection) |
-| `recompilation-widening` | a removal or a changed compile-time constant widened every transitive referencer. [Register](limitations.md#recompilation-widenings-blast-radius) |
+| `recompilation-widening` | a removal or a changed compile-time constant widened every transitive referencer. One per triggering change, naming it in `data.members` and the widened projects in `data.projects`. [Register](limitations.md#recompilation-widenings-blast-radius) |
 
 ### `scope` — where a change landed
 
@@ -270,9 +315,9 @@ not holes are documented in full here.
 |---|---|---|
 | `project-outside-every-solution` | Reach was pointed at a project no solution above it lists, so there is no expected project list to check the output against | `projects` |
 | `untracked-source-files` | C# files git has never seen entered the changed set: intentional codegen, or a forgotten `git add` | `paths` |
-| `no-changed-member-reached-a-test` | there were changes, they joined, and no test could reach any of them | — |
-| `all-changes-outside-analysis-scope` | every change was outside the union of the test projects' closures | — |
-| `changes-were-formatting-only` | paths changed, but nothing inside them did | — |
+| `no-changed-member-reached-a-test` | there were changes, not every one of them outside the analysis scope, and no test could reach any of them | — |
+| `all-changes-outside-analysis-scope` | every change was to C# source that no in-scope project contains, such as code in a project no test project references, which no test process can execute. Each is still listed in `changes`, with `testsReached: 0` and a `reason` saying it is outside the analysis scope | — |
+| `changes-were-formatting-only` | paths changed, but no member did, and nothing the changed paths widened reached a test. **Despite its name, it is not about formatting**: a formatting-only C# edit gives `no-changes` instead. It fires whenever no member changed, such as on a change only to a README | — |
 
 The last three appear in `reasons` rather than in `notices`.
 
@@ -283,16 +328,14 @@ The last three appear in `reasons` rather than in `notices`.
 | `baseline-resolved` | how the baseline was arrived at, and what it resolved to | `sha`, `reference`, `origin`, `variable` |
 | `baseline-is-head` | the baseline is `HEAD`, so only uncommitted work can appear as a change | `sha` |
 | `baseline-unresolvable` | no baseline could be found; the message prints the line to add | `problem` |
-| `langversion-above-ceiling` | a project declares a language version above what Reach's parser understands. Reported, **not** widened | — |
+| `langversion-above-ceiling` | a project declares a language version above what Reach's parser understands. Reported, **not** widened | `projects` |
 | `selection-delivered-out-of-band` | the selection exceeded the command-line ceiling, so it went through a response file or several invocations | — |
 | `test-runner-not-configured` | a project needs the Microsoft.Testing.Platform runner setting and `global.json` does not have it, so every command Reach emitted is unrunnable. The rendering is correct; the repository is not | `projects` |
 
-### Reserved `data` keys
+### `data`
 
-`projects`, `assemblies`, `paths` and `members` mean the same thing wherever they appear, which
-is what lets you build *"everything affecting this project"* without knowing every code. Every
-other key is free-form per code, and typing each one here would make every new code a breaking
-change.
+The keys in `data` are free-form per code. Typing every key here would make every new code a
+breaking change.
 
 **Notices cannot be suppressed.** A suppression switch would un-surface exactly the gaps the
 correctness bargain depends on surfacing. If suppression ever ships, `blind-spot` must be

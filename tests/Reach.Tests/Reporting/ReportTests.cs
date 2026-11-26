@@ -33,6 +33,15 @@ public class ReportTests
         }
         """;
 
+    private const string Housekeeping = """
+        namespace N.Tools;
+
+        public class Housekeeping
+        {
+            public int DaysToKeep(int days) => days;
+        }
+        """;
+
     private static readonly JsonSerializerOptions Indented = new()
     {
         WriteIndented = true,
@@ -218,6 +227,45 @@ public class ReportTests
         Assert.Equal("selected", report.Outcome);
         Assert.Null(report.Reasons);
         Assert.DoesNotContain("\"reasons\"", ReportWriter.Serialise(report));
+    }
+
+    [Fact]
+    public void A_change_only_outside_the_analysis_scope_says_so_rather_than_that_it_reached_no_test()
+    {
+        using var selections = Selections.Of(
+            Core,
+            Tests,
+            changed: ["Housekeeping.DaysToKeep"],
+            outsideSource: Housekeeping);
+
+        var report = ReportFixture.Build(selections);
+
+        // No test process can execute src/Tools (ADR-0002), so "nothing in this repository can
+        // test this code" is the honest news, not a coverage gap in code a test could reach.
+        Assert.Equal("nothing-selected", report.Outcome);
+        Assert.Equal(["all-changes-outside-analysis-scope"], report.Reasons);
+
+        var change = Assert.Single(report.Changes);
+        Assert.Equal("N.Tools.Housekeeping.DaysToKeep(int)", change.Display);
+        Assert.Contains("outside the analysis scope", change.Reason, StringComparison.Ordinal);
+        Assert.Equal(0, change.TestsReached);
+    }
+
+    [Fact]
+    public void An_out_of_scope_change_beside_an_in_scope_one_that_reached_nothing_keeps_that_reason()
+    {
+        using var selections = Selections.Of(
+            Core,
+            "namespace N.Tests;\n\npublic class WidgetTests { [Xunit.Fact] public void Unrelated() { } }",
+            changed: ["Widget.Inner", "Housekeeping.DaysToKeep"],
+            outsideSource: Housekeeping);
+
+        var report = ReportFixture.Build(selections);
+
+        // Not every change was outside the scope: Widget.Inner is code a test could reach, and
+        // did not, which is the more urgent of the two pieces of news.
+        Assert.Equal("nothing-selected", report.Outcome);
+        Assert.Equal(["no-changed-member-reached-a-test"], report.Reasons);
     }
 
     [Fact]

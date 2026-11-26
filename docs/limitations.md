@@ -90,10 +90,15 @@ The gaps that can cost you a regression. Listed worst first.
   about what real repositories keep at their roots.
 
 ### Source generators and analysers Reach cannot identify
-- **Shape**: generator detection is conventional, not prescribed — `OutputItemType="Analyzer"`
-  on a `ProjectReference`, or a project setting `IsRoslynComponent` or
-  `EnforceExtendedAnalyzerRules`. A generator arriving as a `PackageReference` or a bare
-  `<Analyzer>` item is invisible, so a change to it does not widen its consumers.
+- **Shape**: generator detection is conventional, not prescribed — Reach recognises a generator
+  only as an in-scope project that another in-scope project references with
+  `OutputItemType="Analyzer"` on a `ProjectReference`. A project setting `IsRoslynComponent` or
+  `EnforceExtendedAnalyzerRules` is not recognised by that alone. A generator arriving as a
+  `PackageReference` or a bare `<Analyzer>` item is invisible, so a change to it does not widen its
+  consumers. A generator
+  Reach does identify widens its consumers whatever changed in it: its project file, a source
+  file, a new or deleted file, or a `Directory.Build.props`, `Directory.Build.targets` or
+  `.editorconfig` inside its directory.
 - **Direction**: under-selection.
 - **Detectable**: no — the failure is not knowing the generator exists.
 - **Why not whole-suite on failure**: it would fire on every solution that has no generator at
@@ -105,7 +110,8 @@ The gaps that can cost you a regression. Listed worst first.
 - **Shape**: `Delegate.CreateDelegate`, `Marshal.GetFunctionPointerForDelegate`, native interop.
   Reach edges from the **capture** site (`ldftn`), so a pointer produced without one has no edge.
 - **Direction**: under-selection.
-- **Detectable**: partially — `calli-unresolved` fires on a `calli` with no inferable source.
+- **Detectable**: no — Reach has no notice for a `calli` with no inferable source. Detecting one is
+  new IL dataflow work, follow-up after the alpha.
 - **Why no widening**: every method whose address is taken in analysed code already has its
   capture-site edge, so the only widening available is unbounded.
 
@@ -253,6 +259,15 @@ and the first one distorts the numbers Reach reports about itself.
   `modopt`/`modreq` and function-pointer parameters can leave genuine ambiguity.
 - **Direction**: over-selection. **Detectable**: **yes** — `signature-ambiguous`.
 
+### A changed declaration with no compiled body widens its whole assembly
+- **Shape**: a changed member joins to the methods whose sequence points sit inside its
+  declaration. A declaration with none cannot join: a field with no initialiser, a `const`, an
+  abstract or `extern` method, a `partial` declaration with no implementation. Its project widens
+  to the whole assembly instead — the same fall-back that makes a misparsed declaration survivable.
+  A changed `const` also triggers recompilation widening, so it gets both entries.
+- **Direction**: over-selection. **Detectable**: no notice; the change's entry in `changes` reads
+  `whole-assembly`, with the reason that the declaration could not be matched to compiled code.
+
 ### Whole-project selection on an unrecognised test framework
 - **Shape**: a test project whose framework Reach does not recognise runs in full, and cannot be
   enumerated at all.
@@ -358,3 +373,15 @@ is not a verdict.
   assembly's referenced identities and `global.json` is a root file Reach already reads, so both
   halves are free. The message prints the literal `global.json` block, the way exit 4 prints its
   line of YAML.
+
+### A VSTest project under a `global.json` that selects Microsoft.Testing.Platform
+- **Shape**: the reverse of the entry above. When `global.json` opts into Microsoft.Testing.Platform,
+  `dotnet test` expects every test project to use it, and a VSTest project is an error
+  ([`dotnet test` with MTP](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test-mtp#description)).
+  Reach still renders `dotnet test <project> --filter …` for such a project — xUnit v2, NUnit and
+  MSTest on VSTest, or a project on an unrecognised framework — and none of those commands can run.
+- **Direction**: not a selection gap. The selection and its rendering are correct; the repository
+  cannot execute them. Reach emits the commands and does not stop.
+- **Detectable**: no. Reach raises no notice for it in this release.
+- **Workaround**: move those projects to Microsoft.Testing.Platform, or drop the runner setting from
+  `global.json` if no project needs it.

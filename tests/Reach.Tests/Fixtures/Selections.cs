@@ -70,6 +70,10 @@ internal sealed class Selections : IDisposable
     /// </param>
     /// <param name="added">Declarations to mark as added rather than modified.</param>
     /// <param name="includePaths">Record hop-by-hop paths, as <c>--paths</c> does.</param>
+    /// <param name="outsideSource">
+    /// C# in `src/Tools`, a project no test project references, so outside the analysis scope.
+    /// Never compiled: its changed declarations reach the selector without any assembly to join.
+    /// </param>
     /// <param name="testFramework">
     /// A stand-in test framework assembly the test assembly also references, for a framework
     /// the suite itself does not run on. Never opened: like a real one, it is not first-party.
@@ -80,7 +84,8 @@ internal sealed class Selections : IDisposable
         IEnumerable<string>? changed = null,
         IEnumerable<string>? added = null,
         bool includePaths = false,
-        CompiledAssembly? testFramework = null)
+        CompiledAssembly? testFramework = null,
+        string? outsideSource = null)
     {
         var selections = new Selections();
 
@@ -121,6 +126,7 @@ internal sealed class Selections : IDisposable
 
         var members = Members(coreSource, "src/Core/Widget.cs", changed, added)
             .Concat(Members(testsSource, "tests/Tests/WidgetTests.cs", changed, added))
+            .Concat(Members(outsideSource ?? string.Empty, "src/Tools/Housekeeping.cs", changed, added))
             .ToArray();
 
         var joined = new SpanJoin(graphAssemblies, "/repo").ResolveAll(members);

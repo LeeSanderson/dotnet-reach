@@ -164,6 +164,57 @@ public class AnalysisScopeTests
     }
 
     [Fact]
+    public async Task A_language_version_above_the_ceiling_is_reported_including_from_Directory_Build_props()
+    {
+        using var tree = ProjectTree.Create();
+
+        var core = tree.AddProject("Core", targetFrameworks: "net10.0");
+        var tests = tree.AddProject("Tests", [core], [TestPackage], "net10.0");
+
+        tree.WriteFile(
+            "src/Directory.Build.props",
+            """
+            <Project>
+              <PropertyGroup>
+                <LangVersion>99.0</LangVersion>
+              </PropertyGroup>
+            </Project>
+            """);
+
+        var result = await ResolveAsync(tree.AddSlnx("Modern", core, tests));
+
+        var notice = Assert.Single(result.Notices, candidate => candidate.Code == NoticeCodes.LangVersionAboveCeiling);
+
+        Assert.Equal(NoticeKind.Environment, notice.Kind);
+        // Both projects sit under src/, so both inherit it.
+        var projects = Assert.IsType<string[]>(notice.Data!["projects"]);
+        Assert.Equal(["Core", "Tests"], projects.Select(Path.GetFileNameWithoutExtension));
+    }
+
+    [Fact]
+    public async Task A_language_version_at_or_below_the_ceiling_raises_no_notice()
+    {
+        using var tree = ProjectTree.Create();
+
+        var core = tree.AddProject("Core", targetFrameworks: "net10.0");
+        var tests = tree.AddProject("Tests", [core], [TestPackage], "net10.0");
+
+        tree.WriteFile(
+            "src/Directory.Build.props",
+            """
+            <Project>
+              <PropertyGroup>
+                <LangVersion>latest</LangVersion>
+              </PropertyGroup>
+            </Project>
+            """);
+
+        var result = await ResolveAsync(tree.AddSlnx("Ordinary", core, tests));
+
+        Assert.DoesNotContain(result.Notices, candidate => candidate.Code == NoticeCodes.LangVersionAboveCeiling);
+    }
+
+    [Fact]
     public async Task A_target_framework_inherited_from_Directory_Build_props_is_read()
     {
         using var tree = ProjectTree.Create();

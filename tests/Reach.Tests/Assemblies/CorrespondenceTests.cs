@@ -533,6 +533,155 @@ public class CorrespondenceTests
         Assert.Equal(2, result.Documents.Count(verdict => verdict.Class == DocumentClass.Verified));
     }
 
+    [Fact]
+    public void The_unmapped_root_notice_carries_every_root_it_left_unmapped_as_data()
+    {
+        using var directory = TempDirectory.Create("reach-deterministic");
+
+        var widget = directory.Combine("src", "Widget.cs");
+        var first = directory.Combine("one", "First.cs");
+        var second = directory.Combine("two", "Second.cs");
+        const string firstSource = "namespace N; public static class First { public static int One() => 1; }";
+        const string secondSource = "namespace N; public static class Second { public static int Two() => 2; }";
+
+        foreach (var (path, text) in new[] { (widget, Source), (first, firstSource), (second, secondSource) })
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, text);
+        }
+
+        // Two roots the build added itself, neither of which names a packages-folder file.
+        var compiled = Compiled.Assembly(
+            "Core",
+            [(Source, widget), (firstSource, first), (secondSource, second)],
+            pathMap:
+            [
+                (directory.Combine("one") + Path.DirectorySeparatorChar, "/_1/"),
+                (directory.Combine("two") + Path.DirectorySeparatorChar, "/_2/"),
+                (directory.Path + Path.DirectorySeparatorChar, "/_/"),
+            ]);
+
+        var scanned = AssemblyScanner.Read(
+            compiled.WriteTo(directory.Combine("bin")),
+            new SourceRoots(directory.Path, directory.Combine("packages")));
+
+        Assert.NotNull(scanned);
+
+        var project = ProjectFileReader.Read(WriteProject(directory));
+        var result = Correspondence.Verify(
+            [new AssemblyInstance(new ExpectedAssemblyInstance(project, "net10.0"), scanned)],
+            SourceVisibility.Unknown);
+
+        var notice = Assert.Single(result.Notices, n => n.Code == NoticeCodes.UnmappedDeterministicSourceRoot);
+
+        Assert.NotNull(notice.Data);
+        Assert.Equal(["/_1/", "/_2/"], Assert.IsAssignableFrom<IEnumerable<string>>(notice.Data["roots"]));
+    }
+
+    // Reach looks for package content only in the global packages folder NUGET_PACKAGES names,
+    // else ~/.nuget/packages. A packages folder configured any other way is not read, so its
+    // content files raise the notice. One test per way the register lists.
+
+    [Fact]
+    public void Package_content_in_a_global_packages_folder_set_in_nuget_config_raises_the_notice()
+    {
+        using var directory = TempDirectory.Create("reach-deterministic");
+
+        File.WriteAllText(
+            directory.Combine("nuget.config"),
+            """
+            <configuration>
+              <config>
+                <add key="globalPackagesFolder" value="configured-packages" />
+              </config>
+            </configuration>
+            """);
+
+        AssertPackageContentRaisesTheNotice(directory, directory.Combine("configured-packages"));
+    }
+
+    [Fact]
+    public void Package_content_in_a_RestorePackagesPath_folder_raises_the_notice()
+    {
+        using var directory = TempDirectory.Create("reach-deterministic");
+
+        File.WriteAllText(
+            directory.Combine("Directory.Build.props"),
+            """
+            <Project>
+              <PropertyGroup>
+                <RestorePackagesPath>$(MSBuildThisFileDirectory)restored-packages</RestorePackagesPath>
+              </PropertyGroup>
+            </Project>
+            """);
+
+        AssertPackageContentRaisesTheNotice(directory, directory.Combine("restored-packages"));
+    }
+
+    [Fact]
+    public void Package_content_in_a_fallback_packages_folder_raises_the_notice()
+    {
+        using var directory = TempDirectory.Create("reach-deterministic");
+
+        File.WriteAllText(
+            directory.Combine("nuget.config"),
+            """
+            <configuration>
+              <fallbackPackageFolders>
+                <add key="offline" value="fallback-packages" />
+              </fallbackPackageFolders>
+            </configuration>
+            """);
+
+        AssertPackageContentRaisesTheNotice(directory, directory.Combine("fallback-packages"));
+    }
+
+    /// <summary>
+    /// Compiles an assembly with a package content file restored to <paramref name="packages"/>
+    /// and recorded under <c>/_1/</c>, scans it the way discovery does, and asserts the content
+    /// was disclosed rather than mapped or guessed.
+    /// </summary>
+    private static void AssertPackageContentRaisesTheNotice(TempDirectory directory, string packages)
+    {
+        var widget = directory.Combine("src", "Widget.cs");
+        var content = Path.Combine(packages, "some.package", "1.0.0", "_content", "Reporter.cs");
+        const string contentSource = "namespace N; internal static class Reporter { public static int One() => 1; }";
+
+        Directory.CreateDirectory(Path.GetDirectoryName(widget)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(content)!);
+        File.WriteAllText(widget, Source);
+        File.WriteAllText(content, contentSource);
+
+        var compiled = Compiled.Assembly(
+            "Core",
+            [(Source, widget), (contentSource, content)],
+            pathMap:
+            [
+                (packages + Path.DirectorySeparatorChar, "/_1/"),
+                (directory.Path + Path.DirectorySeparatorChar, "/_/"),
+            ]);
+
+        // The repository root alone, as discovery passes it: the packages folder is Reach's own
+        // to find.
+        var scanned = AssemblyScanner.Read(compiled.WriteTo(directory.Combine("bin")), directory.Path);
+
+        Assert.NotNull(scanned);
+        Assert.DoesNotContain(scanned.Documents, document => Paths.Same(document.Path, content));
+
+        var project = ProjectFileReader.Read(WriteProject(directory));
+        var result = Correspondence.Verify(
+            [new AssemblyInstance(new ExpectedAssemblyInstance(project, "net10.0"), scanned)],
+            SourceVisibility.Unknown);
+
+        var notice = Assert.Single(result.Notices, n => n.Code == NoticeCodes.UnmappedDeterministicSourceRoot);
+
+        Assert.NotNull(notice.Data);
+        Assert.Equal(["/_1/"], Assert.IsAssignableFrom<IEnumerable<string>>(notice.Data["roots"]));
+
+        // Accurate, and no under-selection: the project's own source still verifies.
+        Assert.Equal(CorrespondenceVerdict.Verified, result.Verdict);
+    }
+
     /// <summary>
     /// The document names exactly as the symbols record them, read independently of Reach.
     /// </summary>

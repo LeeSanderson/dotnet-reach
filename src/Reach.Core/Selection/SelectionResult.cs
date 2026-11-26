@@ -106,6 +106,13 @@ public sealed record SelectionResult(
 public sealed record ChangeEntry(int Index, string Display, ChangeTier Tier, string Reason)
 {
     internal int TestsReached { get; set; }
+
+    /// <summary>
+    /// The change is in a file no in-scope project contains, so no test process can execute it
+    /// (ADR-0002). It still appears in the change list, because "nothing in this repository can
+    /// test this code" is news worth reading; it is never selected on.
+    /// </summary>
+    internal bool OutsideAnalysisScope { get; init; }
 }
 
 /// <summary>

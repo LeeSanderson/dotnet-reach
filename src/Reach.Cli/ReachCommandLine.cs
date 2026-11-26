@@ -70,12 +70,7 @@ internal sealed class ReachCommandLine
 
     private readonly Option<bool> _paths = new("--paths")
     {
-        Description = "Include the source path of every changed member in the report.",
-    };
-
-    private readonly Option<bool> _listUnselected = new("--list-unselected")
-    {
-        Description = "Include the tests that were not selected in the report.",
+        Description = "Add hop-by-hop paths to each selected test in the report, from the test back to the change. Every hop is a method.",
     };
 
     private readonly Option<string?> _runSettings = new("--runsettings")
@@ -116,7 +111,6 @@ internal sealed class ReachCommandLine
             _report,
             _reportDirectory,
             _paths,
-            _listUnselected,
             _runSettings,
             _verbosity,
             _noColor,
@@ -150,7 +144,6 @@ internal sealed class ReachCommandLine
         Report = parseResult.GetValue(_report),
         ReportDirectory = parseResult.GetValue(_reportDirectory),
         Paths = parseResult.GetValue(_paths),
-        ListUnselected = parseResult.GetValue(_listUnselected),
         RunSettings = parseResult.GetValue(_runSettings),
         Verbosity = Verbosities.Parse(parseResult.GetValue(_verbosity)),
         NoColor = parseResult.GetValue(_noColor),
@@ -160,9 +153,10 @@ internal sealed class ReachCommandLine
 /// <summary>
 /// Everything the entry point does: split the argument vector, parse, run, print.
 /// </summary>
-internal static class ReachCli
+/// <param name="processRunner">What every <c>git</c> and <c>dotnet build</c> call goes through.</param>
+internal sealed class ReachCli(IProcessRunner processRunner)
 {
-    internal static async Task<int> RunAsync(
+    internal async Task<int> RunAsync(
         IReadOnlyList<string> arguments,
         string workingDirectory,
         TextWriter standardOutput,
@@ -175,7 +169,7 @@ internal static class ReachCli
         // swallow the first forwarded token when no target was given.
         var (reachArguments, buildArguments) = ForwardedBuildArguments.Split(arguments);
 
-        var pipeline = new ReachPipeline(new ProcessRunner());
+        var pipeline = new ReachPipeline(processRunner);
 
         var commandLine = new ReachCommandLine(async (parsed, token) =>
         {
@@ -187,8 +181,7 @@ internal static class ReachCli
 
             var timings = new PhaseTimings();
 
-            var run = await pipeline
-                .SelectAsync(request, environment, timings, token)
+            var run = await SelectOrInternalErrorAsync(pipeline, request, environment, timings, token)
                 .ConfigureAwait(false);
 
             Print(run, request, timings, standardOutput, standardError, environment, outputIsRedirected);
@@ -202,6 +195,35 @@ internal static class ReachCli
                 new InvocationConfiguration { Output = standardOutput, Error = standardError },
                 cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The run, or exit 70 when the pipeline threw something no phase anticipated. Left to
+    /// System.CommandLine, such an exception became exit 1 — a usage error, which writes no
+    /// report — and blamed the caller for a bug in Reach.
+    /// </summary>
+    private static async Task<SelectRun> SelectOrInternalErrorAsync(
+        ReachPipeline pipeline,
+        SelectRequest request,
+        EnvironmentLookup environment,
+        PhaseTimings timings,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await pipeline
+                .SelectAsync(request, environment, timings, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // A run the caller cancelled is not a bug, so cancellation still propagates.
+            return new SelectRun(
+                ExitCode.InternalError,
+                "Reach hit an internal error, which is a bug in Reach and not in the solution it "
+                + "was pointed at. Do not trust this run's selection:\n\n" + exception,
+                []);
+        }
     }
 
     private static void Print(

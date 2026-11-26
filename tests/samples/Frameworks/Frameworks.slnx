@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="src/Frameworks.Core/Frameworks.Core.csproj" />
+  <Project Path="tests/Frameworks.Tests.MSTest/Frameworks.Tests.MSTest.csproj" />
+  <Project Path="tests/Frameworks.Tests.NUnit/Frameworks.Tests.NUnit.csproj" />
+  <Project Path="tests/Frameworks.Tests.Unrecognised/Frameworks.Tests.Unrecognised.csproj" />
+  <Project Path="tests/Frameworks.Tests.XunitV2/Frameworks.Tests.XunitV2.csproj" />
+  <Project Path="tests/Frameworks.Tests.XunitV3/Frameworks.Tests.XunitV3.csproj" />
+  <Project Path="tests/Frameworks.Tests.XunitV3_4/Frameworks.Tests.XunitV3_4.csproj" />
+</Solution>

@@ -1,0 +1,26 @@
+--- a/src/Basics.Core/Basics.Core.csproj
++++ b/src/Basics.Core/Basics.Core.csproj
+@@ -1,7 +1,9 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+ 
+   <PropertyGroup>
+-    <TargetFramework>net10.0</TargetFramework>
++    <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
++    <!-- Without this, building the Windows framework on Linux fails with NETSDK1100. -->
++    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+     <!-- Set here as well as in the repository's props: the acceptance harness builds a copy of
+          this sample, outside the repository, where those props do not reach. -->
+     <Nullable>enable</Nullable>
+--- a/tests/Basics.Tests/Basics.Tests.csproj
++++ b/tests/Basics.Tests/Basics.Tests.csproj
+@@ -1,7 +1,9 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+ 
+   <PropertyGroup>
+-    <TargetFramework>net10.0</TargetFramework>
++    <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
++    <!-- Without this, building the Windows framework on Linux fails with NETSDK1100. -->
++    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+     <!-- Microsoft.Testing.Platform enforces this with a bespoke MSBuild error. -->
+     <OutputType>Exe</OutputType>
+     <Nullable>enable</Nullable>

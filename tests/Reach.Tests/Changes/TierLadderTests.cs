@@ -125,6 +125,34 @@ public class TierLadderTests
         Assert.Equal(["Billing"], Names(Route("src/Generator/Generator.csproj")));
     }
 
+    [Theory]
+    [InlineData("src/Generator/GlobalUsings.cs")]
+    [InlineData("src/Generator/Templates/template.json")]
+    [InlineData("src/Generator/notes.md")]
+    public void Any_file_inside_a_generator_project_selects_its_consumers(string path)
+    {
+        // The generator's directory is no more scanned than its project file is, so a file that
+        // would otherwise widen the generator itself widens what consumes it.
+        var routed = Route(path);
+
+        Assert.Equal(4, routed.Rule.Row);
+        Assert.Equal(["Billing"], Names(routed));
+    }
+
+    [Theory]
+    [InlineData("src/Generator/Directory.Build.props")]
+    [InlineData("src/Generator/Directory.Build.targets")]
+    [InlineData("src/Generator/.editorconfig")]
+    public void A_directory_scoped_build_file_inside_a_generator_also_selects_its_consumers(string path)
+    {
+        // Row 2 still names the generator, whose assembly is in no graph, so on its own it would
+        // root nothing. Its consumers are where the generator's output is compiled.
+        var routed = Route(path);
+
+        Assert.Equal(2, routed.Rule.Row);
+        Assert.Equal(["Billing", "Generator"], Names(routed));
+    }
+
     [Fact]
     public void A_project_nothing_references_as_an_analyser_is_an_ordinary_project() =>
         Assert.Equal(["Shared"], Names(Route("src/Shared/Shared.csproj")));

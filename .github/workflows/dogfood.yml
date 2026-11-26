@@ -13,10 +13,16 @@ jobs:
           # Without this, git merge-base has no history to walk and Reach exits 4.
           fetch-depth: 0
 
+      # dnx comes with the .NET 10 SDK. Without this step the hosted runner finds dotnet but
+      # not dnx, and the selection step fails with "dnx: command not found".
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
       - name: Build
         run: dotnet build -c Release
 
-      # Reach's own solution also holds the fixture projects its tests build, so this names its
+      # Reach's own solution also holds the sample projects its tests build, so this names its
       # one test project. Put your solution or test project in its place, here and in the whole
       # suite below. Without one, both find the solution in the working directory.
       - name: Select the tests this change could affect

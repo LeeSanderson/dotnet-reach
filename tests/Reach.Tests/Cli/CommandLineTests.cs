@@ -1,6 +1,7 @@
 using System.Globalization;
 using Reach.Cli;
 using Reach.Output;
+using Reach.Processes;
 using Reach.Tests.Fixtures;
 
 namespace Reach.Tests.Cli;
@@ -19,7 +20,7 @@ public sealed class CommandLineTests : IDisposable
     private readonly StringWriter _standardError = new();
 
     private Task<int> RunAsync(string workingDirectory, params string[] arguments) =>
-        ReachCli.RunAsync(
+        new ReachCli(new ProcessRunner()).RunAsync(
             arguments,
             workingDirectory,
             _standardOutput,
@@ -32,7 +33,10 @@ public sealed class CommandLineTests : IDisposable
 
     private string Error => _standardError.ToString();
 
-    private static int Numeric(ExitCode code) => Convert.ToInt32(code, CultureInfo.InvariantCulture);
+    /// <summary>
+    /// An exit code as the process returns it.
+    /// </summary>
+    internal static int Numeric(ExitCode code) => Convert.ToInt32(code, CultureInfo.InvariantCulture);
 
     // ---- The verb -----------------------------------------------------------------------
 
@@ -304,7 +308,6 @@ public sealed class CommandLineTests : IDisposable
             "--report", "r.json",
             "--report-dir", "rdir",
             "--paths",
-            "--list-unselected",
             "--runsettings", "my.runsettings",
             "-v", "diag",
             "--no-color",
@@ -323,7 +326,6 @@ public sealed class CommandLineTests : IDisposable
         Assert.Equal("r.json", request.Report);
         Assert.Equal("rdir", request.ReportDirectory);
         Assert.True(request.Paths);
-        Assert.True(request.ListUnselected);
         Assert.Equal("my.runsettings", request.RunSettings);
         Assert.Equal(Verbosity.Diagnostic, request.Verbosity);
         Assert.True(request.NoColor);
@@ -438,7 +440,7 @@ public sealed class CommandLineTests : IDisposable
     /// <summary>
     /// The fixture solution inside a real repository, committed as the baseline.
     /// </summary>
-    private static TempRepository SolutionRepository()
+    internal static TempRepository SolutionRepository()
     {
         var repository = TempRepository.Create();
 
@@ -458,7 +460,7 @@ public sealed class CommandLineTests : IDisposable
         return repository;
     }
 
-    private static ProjectTree SolutionWithTests()
+    internal static ProjectTree SolutionWithTests()
     {
         var tree = ProjectTree.Create();
 

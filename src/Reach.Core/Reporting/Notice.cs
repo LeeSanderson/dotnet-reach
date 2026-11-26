@@ -11,8 +11,7 @@ namespace Reach.Reporting;
 /// never meaning.
 /// </param>
 /// <param name="Data">
-/// Free-form per code. The names <c>projects</c>, <c>assemblies</c>, <c>paths</c> and
-/// <c>members</c> are reserved and used consistently wherever they apply.
+/// Free-form per code.
 /// </param>
 public sealed record Notice(
     string Code,

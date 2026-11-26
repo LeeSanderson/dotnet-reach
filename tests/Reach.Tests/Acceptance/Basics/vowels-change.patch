@@ -1,0 +1,9 @@
+--- a/src/Basics.Core/Vowels.cs
++++ b/src/Basics.Core/Vowels.cs
+@@ -8,5 +8,5 @@ public static class Vowels
+ {
+     private const string All = "aeiouAEIOU";
+ 
+-    public static int In(string text) => text.Count(All.Contains);
++    public static int In(string text) => text.Count(letter => All.Contains(letter, StringComparison.Ordinal));
+ }

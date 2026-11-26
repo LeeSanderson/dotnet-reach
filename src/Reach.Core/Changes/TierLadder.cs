@@ -83,6 +83,16 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
 
     internal RoutedChange Route(ChangedPath path)
     {
+        var routed = RouteByRule(path);
+
+        return routed with { Projects = WithGeneratorConsumers(routed.Projects) };
+    }
+
+    internal IReadOnlyList<RoutedChange> RouteAll(IEnumerable<ChangedPath> paths) =>
+        [.. paths.Select(Route)];
+
+    private RoutedChange RouteByRule(ChangedPath path)
+    {
         var name = System.IO.Path.GetFileName(path.Path);
         var extension = System.IO.Path.GetExtension(path.Path);
 
@@ -93,9 +103,9 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
             // A generator project is consumed rather than executed, so what widens is every
             // project that references it — not the generator itself, whose output lands nowhere
             // Reach scans.
-            if (project is not null && IsGenerator(project))
+            if (GeneratorConsumers(project) is { } consumers)
             {
-                return new RoutedChange(path, Generator, ConsumersOf(project));
+                return new RoutedChange(path, consumers.Rule, consumers.Projects);
             }
 
             return new RoutedChange(path, Project, project is null ? [] : [project]);
@@ -112,26 +122,17 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
             return new RoutedChange(path, DirectoryScoped, AtOrBelow(DirectoryOf(path.Path)));
         }
 
-        var containing = NearestAncestorProject(path.Path);
-
-        if (containing is null)
-        {
-            // Rows 1–5 enumerate every build-affecting file that lives at a repository root, so
-            // the residue genuinely is documentation-shaped: README.md, .gitignore, CI YAML,
-            // licence files. The alternative — whole-solution selection for any unrecognised
-            // file — means a README change runs the entire suite, which is not conservatism
-            // with a cost but a tool nobody keeps switched on.
-            return new RoutedChange(path, Unattributed, []);
-        }
-
-        return new RoutedChange(
-            path,
-            IsContent(extension) ? Content : NearestProject,
-            [containing]);
+        return RouteToContainingProject(path, extension);
     }
 
-    internal IReadOnlyList<RoutedChange> RouteAll(IEnumerable<ChangedPath> paths) =>
-        [.. paths.Select(Route)];
+    /// <summary>
+    /// Row 4 for a change that <em>did</em> map to a member or a type, when the file it is in
+    /// belongs to a generator project. The generator's assembly is consumed by the compiler, not
+    /// loaded, so it is never in the graph and its own widening would root nothing. Null for a
+    /// file outside every generator.
+    /// </summary>
+    internal RoutedConsumers? ConsumersOfGeneratorContaining(string repositoryRelativePath) =>
+        GeneratorConsumers(scope.ProjectContaining(repositoryRoot, repositoryRelativePath));
 
     /// <summary>
     /// Tier 2: a changed source file with no changed member, but which some assembly's debug
@@ -185,31 +186,70 @@ internal sealed class TierLadder(AnalysisScope scope, string repositoryRoot)
         scope.Projects.Any(consumer => consumer.References.Any(reference =>
             reference.IsAnalyzer && Paths.Same(Paths.Normalise(reference.Path), project.Path)));
 
+    /// <summary>
+    /// Row 4, the one place it is decided: a generator reaches the build only through the
+    /// projects that consume it, so they are what widens. Null for a project that is not a
+    /// generator, or for no project.
+    /// </summary>
+    private RoutedConsumers? GeneratorConsumers(ProjectFile? project) =>
+        project is not null && IsGenerator(project)
+            ? new RoutedConsumers(Generator, ConsumersOf(project))
+            : null;
+
     private IReadOnlyList<ProjectFile> ConsumersOf(ProjectFile generator) =>
     [
         .. scope.Projects.Where(consumer => consumer.References.Any(reference =>
             Paths.Same(Paths.Normalise(reference.Path), generator.Path)))
     ];
 
+    /// <summary>
+    /// Whatever rule routed a change, a generator it names reaches the build only through its
+    /// consumers, so they widen too. Without this, a <c>Directory.Build.props</c> inside a
+    /// generator's directory widens only the generator, whose assembly is in no graph. Only ever
+    /// adds: the projects the rule chose are all kept.
+    /// </summary>
+    private IReadOnlyList<ProjectFile> WithGeneratorConsumers(IReadOnlyList<ProjectFile> projects) =>
+    [
+        .. projects
+            .Concat(projects.Where(IsGenerator).SelectMany(ConsumersOf))
+            .Distinct()
+    ];
+
+    /// <summary>
+    /// Rows 4 to 6 for a file that is not itself a build file: whatever project contains it.
+    /// </summary>
+    private RoutedChange RouteToContainingProject(ChangedPath path, string extension)
+    {
+        var containing = scope.ProjectContaining(repositoryRoot, path.Path);
+
+        if (containing is null)
+        {
+            // Rows 1–5 enumerate every build-affecting file that lives at a repository root, so
+            // the residue genuinely is documentation-shaped: README.md, .gitignore, CI YAML,
+            // licence files. The alternative — whole-solution selection for any unrecognised
+            // file — means a README change runs the entire suite, which is not conservatism
+            // with a cost but a tool nobody keeps switched on.
+            return new RoutedChange(path, Unattributed, []);
+        }
+
+        // Anything inside a generator, not only its project file: a source file or a template
+        // reaches the build only through the generator's consumers.
+        if (GeneratorConsumers(containing) is { } consumers)
+        {
+            return new RoutedChange(path, consumers.Rule, consumers.Projects);
+        }
+
+        return new RoutedChange(
+            path,
+            IsContent(extension) ? Content : NearestProject,
+            [containing]);
+    }
+
     private ProjectFile? ProjectAt(string repositoryRelativePath) =>
         scope.Projects.FirstOrDefault(project => Paths.Same(project.Path, Absolute(repositoryRelativePath)));
 
     private IReadOnlyList<ProjectFile> AtOrBelow(string directory) =>
         [.. scope.Projects.Where(project => Paths.IsUnder(project.Directory, directory))];
-
-    /// <summary>
-    /// The nearest ancestor project directory, which reproduces the SDK's default
-    /// <c>**/*.cs</c> globbing without running MSBuild.
-    /// </summary>
-    private ProjectFile? NearestAncestorProject(string repositoryRelativePath)
-    {
-        var full = Absolute(repositoryRelativePath);
-
-        return scope.Projects
-            .Where(project => Paths.IsUnder(full, project.Directory))
-            .OrderByDescending(project => project.Directory.Length)
-            .FirstOrDefault();
-    }
 
     private static bool IsContent(string extension) => ContentExtensions.Contains(extension, NameComparer);
 
@@ -238,3 +278,10 @@ internal sealed record RoutedChange(
     ChangedPath Path,
     RoutingRule Rule,
     IReadOnlyList<ProjectFile> Projects);
+
+/// <summary>
+/// A member-level change re-routed to a generator's consumers.
+/// </summary>
+/// <param name="Rule">Row 4, so the report gives the same reason a project-file change does.</param>
+/// <param name="Projects">The in-scope projects that consume the generator.</param>
+internal sealed record RoutedConsumers(RoutingRule Rule, IReadOnlyList<ProjectFile> Projects);

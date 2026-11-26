@@ -1,9 +1,11 @@
+using Reach.Processes;
+
 namespace Reach.Cli;
 
 internal static class Program
 {
     internal static Task<int> Main(string[] args) =>
-        ReachCli.RunAsync(
+        new ReachCli(new ProcessRunner()).RunAsync(
             args,
             Environment.CurrentDirectory,
             Console.Out,

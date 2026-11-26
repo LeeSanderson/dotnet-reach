@@ -1,5 +1,8 @@
 using Reach.Changes;
 using Reach.Projects;
+using Reach.Reporting;
+using Reach.Selection;
+using Reach.Tests.Fixtures;
 
 namespace Reach.Tests.Changes;
 
@@ -172,5 +175,58 @@ public class RecompilationWideningTests
 
         Assert.Equal(trigger, one.Trigger);
         Assert.Contains("compile-time constant", one.Reason);
+    }
+
+    // ---- The notice -----------------------------------------------------------------------------------
+
+    [Fact]
+    public void Each_triggering_change_raises_its_own_widening_notice_naming_the_member_and_its_consumers()
+    {
+        using var graphs = Graphs.Of(
+            ("Core", "namespace N; public class Widget { public const int Value = 2; public int Gone() => 1; }"),
+            ("App", "namespace N.App; public class Uses { public int M() => N.Widget.Value; }"));
+
+        var scope = Scope();
+        var constant = Member(MemberChange.Modified, isConstant: true, kind: MemberKind.Field);
+
+        var removed = new ChangedMember(
+            "N.Widget",
+            new MemberKey(MemberKind.Method, "Gone", 0, []),
+            MemberChange.Removed,
+            "src/Core/Widget.cs");
+
+        var notices = new RootSets(graphs.Assemblies).ChangesFrom(
+            new ChangedSet([constant, removed], [], [], [], [], []),
+            [],
+            scope,
+            "/repo").Notices;
+
+        var raised = notices.Where(notice => notice.Code == "recompilation-widening").ToArray();
+
+        // One per triggering change, because each names what caused its blast radius.
+        Assert.Equal(2, raised.Length);
+
+        var forConstant = Assert.Single(raised, notice => notice.Message.Contains("N.Widget.Value", StringComparison.Ordinal));
+
+        Assert.Equal(NoticeKind.Widening, forConstant.Kind);
+        Assert.Equal(["N.Widget.Value"], Assert.IsType<string[]>(forConstant.Data!["members"]));
+        Assert.Equal(
+            new[] { Paths.Normalise("/repo/src/App/App.csproj"), Paths.Normalise("/repo/tests/Tests/Tests.csproj") },
+            forConstant.Data["projects"]);
+    }
+
+    [Fact]
+    public void A_change_that_widens_nothing_raises_no_notice()
+    {
+        using var graphs = Graphs.Of(("Core", "namespace N; public class Widget { public int Value() => 1; }"));
+
+        var scope = Scope();
+        var notices = new RootSets(graphs.Assemblies).ChangesFrom(
+            new ChangedSet([Member(MemberChange.Modified)], [], [], [], [], []),
+            [],
+            scope,
+            "/repo").Notices;
+
+        Assert.DoesNotContain(notices, notice => notice.Code == "recompilation-widening");
     }
 }

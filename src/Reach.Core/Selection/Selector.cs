@@ -22,10 +22,10 @@ internal static class Selector
         bool includePaths,
         string repositoryRoot)
     {
-        var notices = new List<Notice>();
         var ladder = new TierLadder(scope, repositoryRoot);
-        var roots = new RootSets(graph.Assemblies);
-        var changes = roots.ChangesFrom(changed, joined, scope, ladder);
+        var rooted = new RootSets(graph.Assemblies).ChangesFrom(changed, joined, scope, repositoryRoot);
+        var changes = rooted.Changes;
+        var notices = new List<Notice>(rooted.Notices);
 
         if (TierLadder.UnattributedNotice(ladder.RouteAll(changed.UnmappablePaths)) is { } unattributed)
         {
